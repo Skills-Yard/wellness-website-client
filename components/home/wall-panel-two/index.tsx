@@ -1,0 +1,38 @@
+import { Button } from "@/ui/button";
+import Image from "next/image";
+
+export default function WallPanelTwo() {
+    return (
+        <section className="w-full py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+            <div className="relative overflow-hidden rounded-[32px] bg-[#EFF6FF] flex flex-col md:flex-row items-center justify-between p-6 sm:p-8 md:p-10 gap-8 min-h-[350px]">
+                
+                {/* Left Text content */}
+                <div className="relative z-10 flex-1 flex flex-col items-start justify-center space-y-5 py-4 md:py-6 pl-2 sm:pl-4">
+                    <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold text-neutral-900 leading-tight tracking-tight max-w-lg">
+                        Expert physical therapy consultation at home
+                    </h2>
+                    
+                    <p className="text-base sm:text-lg text-neutral-800 font-medium tracking-wide">
+                        Physiotherapy & Rehab Packages
+                    </p>
+
+                    <Button className="bg-[#111111] text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
+                        Book assessment
+                    </Button>
+                </div>
+
+                {/* Right Image Container */}
+                <div className="relative w-full md:w-[48%] aspect-[4/3] sm:aspect-[16/10] md:aspect-[1.4] rounded-[24px] overflow-hidden bg-neutral-100 shrink-0">
+                    <Image
+                        src="/images/physio_back_pain.png"
+                        alt="Clinical physical assessment"
+                        fill
+                        sizes="(max-w-7xl) 50vw, 40vw"
+                        className="object-cover transition-transform duration-500 hover:scale-[1.02]"
+                        priority
+                    />
+                </div>
+            </div>
+        </section>
+    );
+}
