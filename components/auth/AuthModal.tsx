@@ -35,7 +35,13 @@ const cities = [
 
 type AuthStep = "PHONE" | "OTP" | "ONBOARDING";
 
-export default function AuthModal({ onClose }: { onClose: () => void }) {
+export default function AuthModal({
+  onClose,
+  onComplete,
+}: {
+  onClose: () => void;
+  onComplete?: () => void;
+}) {
   const router = useRouter();
 
   const [step, setStep] = useState<AuthStep>("PHONE");
@@ -110,8 +116,8 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
   // 3. ONBOARDING logic
   // ==========================================
   const handleComplete = () => {
-    alert(`Setup complete for ${name} as ${profession} in ${city}!`);
-    onClose();
+    if (onComplete) onComplete(); // Triggers the Toast & Profile unlock
+    else onClose();
     router.push("/");
   };
 
