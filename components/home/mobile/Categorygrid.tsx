@@ -40,12 +40,12 @@ interface CategoryGridProps {
 
 export default function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
     return (
-        <div className="mx-4 mt-5 relative z-20 bg-white">
-            <div className="grid grid-cols-3 gap-x-4 gap-y-5 max-w-sm mx-auto">
+        <div className="mx-4 mt-5 relative z-20 w-full bg-white">
+            <div className="grid grid-cols-3  flex item-center max-w-sm   mx-auto">
                 {mobileCategories.map((cat) => (
                     <Link href={cat.path} key={cat.id}>
                         <button
-                            className="flex flex-col items-center group cursor-pointer"
+                            className="flex flex-col  w-fit items-center group cursor-pointer"
                         >
                             <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-sm bg-stone-100 group-hover:bg-amber-50/30 flex items-center justify-center overflow-hidden border border-stone-100/40 shadow-2xs group-hover:border-amber-200 transition-all duration-300">
                                 {cat.badge && (
