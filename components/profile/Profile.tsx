@@ -205,6 +205,7 @@ const AboutSection = () => {
 // MAIN PAGE COMPONENT
 // ==========================================
 export default function ProfilePage() {
+
   // Initialize state with the imported temp data
   const [user, setUser] = useState<UserProfile>(tempUser);
 
