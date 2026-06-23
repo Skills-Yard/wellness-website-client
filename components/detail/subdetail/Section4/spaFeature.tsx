@@ -4,41 +4,47 @@ const featureItems = [
   {
     id: 1,
     title: "Portable massage bed",
-    image: "/images/hero-1.svg",
+    image: "/images/detail/portable_massage_bed.png",
   },
   {
     id: 2,
     title: "Oil diffuser & timer",
-    image: "/images/hero-2.svg",
+    image: "/images/detail/oil_diffuser_timer.png",
   },
   {
     id: 3,
     title: "Single-use disposables",
-    image: "/images/hero-3.svg",
+    image: "/images/detail/single_use_disposables.png",
   },
   {
     id: 4,
     title: "Oils, candles & flowers",
-    image: "/images/hero-1.svg",
+    image: "/images/detail/oils_candles_flowers.png",
   },
 ];
 
-export default function SpaFeature() {
+interface SpaFeatureProps {
+  service?: any;
+}
+
+export default function SpaFeature({ service }: SpaFeatureProps) {
+  const bottomBanner = service?.media || "/images/detail/massage_detail.png";
+
   return (
     <>
-      <section className="mx-auto max-w-6xl px-2 py-12 sm:px-2 lg:px-4 lg:py-5">
+      <section className="mx-auto max-w-6xl px-6 py-12 sm:px-6 lg:py-5">
         {/* Header Section */}
-        <div className="mb-4 text-start sm:mb-4">
-          <h2 className="text-3xl font-light tracking-tight text-slate-900 sm:text-3xl">
+        <div className="mb-4 text-start">
+          <h2 className="text-2xl font-light tracking-tight text-slate-900">
             We bring the{" "}
             <span className="font-semibold text-slate-800">spa to you</span>
           </h2>
         </div>
 
         {/* 1. Hero Image - Just the image, no title/description */}
-        <div className="group relative mb-2 w-full overflow-hidden rounded-xl bg-slate-100 shadow-md aspect-[21/9]">
+        <div className="group relative mb-4 w-full overflow-hidden rounded-2xl bg-slate-100 border border-slate-200 aspect-[21/9]">
           <Image
-            src={"/images/hero-1.svg"}
+            src="/images/detail/spa_home_banner.png"
             alt="Spa experience at home"
             fill
             priority
@@ -48,11 +54,11 @@ export default function SpaFeature() {
         </div>
 
         {/* 2. Grid Section - 2x2 layout with Title Overlays */}
-        <div className="grid gap-2 sm:grid-cols-2 lg:gap-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {featureItems.map((item) => (
             <div
               key={item.id}
-              className="group relative overflow-hidden rounded-xl bg-slate-100 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/50 aspect-video"
+              className="group relative overflow-hidden rounded-2xl bg-slate-100 border border-slate-200 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/50 aspect-video"
             >
               {/* Background Image */}
               <Image
@@ -64,11 +70,11 @@ export default function SpaFeature() {
               />
 
               {/* Gradient Overlay for Text Legibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
 
               {/* Title Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 flex flex-col justify-end">
-                <h3 className="text-lg sm:text-xl font-medium text-white tracking-wide transition-transform duration-300 ease-out group-hover:-translate-y-1">
+              <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end">
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-wide transition-transform duration-300 ease-out group-hover:-translate-y-1">
                   {item.title}
                 </h3>
               </div>
@@ -77,30 +83,16 @@ export default function SpaFeature() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl py-12 sm:px-2 lg:px-0 lg:py-5">
-        <div className="bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)]">
+      <section className="mx-auto max-w-6xl px-6 py-6 lg:py-5">
+        <div className="bg-slate-50 rounded-2xl overflow-hidden border border-slate-150 relative aspect-[21/9] w-full">
           <Image
-            src="/images/detail/section4.png"
+            src={bottomBanner}
             alt="Service Banner"
-            width={800}
-            height={500}
+            fill
             className="w-full object-cover"
           />
         </div>
       </section>
-      {/* <section className="mx-auto bg-red-700 max-w-6xl px-2 py-12 sm:px-2 lg:px-0 lg:py-5">
-      <div className="bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] p-2" >
-          <h2 className="text-gray-600 text-2xl" >
-            Body Massage
-          </h2>
-          <h1 className="text-gray-700 text-3xl">
-            This is the heading
-          </h1>
-          <p className="text-gray-500 text-2xl">
-            this is description
-          </p>
-      </div>
-    </section> */}
     </>
   );
 }

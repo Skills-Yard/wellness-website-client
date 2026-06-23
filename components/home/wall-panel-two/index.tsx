@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import Image from "next/image";
 
 export default function WallPanelTwo() {
@@ -15,10 +16,11 @@ export default function WallPanelTwo() {
                     <p className="text-base sm:text-lg text-neutral-800 font-medium tracking-wide">
                         Physiotherapy & Rehab Packages
                     </p>
-
-                    <Button className="bg-[#111111] max-sm:hidden text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
-                        Book assessment
-                    </Button>
+                    <Link href="/detail?type=physio">
+                        <Button className="bg-[#111111] max-sm:hidden text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
+                            Book assessment
+                        </Button>
+                    </Link>
                 </div>
 
                 {/* Right Image Container */}
@@ -31,10 +33,12 @@ export default function WallPanelTwo() {
                         className="object-cover transition-transform duration-500 hover:scale-[1.02]"
                         priority
                     />
-                    <Button className="bg-[#ffffff] hidden absolute max-sm:flex text-black hover:bg-black hover:text-white font-bold text-sm 
-                    h-9 px-7 bottom-4 left-4 rounded-sm cursor-pointer transition-all active:scale-95 border-none shadow-sm">
-                        Book assessment
-                    </Button>
+                    <Link href="/detail?type=physio">
+                        <Button className="bg-[#ffffff] hidden absolute max-sm:flex text-black hover:bg-black hover:text-white font-bold text-sm 
+                        h-9 px-7 bottom-4 left-4 rounded-sm cursor-pointer transition-all active:scale-95 border-none shadow-sm">
+                            Book assessment
+                        </Button>
+                    </Link>
                 </div>
             </div>
         </section>

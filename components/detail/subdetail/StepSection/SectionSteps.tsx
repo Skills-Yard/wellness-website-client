@@ -1,8 +1,17 @@
-import { stepsData } from "@/utils/data/stepData";
 import Image from "next/image";
-import SetUpImage from "./SetUpImage";
 
-export default function StepsSection() {
+interface StepsSectionProps {
+  steps: {
+    id: string;
+    title: string;
+    description: string;
+    image: string;
+  }[];
+}
+
+export default function StepsSection({ steps }: StepsSectionProps) {
+  const activeSteps = steps || [];
+
   return (
     <>
     <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
@@ -18,9 +27,9 @@ export default function StepsSection() {
 
       {/* Pipeline Container */}
       <div className="relative">
-        {stepsData.map((step, index) => {
+        {activeSteps.map((step, index) => {
           // Check if it's the last item so we don't draw the line past it
-          const isLast = index === stepsData.length - 1;
+          const isLast = index === activeSteps.length - 1;
 
           return (
             <div key={step.id} className="group relative flex gap-6 sm:gap-8">

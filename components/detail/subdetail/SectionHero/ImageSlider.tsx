@@ -9,14 +9,11 @@ type ImageSliderProps = {
 
 export default function ImageSlider({ images, count }: ImageSliderProps) {
   const slides = useMemo(() => {
-    const selected = images.slice(0, count);
-    if (selected.length >= count) {
-      return selected;
+    const selected = images.slice(0, count).filter(Boolean);
+    if (selected.length === 0) {
+      return ["/images/detail/massage_detail.png"];
     }
-
-    return Array.from({ length: count }, (_, index) => 
-      selected[index % selected.length] ?? ""
-    );
+    return selected;
   }, [images, count]);
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -31,46 +28,50 @@ export default function ImageSlider({ images, count }: ImageSliderProps) {
 
   return (
     <div className="relative">
-      <div className="aspect-[16/9] sm:aspect-[20/9] w-full overflow-hidden bg-slate-100">
+      <div className="aspect-[16/9] w-full overflow-hidden bg-slate-50">
         <img
           src={slides[activeIndex]}
           alt={`Slide ${activeIndex + 1}`}
-          className="h-full w-full object-cover transition duration-500 ease-out"
+          className="h-full w-full object-cover"
         />
       </div>
 
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-3">
-        <button
-          type="button"
-          onClick={prevSlide}
-          className="pointer-events-auto rounded-full bg-slate-950/70 px-3 py-2 text-white transition hover:bg-slate-900"
-          aria-label="Previous image"
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          onClick={nextSlide}
-          className="pointer-events-auto rounded-full bg-slate-950/70 px-3 py-2 text-white transition hover:bg-slate-900"
-          aria-label="Next image"
-        >
-          ›
-        </button>
-      </div>
+      {slides.length > 1 && (
+        <>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-4">
+            <button
+              type="button"
+              onClick={prevSlide}
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:bg-black/80 cursor-pointer"
+              aria-label="Previous image"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={nextSlide}
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition hover:bg-black/80 cursor-pointer"
+              aria-label="Next image"
+            >
+              ›
+            </button>
+          </div>
 
-      <div className="mt-3 flex justify-center gap-2 px-4 pb-3 sm:px-6">
-        {slides.map((_, index) => (
-          <button
-            key={`slide-dot-${index}`}
-            type="button"
-            onClick={() => setActiveIndex(index)}
-            className={`h-2.5 w-2.5 rounded-full transition ${
-              index === activeIndex ? "bg-slate-950" : "bg-slate-400"
-            }`}
-            aria-label={`Show slide ${index + 1}`}
-          />
-        ))}
-      </div>
+          <div className="mt-3 flex justify-center gap-1.5 px-4 pb-2">
+            {slides.map((_, index) => (
+              <button
+                key={`slide-dot-${index}`}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                  index === activeIndex ? "bg-amber-500 w-3" : "bg-slate-300"
+                }`}
+                aria-label={`Show slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

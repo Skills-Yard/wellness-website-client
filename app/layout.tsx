@@ -34,7 +34,9 @@ export default function RootLayout({
         <CartProvider>
           <Navbar />
           {children}
-          <Footer />
+          <div className="hidden md:block">
+            <Footer />
+          </div>
         </CartProvider>
       </body>
     </html>

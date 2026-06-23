@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function WallPanel() {
     return (
@@ -15,10 +16,11 @@ export default function WallPanel() {
                     <p className="text-base sm:text-lg text-neutral-800 font-medium tracking-wide">
                         Massage & Spa Packages
                     </p>
-
-                    <Button className="bg-[#111111] max-sm:hidden text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
-                        Book now
-                    </Button>
+                    <Link href="/detail?type=physio">
+                        <Button className="bg-[#111111] max-sm:hidden text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
+                            Book now
+                        </Button>
+                    </Link>
                 </div>
 
                 {/* Right Image Container */}
@@ -31,10 +33,11 @@ export default function WallPanel() {
                         className="object-cover transition-transform duration-500 hover:scale-[1.02]"
                         priority
                     />
-                    <Button className="bg-[#ffffff] hidden absolute max-sm:flex text-black hover:bg-black hover:text-white font-bold text-sm 
-                    h-9 px-7 bottom-4 left-4 rounded-sm cursor-pointer transition-all active:scale-95 border-none shadow-sm">
-                        Book now
-                    </Button>
+                    <Link href="/detail?type=physio">
+                        <Button className="bg-[#ffffff] hidden absolute max-sm:flex text-black hover:bg-black hover:text-white font-bold text-sm h-9 px-7 bottom-4 left-4 rounded-sm cursor-pointer transition-all active:scale-95 border-none shadow-sm">
+                            Book now
+                        </Button>
+                    </Link>
                 </div>
 
             </div>

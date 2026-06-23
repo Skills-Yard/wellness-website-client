@@ -9,6 +9,10 @@ import {
 } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { tempUser, UserProfile } from "@/utils/data/tempUserData";
+import { Home as HomeIcon, Flower2, Sparkles, ShoppingCart, User } from "lucide-react";
+import Link from "next/link";
+import { useCart } from "@/context/CartContext";
+import { cn } from "@/lib/utils";
 import AuthModal from "../auth/AuthModal";
 
 // ==========================================
@@ -29,7 +33,7 @@ const AccountSection = ({ user, onEdit }: { user: UserProfile; onEdit: () => voi
           )}
         </div>
       </AccordionTrigger>
-      
+
       <AccordionContent className="pt-2 text-slate-600">
         <p className="mb-6 text-sm text-slate-500">Manage your personal information</p>
 
@@ -103,10 +107,10 @@ const AddressSection = ({ user }: { user: UserProfile }) => {
       <AccordionTrigger className="hover:no-underline">
         <span className="text-lg font-bold text-slate-900">Saved Addresses</span>
       </AccordionTrigger>
-      
+
       <AccordionContent className="pt-2">
         <p className="mb-6 text-sm text-slate-500">Manage where we deliver our spa services.</p>
-        
+
         <div className="space-y-4">
           {/* List Existing Addresses */}
           {user.addresses.map((address) => (
@@ -141,7 +145,7 @@ const SettingsSection = () => {
       <AccordionTrigger className="hover:no-underline">
         <span className="text-lg font-bold text-slate-900">Settings</span>
       </AccordionTrigger>
-      
+
       <AccordionContent className="pt-2">
         <div className="divide-y divide-slate-100">
           <div className="flex items-center justify-between py-4">
@@ -175,7 +179,7 @@ const AboutSection = () => {
       <AccordionTrigger className="hover:no-underline">
         <span className="text-lg font-bold text-slate-900">About Spa Prime</span>
       </AccordionTrigger>
-      
+
       <AccordionContent className="pt-2">
         <div className="space-y-2 text-sm text-slate-700">
           <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-indigo-600">
@@ -205,30 +209,69 @@ const AboutSection = () => {
 // MAIN PAGE COMPONENT
 // ==========================================
 export default function ProfilePage() {
-
-  // Initialize state with the imported temp data
-  const [user, setUser] = useState<UserProfile>(tempUser);
+  const [user] = useState<UserProfile>(tempUser);
+  const { cartCount, setIsCartOpen } = useCart();
 
   const handleEditProfile = () => {
     alert("Open an edit modal or navigate to an edit page here!");
   };
 
   return (
-    <div className="mx-auto max-w-2xl bg-white px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Profile</h1>
+    <div className="min-h-screen bg-white pb-24 md:pb-0">
+      <div className="mx-auto max-w-2xl bg-white px-4 py-8 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Profile</h1>
+        </div>
+
+        {/* Accordion Layout wrapper */}
+        <div className="rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
+          <Accordion type="single" collapsible defaultValue="account" className="w-full">
+            <AccountSection user={user} onEdit={handleEditProfile} />
+            <AddressSection user={user} />
+            <SettingsSection />
+            <AboutSection />
+          </Accordion>
+        </div>
       </div>
 
-      {/* Accordion Layout wrapper */}
-      <div className="rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
-        <Accordion type="single" collapsible defaultValue="account" className="w-full">
-          <AccountSection user={user} onEdit={handleEditProfile} />
-          <AddressSection user={user} />
-          <SettingsSection />
-          <AboutSection />
-        </Accordion>
-        
+      {/* ── Bottom Navigation Bar (mobile only) ──────────── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-100 flex justify-around py-2.5 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] pb-4">
+        <Link href="/" className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer">
+          <HomeIcon className="w-4.5 h-4.5" />
+          <span className="text-[9px] font-bold">Home</span>
+        </Link>
+
+        <Link href="/detail?type=massage" className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer">
+          <Flower2 className="w-4.5 h-4.5" />
+          <span className="text-[9px] font-bold">Massage</span>
+        </Link>
+
+        <Link href="/detail?type=wellness" className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer">
+          <Sparkles className="w-4.5 h-4.5" />
+          <span className="text-[9px] font-bold">Wellness</span>
+        </Link>
+
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer relative"
+        >
+          <div className="relative">
+            <ShoppingCart className="w-4.5 h-4.5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-[8px] font-extrabold text-white flex items-center justify-center shadow-xs">
+                {cartCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[9px] font-bold">Cart</span>
+        </button>
+
+        {/* Profile — always active */}
+        <div className="flex flex-col items-center gap-1 flex-1 py-1 text-amber-500 cursor-pointer">
+          <User className="w-4.5 h-4.5" />
+          <span className="text-[9px] font-bold">Profile</span>
+        </div>
       </div>
     </div>
   );

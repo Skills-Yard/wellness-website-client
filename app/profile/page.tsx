@@ -1,10 +1,11 @@
 import ProfilePage from "@/components/profile/Profile";
 
 export default function Detail() {
-    return(
-        <div className="bg-white h-screen ">
+    return (
+        <div className="bg-white">
 
-            <ProfilePage/>
+            <ProfilePage />
+
         </div>
     )
 }
