@@ -3,16 +3,15 @@
 import { useState } from "react";
 import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FaqItem } from "@/types";
 import { FAQ_DATA } from "@/utils/data";
 
 export default function ServiceFaq() {
     const [activeTab, setActiveTab] = useState<"massage" | "wellness" | "physiotherapy">("massage");
-    const [openId, setOpenId] = useState<number | null>(1); // default open first FAQ
+    const [openId, setOpenId] = useState<number | null>(1); 
 
     const handleTabChange = (tab: "massage" | "wellness" | "physiotherapy") => {
         setActiveTab(tab);
-        setOpenId(1); // Reset open accordion to first item
+        setOpenId(1);
     };
 
     const toggleAccordion = (id: number) => {
@@ -63,7 +62,7 @@ export default function ServiceFaq() {
                                 key={tab}
                                 onClick={() => handleTabChange(tab)}
                                 className={cn(
-                                    "flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all duration-300 cursor-pointer text-gray-500 hover:text-gray-900 select-none",
+                                    "flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all duration-300 cursor-pointer text-gray-500  select-none",
                                     isActive && tabConfig[tab].activeClass
                                 )}
                             >

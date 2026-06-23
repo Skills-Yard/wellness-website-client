@@ -61,11 +61,11 @@ export default function PhysioServices() {
                     spaceBetween={12}
                     slidesPerView={1}
                     breakpoints={{
-                        480: { slidesPerView: 1.5, spaceBetween: 12 },
+                        320: { slidesPerView: 2, spaceBetween: 14 },
                         640: { slidesPerView: 2, spaceBetween: 14 },
-                        768: { slidesPerView: 2.5, spaceBetween: 14 },
-                        1024: { slidesPerView: 3, spaceBetween: 16 },
-                        1280: { slidesPerView: 4, spaceBetween: 20 },
+                        768: { slidesPerView: 3, spaceBetween: 14 },
+                        1024: { slidesPerView: 4, spaceBetween: 16 },
+                        1280: { slidesPerView: 5, spaceBetween: 20 },
                     }}
                     className="w-full"
                 >
@@ -81,10 +81,9 @@ export default function PhysioServices() {
                                             <Image
                                                 src={item.image}
                                                 alt={item.title}
-                                                fill
-                                                sizes="(max-width: 480px) 90vw, (max-width: 640px) 50vw, (max-width: 768px) 40vw, (max-width: 1024px) 35vw, 25vw"
+                                                width={400}
+                                                height={400}
                                                 className="object-cover transition-transform duration-300 ease-out group-hover:scale-105"
-                                                loading="lazy"
                                             />
                                             <span className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2.5 bg-black/60 backdrop-blur-xs text-[9px] sm:text-[10px] font-bold text-white px-1.5 sm:px-2 py-0.5 rounded-md flex items-center gap-0.5 sm:gap-1">
                                                 <Clock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-blue-400" />
@@ -94,7 +93,7 @@ export default function PhysioServices() {
 
                                         {/* Text Information Stack */}
                                         <div className="space-y-1 sm:space-y-1.5">
-                                            <h3 className="text-[12px] sm:text-[13px] md:text-sm lg:text-base font-semibold text-gray-900 line-clamp-2 leading-snug tracking-tight group-hover:text-blue-600 transition-colors">
+                                            <h3 className="text-[12px] sm:text-[13px] md:text-sm lg:text-base font-semibold text-gray-900 line-clamp-1 leading-snug tracking-tight group-hover:text-blue-600 transition-colors">
                                                 {item.title}
                                             </h3>
 
@@ -108,7 +107,7 @@ export default function PhysioServices() {
                                     </div>
 
                                     {/* Booking Button and Pricing representation Row */}
-                                    <div className="flex items-center justify-between gap-2 mt-2.5 sm:mt-3 md:mt-3.5 flex-wrap">
+                                    <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
                                         <div className="flex items-baseline space-x-1 sm:space-x-1.5">
                                             <span className="text-[13px] sm:text-[14px] md:text-base font-bold text-gray-900">
                                                 ₹{item.price.toLocaleString('en-IN')}
@@ -120,19 +119,20 @@ export default function PhysioServices() {
                                             )}
                                         </div>
                                         <button
+                                            type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 addToCart({
-                                                    id: `physio-${item.id}`,
+                                                    id: item.id.toString() + "-physio",
                                                     title: item.title,
                                                     price: item.price,
-                                                    duration: item.duration,
                                                     image: item.image,
+                                                    duration: item.duration,
                                                 });
                                             }}
-                                            className="bg-neutral-950 text-white hover:bg-neutral-800 text-[11px] sm:text-xs md:text-sm font-bold px-3 sm:px-4 md:px-5 py-1 sm:py-1.5 md:py-2 rounded-lg border-none shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                                            className="px-4.5 py-1.5 text-xs font-extrabold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/60 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                                         >
-                                            Book
+                                            ADD
                                         </button>
                                     </div>
                                 </div>

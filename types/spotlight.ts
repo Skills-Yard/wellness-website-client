@@ -1,4 +1,5 @@
 export interface SpotlightCardItem {
+    id: string;
     badge?: string;
     title: string;
     subtitle: string;
