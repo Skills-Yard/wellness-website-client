@@ -5,7 +5,7 @@ import SubDetailPopUp from "./subdetail/mainfile";
 import Link from "next/link";
 
 export default function SpaBookingLayout() {
-    const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   return (
     <div className="mx-auto max-w-[1300px] px-4 py-8">
       {/* 3-Column Grid Layout */}
@@ -71,16 +71,28 @@ export default function SpaBookingLayout() {
             if (categoryServices.length === 0) return null;
 
             return (
-              <div key={category.id} id={category.id} className="space-y-6 scroll-mt-36">
+              <div
+                key={category.id}
+                id={category.id}
+                className="space-y-6 scroll-mt-36"
+              >
                 <h2 className="text-3xl font-bold text-slate-900">
                   {category.name}
                 </h2>
 
                 <div className="space-y-8">
                   {categoryServices.map((service, index) => (
-                    <div key={service.id} onClick={() => setOpen(true)} className=" cursor-pointer ">
-
-
+                    <div
+                      key={service.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault(); // Prevents any weird scroll jumps
+                        e.stopPropagation(); // Stops the click from hitting the popup background
+                        setOpen(true);
+                      }}
+                      className=" cursor-pointer transition-opacity active:opacity-70 "
+                    >
                       {/* === SPOTLIGHT LAYOUT (Video on top) === */}
                       {service.isSpotlight ? (
                         <div className="flex flex-col">
@@ -238,7 +250,7 @@ export default function SpaBookingLayout() {
           </div>
         </div>
       </div>
-      {open && <SubDetailPopUp onClose={() => setOpen(false)} />} 
+      {open && <SubDetailPopUp onClose={() => setOpen(false)} />}
     </div>
   );
 }
