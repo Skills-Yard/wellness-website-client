@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -20,13 +20,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { cn } from "@/lib/utils";
 import AuthModal from "../auth/AuthModal";
-import toast, { Toaster } from "react-hot-toast";
+import BottomNav from "../home/mobile/Bottomnav";
+import { useRouter } from "next/navigation";
+import { toast, ToastContainer } from "react-toastify";
 
-// ==========================================
-// 1. ACCOUNT COMPONENT
-// ==========================================
 const AccountSection = ({
   user,
   onEdit,
@@ -37,101 +35,101 @@ const AccountSection = ({
   const isProfileComplete = user.name && user.email;
 
 
-  
+
 
   return (
-    
 
-      
-        /* ==========================================
-           AUTHENTICATED STATE (Actual Profile)
-           ========================================== */
-        <AccordionItem value="account" className="border-b-slate-200 py-2">
-          <AccordionTrigger className="hover:no-underline">
-            <div className="flex items-center gap-3 text-left">
-              <span className="text-lg font-bold text-slate-900">
-                Account Details
-              </span>
-              {!isProfileComplete && (
-                <span className="inline-flex animate-pulse items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800">
-                  INCOMPLETE
-                </span>
-              )}
-            </div>
-          </AccordionTrigger>
 
-          <AccordionContent className="pt-2 text-slate-600">
-            <p className="mb-6 text-sm text-slate-500">
-              Manage your personal information
+
+    /* ==========================================
+       AUTHENTICATED STATE (Actual Profile)
+       ========================================== */
+    <AccordionItem value="account" className="border-b-slate-200 py-2">
+      <AccordionTrigger className="hover:no-underline">
+        <div className="flex items-center gap-3 text-left">
+          <span className="text-lg font-bold text-slate-900">
+            Account Details
+          </span>
+          {!isProfileComplete && (
+            <span className="inline-flex animate-pulse items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800">
+              INCOMPLETE
+            </span>
+          )}
+        </div>
+      </AccordionTrigger>
+
+      <AccordionContent className="pt-2 text-slate-600">
+        <p className="mb-6 text-sm text-slate-500">
+          Manage your personal information
+        </p>
+
+        {!isProfileComplete && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm text-amber-800">
+              Please complete your profile to receive booking confirmations
+              and exclusive offers.
             </p>
+          </div>
+        )}
 
-            {!isProfileComplete && (
-              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm text-amber-800">
-                  Please complete your profile to receive booking confirmations
-                  and exclusive offers.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-5">
-              <div>
-                <label className="text-xs font-medium text-slate-500">
-                  Mobile Number
-                </label>
-                <div className="mt-1 flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                  <span className="font-medium">{user.phone}</span>
-                  <span className="text-xs font-semibold text-green-600">
-                    Verified ✓
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-500">
-                  Full Name
-                </label>
-                <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
-                  <span
-                    className={
-                      user.name ? "text-slate-900" : "text-slate-400 italic"
-                    }
-                  >
-                    {user.name || "Not provided yet"}
-                  </span>
-                  <button
-                    onClick={onEdit}
-                    className="font-semibold text-indigo-600 transition-colors hover:text-indigo-700"
-                  >
-                    {user.name ? "Edit" : "Add"}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-500">
-                  Email Address
-                </label>
-                <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
-                  <span
-                    className={
-                      user.email ? "text-slate-900" : "text-slate-400 italic"
-                    }
-                  >
-                    {user.email || "Not provided yet"}
-                  </span>
-                  <button
-                    onClick={onEdit}
-                    className="font-semibold text-indigo-600 transition-colors hover:text-indigo-700"
-                  >
-                    {user.email ? "Edit" : "Add"}
-                  </button>
-                </div>
-              </div>
+        <div className="space-y-5">
+          <div>
+            <label className="text-xs font-medium text-slate-500">
+              Mobile Number
+            </label>
+            <div className="mt-1 flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+              <span className="font-medium">{user.phone}</span>
+              <span className="text-xs font-semibold text-green-600">
+                Verified ✓
+              </span>
             </div>
-          </AccordionContent>
-        </AccordionItem>
-      
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500">
+              Full Name
+            </label>
+            <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
+              <span
+                className={
+                  user.name ? "text-slate-900" : "text-slate-400 italic"
+                }
+              >
+                {user.name || "Not provided yet"}
+              </span>
+              <button
+                onClick={onEdit}
+                className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
+              >
+                {user.name ? "Edit" : "Add"}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500">
+              Email Address
+            </label>
+            <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
+              <span
+                className={
+                  user.email ? "text-slate-900" : "text-slate-400 italic"
+                }
+              >
+                {user.email || "Not provided yet"}
+              </span>
+              <button
+                onClick={onEdit}
+                className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
+              >
+                {user.email ? "Edit" : "Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </AccordionContent>
+    </AccordionItem>
+
   );
 };
 
@@ -142,7 +140,7 @@ const AddAddressCard = ({ onAdd }: { onAdd: () => void }) => {
   return (
     <button
       onClick={onAdd}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-indigo-600 transition-all hover:border-indigo-300 hover:bg-indigo-50 active:scale-[0.98]"
+      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-amber-600 transition-all hover:border-amber-300 hover:bg-amber-50 active:scale-[0.98] cursor-pointer"
     >
       <span className="text-lg">+</span> Add New Address
     </button>
@@ -178,9 +176,9 @@ const AddressSection = ({ user }: { user: UserProfile }) => {
                 <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
                   {address.type}
                 </span>
-                <div className="flex gap-3 text-sm font-medium text-indigo-600">
-                  <button className="hover:text-indigo-700">Edit</button>
-                  <button className="text-red-500 hover:text-red-600">
+                <div className="flex gap-3 text-sm font-medium text-amber-600">
+                  <button className="hover:text-amber-700 cursor-pointer">Edit</button>
+                  <button className="text-red-500 hover:text-red-600 cursor-pointer">
                     Delete
                   </button>
                 </div>
@@ -242,9 +240,9 @@ const AboutSection = () => {
   const handleLogout = () => {
     // 1. Clears all local storage data
     localStorage.clear();
-    
+
     // 2. Refreshes the page to reset the app state
-    window.location.reload(); 
+    window.location.reload();
   };
   return (
     <AccordionItem value="about" className="border-none py-2">
@@ -256,17 +254,17 @@ const AboutSection = () => {
 
       <AccordionContent className="pt-2">
         <div className="space-y-2 text-sm text-slate-700">
-          <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-indigo-600">
+          <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-amber-600 cursor-pointer">
             <span className="font-medium">Terms & Conditions</span>
             <span className="text-slate-400">→</span>
           </button>
-          <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-indigo-600">
+          <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-amber-600 cursor-pointer">
             <span className="font-medium">Privacy Policy</span>
             <span className="text-slate-400">→</span>
           </button>
           <button
             onClick={() => handleLogout()}
-            className="mt-4 flex w-full items-center justify-between rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50"
+            className="mt-4 flex w-full items-center justify-between rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 cursor-pointer"
           >
             <span className="font-medium">Log Out</span>
           </button>
@@ -288,10 +286,11 @@ const AboutSection = () => {
 // MAIN PAGE COMPONENT
 // ==========================================
 export default function ProfilePage() {
+  const router = useRouter();
   const [user] = useState<UserProfile>(tempUser);
   const { cartCount, setIsCartOpen } = useCart();
 
-    const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   // Prevents Next.js hydration mismatch errors
   const [isMounted, setIsMounted] = useState(false);
@@ -301,7 +300,7 @@ export default function ProfilePage() {
   useEffect(() => {
     setIsMounted(true);
     const storedLoginState = localStorage.getItem("isUserLoggedIn");
-    
+
     if (storedLoginState === "true") {
       setIsLogin(true);
     }
@@ -311,21 +310,11 @@ export default function ProfilePage() {
   const handleLoginSuccess = () => {
     setShowAuthModal(false);
     setIsLogin(true);
-    
+
     // Save to local storage so it survives a refresh!
     localStorage.setItem("isUserLoggedIn", "true");
-    
-    toast.success("Successfully logged in!", {
-      icon: '👋',
-      style: {
-        borderRadius: '100px',
-        background: '#1e293b', 
-        color: '#fff',
-        padding: '12px 24px',
-        fontWeight: '500',
-      },
-      duration: 3000,
-    });
+
+    toast.success("Successfully logged in!");
   };
 
   // Do not render the UI until we have checked local storage on the client
@@ -336,17 +325,17 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pb-24 md:pb-0 relative">
       {/* 1. Global Toaster Component for notifications */}
-      <Toaster position="top-center" reverseOrder={false} />
-    {!isLogin ? (
+      <ToastContainer position="top-center" />
+      {!isLogin ? (
         /* ==========================================
            UNAUTHENTICATED STATE (Empty Profile View)
            ========================================== */
         <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 animate-in fade-in duration-500">
           <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             {/* Decorative Icon */}
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-inner">
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-amber-50 text-amber-500 shadow-inner">
               <UserCircle2 className="h-12 w-12" strokeWidth={1.5} />
             </div>
 
@@ -362,7 +351,7 @@ export default function ProfilePage() {
             {/* Shadcn-style Button */}
             <button
               onClick={() => setShowAuthModal(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-full bg-blue-600 px-6 py-4 font-bold text-white transition-all active:scale-[0.98] hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20"
+              className="w-full flex items-center justify-center gap-2 rounded-full bg-amber-500 px-6 py-4 font-bold text-white transition-all active:scale-[0.98] hover:bg-amber-600 hover:shadow-lg hover:shadow-amber-500/20 cursor-pointer"
             >
               <ShieldCheck className="h-5 w-5" />
               Login to continue
@@ -370,80 +359,46 @@ export default function ProfilePage() {
           </div>
         </div>
       ) : (
-    <div className="min-h-screen bg-white pb-24 md:pb-0">
-      <div className="mx-auto max-w-2xl bg-white px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Profile
-          </h1>
-        </div>
+        <div className="min-h-screen bg-white">
+          <div className="mx-auto max-w-2xl bg-white px-4 py-8 sm:px-6 lg:px-8">
+            {/* Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+                Profile
+              </h1>
+            </div>
 
-        {/* Accordion Layout wrapper */}
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
-          <Accordion
-            type="single"
-            collapsible
-            defaultValue="account"
-            className="w-full"
-          >
-            <AccountSection user={user} onEdit={handleEditProfile} />
-            <AddressSection user={user} />
-            <SettingsSection />
-            <AboutSection />
-          </Accordion>
+            {/* Accordion Layout wrapper */}
+            <div className="rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
+              <Accordion
+                type="single"
+                collapsible
+                defaultValue="account"
+                className="w-full"
+              >
+                <AccountSection user={user} onEdit={handleEditProfile} />
+                <AddressSection user={user} />
+                <SettingsSection />
+                <AboutSection />
+              </Accordion>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Bottom Navigation Bar (mobile only) ──────────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-100 flex justify-around py-2.5 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] pb-4">
-        <Link
-          href="/"
-          className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer"
-        >
-          <HomeIcon className="w-4.5 h-4.5" />
-          <span className="text-[9px] font-bold">Home</span>
-        </Link>
-
-        <Link
-          href="/detail?type=massage"
-          className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer"
-        >
-          <Flower2 className="w-4.5 h-4.5" />
-          <span className="text-[9px] font-bold">Massage</span>
-        </Link>
-
-        <Link
-          href="/detail?type=wellness"
-          className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer"
-        >
-          <Sparkles className="w-4.5 h-4.5" />
-          <span className="text-[9px] font-bold">Wellness</span>
-        </Link>
-
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="flex flex-col items-center gap-1 flex-1 py-1 text-stone-400 transition-colors cursor-pointer relative"
-        >
-          <div className="relative">
-            <ShoppingCart className="w-4.5 h-4.5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-[8px] font-extrabold text-white flex items-center justify-center shadow-xs">
-                {cartCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[9px] font-bold">Cart</span>
-        </button>
-
-        {/* Profile — always active */}
-        <div className="flex flex-col items-center gap-1 flex-1 py-1 text-amber-500 cursor-pointer">
-          <User className="w-4.5 h-4.5" />
-          <span className="text-[9px] font-bold">Profile</span>
-        </div>
+      <div className="block md:hidden">
+        <BottomNav
+          activeTab="profile"
+          onTabClick={(tabId) => {
+            if (tabId === "top" || tabId === "home") {
+              router.push("/");
+            } else {
+              router.push(`/?tab=${tabId}`);
+            }
+          }}
+        />
       </div>
-    </div>
-    )}
 
       {/* ==========================================
           AUTH MODAL POPUP

@@ -11,26 +11,20 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-// --- DUMMY DATA (Normally imported from your authData.ts) ---
-const professions = [
-  "TV Repair",
-  "AC Service",
-  "Plumber",
-  "Electrician",
-  "Cleaning",
-];
+import { professions } from "@/utils/data/authData";
+
 const cities = [
   "Delhi NCR",
-  "Banda",
-  "Garhwa",
-  "Surianwan",
-  "Guwahati",
-  "Etah",
-  "Burhanpur",
-  "Warangal",
-  "Nagercoil",
-  "Bhubaneswar",
+  "Mumbai",
+  "Bangalore",
+  "Noida",
+  "Gurugram",
+  "Kolkata",
+  "Chennai",
+  "Hyderabad",
+  "Pune",
 ];
 
 type AuthStep = "PHONE" | "OTP" | "ONBOARDING";
@@ -121,7 +115,8 @@ export default function AuthModal({
     router.push("/");
   };
 
-  const isFormValid = name.trim().length > 0 && profession && city && agreed;
+  const hasSpecialChar = name.trim().length > 0 && /[^a-zA-Z\s]/.test(name);
+  const isFormValid = name.trim().length > 0 && !hasSpecialChar && profession && city && agreed;
 
   // Filter lists based on search
   const filteredCities = cities.filter((c) =>
@@ -132,55 +127,51 @@ export default function AuthModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:p-4 animate-in fade-in duration-300">
-      <div
-        className="relative w-full max-w-md flex flex-col bg-white h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:rounded-3xl overflow-hidden shadow-2xl slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        className="w-[calc(100%-2rem)] max-w-sm p-0 overflow-hidden bg-white rounded-[24px] border border-stone-100 shadow-2xl flex flex-col gap-0 h-auto max-h-[90vh] outline-none animate-in fade-in duration-200"
+        showCloseButton={false}
       >
         {/* ==========================================
             VIEW: CITY SELECTION (Overlay)
         ========================================== */}
         {showCitySelect && step === "ONBOARDING" ? (
           <div className="absolute inset-0 z-20 flex flex-col bg-white h-full slide-in-from-right-full duration-300">
-            <div className="flex items-center px-6 py-4">
-              <button onClick={() => setShowCitySelect(false)} className="mr-4">
-                <ArrowLeft className="h-6 w-6 text-black" />
+            <div className="flex items-center px-4 py-3 border-b border-stone-100">
+              <button onClick={() => setShowCitySelect(false)} className="mr-3 p-1 hover:bg-stone-50 rounded-full transition-colors cursor-pointer flex items-center justify-center">
+                <ArrowLeft className="h-4 w-4 text-stone-700" />
               </button>
+              <h2 className="text-xs font-bold text-stone-800">Select City</h2>
             </div>
 
-            <div className="px-6 pb-4">
-              <h2 className="text-2xl font-bold text-black mb-6">
-                Where do you live?
-              </h2>
-
-              <div className="flex items-center rounded-full border border-slate-300 px-4 py-3 focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600 transition-all">
-                <Search className="h-5 w-5 text-slate-400 mr-3" />
+            <div className="px-4 py-3">
+              <div className="flex items-center rounded-full border border-stone-200 bg-stone-50/50 px-3 py-1.5 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all focus-within:bg-white">
+                <Search className="h-3.5 w-3.5 text-stone-400 mr-2" />
                 <input
                   type="text"
                   placeholder="Search your city"
                   value={citySearch}
                   onChange={(e) => setCitySearch(e.target.value)}
-                  className="w-full text-base outline-none text-slate-900"
+                  className="w-full text-xs outline-none text-stone-800 bg-transparent"
                   autoFocus
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6">
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
               {filteredCities.map((c, idx) => (
                 <label
                   key={idx}
-                  className="flex items-center justify-between py-4 border-b border-dashed border-slate-200 cursor-pointer"
+                  className="flex items-center justify-between py-2 border-b border-dashed border-stone-100 cursor-pointer animate-in fade-in duration-150"
                 >
-                  <span className="text-lg text-slate-800">{c}</span>
+                  <span className="text-xs text-stone-700">{c}</span>
                   <div
-                    className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${city === c ? "border-blue-600" : "border-slate-300"}`}
+                    className={`h-4 w-4 rounded-full border flex items-center justify-center ${city === c ? "border-amber-500" : "border-stone-300"}`}
                   >
                     {city === c && (
-                      <div className="h-3 w-3 rounded-full bg-blue-600" />
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
                     )}
                   </div>
-                  {/* Hidden radio for accessibility */}
                   <input
                     type="radio"
                     name="city"
@@ -203,45 +194,41 @@ export default function AuthModal({
         ========================================== */}
         {showWorkSelect && step === "ONBOARDING" ? (
           <div className="absolute inset-0 z-20 flex flex-col bg-white h-full slide-in-from-right-full duration-300">
-            <div className="flex items-center px-6 py-4">
-              <button onClick={() => setShowWorkSelect(false)} className="mr-4">
-                <ArrowLeft className="h-6 w-6 text-black" />
+            <div className="flex items-center px-4 py-3 border-b border-stone-100">
+              <button onClick={() => setShowWorkSelect(false)} className="mr-3 p-1 hover:bg-stone-50 rounded-full transition-colors cursor-pointer flex items-center justify-center">
+                <ArrowLeft className="h-4 w-4 text-stone-700" />
               </button>
+              <h2 className="text-xs font-bold text-stone-800">Select Profession</h2>
             </div>
 
-            <div className="px-6 pb-4">
-              <h2 className="text-2xl font-bold text-black mb-6">
-                What work do you do?
-              </h2>
-
-              <div className="flex items-center rounded-full border border-slate-300 px-4 py-3 focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600 transition-all">
-                <Search className="h-5 w-5 text-slate-400 mr-3" />
+            <div className="px-4 py-3">
+              <div className="flex items-center rounded-full border border-stone-200 bg-stone-50/50 px-3 py-1.5 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all focus-within:bg-white">
+                <Search className="h-3.5 w-3.5 text-stone-400 mr-2" />
                 <input
                   type="text"
                   placeholder="Search profession"
                   value={workSearch}
                   onChange={(e) => setWorkSearch(e.target.value)}
-                  className="w-full text-base outline-none text-slate-900"
+                  className="w-full text-xs outline-none text-stone-800 bg-transparent"
                   autoFocus
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6">
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
               {filteredProfessions.map((p, idx) => (
                 <label
                   key={idx}
-                  className="flex items-center justify-between py-4 border-b border-dashed border-slate-200 cursor-pointer"
+                  className="flex items-center justify-between py-2 border-b border-dashed border-stone-100 cursor-pointer animate-in fade-in duration-150"
                 >
-                  <span className="text-lg text-slate-800">{p}</span>
+                  <span className="text-xs text-stone-700">{p}</span>
                   <div
-                    className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${profession === p ? "border-blue-600" : "border-slate-300"}`}
+                    className={`h-4 w-4 rounded-full border flex items-center justify-center ${profession === p ? "border-amber-500" : "border-stone-300"}`}
                   >
                     {profession === p && (
-                      <div className="h-3 w-3 rounded-full bg-blue-600" />
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
                     )}
                   </div>
-                  {/* Hidden radio for accessibility */}
                   <input
                     type="radio"
                     name="profession"
@@ -262,38 +249,37 @@ export default function AuthModal({
         {/* ==========================================
             MAIN CONTENT AREA
         ========================================== */}
-        <div className="flex-1 flex flex-col overflow-y-auto">
+        <div className="flex-1 flex flex-col">
           {/* --- STEP 1: PHONE --- */}
           {step === "PHONE" && (
-            <div className="flex flex-col h-full px-6 py-6">
-              <div className="flex justify-end mb-6">
+            <div className="flex flex-col px-5 py-5 animate-in fade-in duration-350">
+              <div className="flex justify-end mb-2">
                 <button
                   onClick={handleSkip}
-                  className="rounded-xl border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 active:scale-95 transition-transform"
+                  className="rounded-full border border-stone-200 px-4 py-1 text-xs font-semibold text-stone-600 active:scale-95 transition-transform hover:bg-stone-50 cursor-pointer"
                 >
                   Skip
                 </button>
               </div>
 
               <div className="flex-1 flex flex-col">
-                <div className="mb-6 h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                  <PhoneCall className="h-6 w-6" />
+                <div className="mb-4 h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+                  <PhoneCall className="h-5 w-5" />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-stone-900">
                   Enter your phone number
                 </h2>
-                <p className="mt-2 text-base text-slate-500">
+                <p className="mt-1 text-xs text-stone-500 leading-normal">
                   We'll send you a text with a verification code.
-                  <br /> Standard tariff may apply.
                 </p>
 
-                <div className="mt-8 flex rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black overflow-hidden transition-all">
-                  <div className="flex items-center gap-1 border-r border-slate-300 px-4 bg-transparent">
-                    <span className="text-base text-slate-800 font-medium">
+                <div className="mt-5 flex rounded-xl border border-stone-200 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 overflow-hidden transition-all bg-stone-50/20">
+                  <div className="flex items-center gap-1 border-r border-stone-200 px-3 bg-stone-50/50">
+                    <span className="text-sm text-stone-700 font-medium">
                       +91
                     </span>
-                    <ChevronDown className="h-4 w-4 text-slate-600" />
+                    <ChevronDown className="h-3.5 w-3.5 text-stone-400" />
                   </div>
                   <input
                     type="tel"
@@ -303,30 +289,30 @@ export default function AuthModal({
                     onChange={(e) =>
                       setPhone(e.target.value.replace(/\D/g, ""))
                     }
-                    className="w-full px-4 py-4 text-base text-slate-900 outline-none font-medium"
+                    className="w-full px-3 py-2.5 text-sm text-stone-900 outline-none font-medium animate-none bg-transparent"
                     placeholder="Phone number"
                   />
                 </div>
               </div>
 
-              <div className="mt-auto pt-6 pb-2 text-center">
-                <p className="text-sm text-slate-600 mb-4">
+              <div className="mt-8 pt-4 border-t border-stone-100 text-center">
+                <p className="text-[11px] text-stone-400 mb-3">
                   By continuing, you agree to our{" "}
-                  <span className="underline font-medium cursor-pointer">
+                  <span className="underline font-medium cursor-pointer text-stone-500">
                     T&C
                   </span>{" "}
                   and{" "}
-                  <span className="underline font-medium cursor-pointer">
+                  <span className="underline font-medium cursor-pointer text-stone-500">
                     Privacy policy
                   </span>
                 </p>
                 <button
                   onClick={handlePhoneSubmit}
                   disabled={phone.length < 10}
-                  className={`w-full rounded-xl py-4 font-bold transition-all active:scale-[0.98] ${
+                  className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer ${
                     phone.length >= 10
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-400"
+                      ? "bg-amber-500 text-white shadow-md shadow-amber-500/10 hover:bg-amber-600"
+                      : "bg-stone-100 text-stone-400 cursor-not-allowed"
                   }`}
                 >
                   Continue
@@ -337,34 +323,33 @@ export default function AuthModal({
 
           {/* --- STEP 2: OTP --- */}
           {step === "OTP" && (
-            <div className="flex flex-col h-full px-6 py-6">
-              <button onClick={() => setStep("PHONE")} className="mb-8 w-fit">
-                <ArrowLeft className="h-6 w-6 text-black" />
+            <div className="flex flex-col px-5 py-5 animate-in fade-in duration-350">
+              <button onClick={() => setStep("PHONE")} className="mb-4 w-fit p-1 hover:bg-stone-50 rounded-full transition-colors cursor-pointer flex items-center justify-center">
+                <ArrowLeft className="h-4 w-4 text-stone-700" />
               </button>
 
               <div className="flex-1 flex flex-col">
-                <div className="mb-6 h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                  <MessageSquare className="h-6 w-6" />
+                <div className="mb-4 h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
+                  <MessageSquare className="h-5 w-5" />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-stone-900">
                   Enter verification code
                 </h2>
-                <p className="mt-2 text-base text-slate-500">
-                  A 6-digit verification code has been sent on
-                  <br /> +91 {phone}
+                <p className="mt-1 text-xs text-stone-500 leading-normal">
+                  A 6-digit code has been sent on +91 {phone}
                 </p>
 
-                <div className="mt-8 flex justify-between gap-2 max-w-[320px]">
+                <div className="mt-5 flex justify-between gap-1.5 max-w-[280px]">
                   {otp.map((digit, index) => (
                     <div
                       key={index}
-                      className={`flex h-12 w-11 sm:h-14 sm:w-12 items-center justify-center rounded-xl border text-xl font-medium transition-all ${
+                      className={`flex h-10 w-9 items-center justify-center rounded-lg border text-sm font-semibold transition-all ${
                         digit !== ""
-                          ? "border-slate-800 text-slate-900"
+                          ? "border-stone-850 text-stone-900 bg-stone-50/30"
                           : index === 0
-                            ? "border-blue-600 shadow-[0_0_0_1px_rgba(37,99,235,1)]"
-                            : "border-slate-300"
+                            ? "border-amber-500 shadow-[0_0_0_1px_rgba(245,158,11,1)]"
+                            : "border-stone-200"
                       }`}
                     >
                       {digit ||
@@ -377,11 +362,14 @@ export default function AuthModal({
                   ))}
                 </div>
 
-                <div className="mt-8 border-t border-dashed border-slate-300 pt-6">
-                  <div className="flex items-center gap-2 text-slate-800 font-medium">
-                    <span>⏱</span>
-                    <span>0:{timer < 10 ? `0${timer}` : timer}</span>
-                  </div>
+                <div className="mt-5 flex items-center gap-2 text-[10px] text-amber-600 bg-amber-50/50 px-2.5 py-1 rounded-full w-fit animate-pulse">
+                  <span className="h-1 w-1 rounded-full bg-amber-500" />
+                  <span>Auto-filling mock verification code...</span>
+                </div>
+
+                <div className="mt-6 border-t border-dashed border-stone-200 pt-4 flex items-center gap-1.5 text-stone-400 font-medium text-xs">
+                  <span>⏱</span>
+                  <span>0:{timer < 10 ? `0${timer}` : timer}</span>
                 </div>
               </div>
             </div>
@@ -389,109 +377,104 @@ export default function AuthModal({
 
           {/* --- STEP 3: ONBOARDING --- */}
           {step === "ONBOARDING" && (
-            <div className="flex flex-col h-full bg-slate-50/50">
-              {/* Optional Header equivalent */}
-              <div className="flex justify-end p-4 pb-0">
-                <button className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold shadow-sm">
-                  <span className="text-lg">Aअ</span> English
+            <div className="flex flex-col bg-white animate-in fade-in duration-350">
+              <div className="flex justify-end p-3 pb-0">
+                <button className="flex items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[10px] font-bold shadow-xs hover:bg-stone-50 cursor-pointer">
+                  <span className="text-xs">Aअ</span> English
                 </button>
               </div>
 
-              <div className="px-6 pt-6 pb-8 flex-1 flex flex-col">
-                <h2 className="text-3xl font-extrabold text-slate-900 mb-8">
+              <div className="px-5 pt-2 pb-5 flex-1 flex flex-col">
+                <h2 className="text-lg font-bold text-stone-900 mb-3.5">
                   Tell us about yourself!
                 </h2>
 
-                <div className="space-y-6 flex-1">
+                <div className="space-y-3 flex-1">
                   {/* Name Input */}
                   <div>
-                    <label className="text-base font-medium text-slate-800 ml-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
                       What's your name?
                     </label>
                     <div
-                      className={`mt-2 rounded-full border px-5 py-3.5 bg-white transition-all ${name ? "border-blue-600" : "border-slate-300"}`}
+                      className={`mt-1 rounded-xl border px-3 py-1.5 bg-stone-50/50 hover:bg-stone-50 focus-within:bg-white focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all ${name ? "border-amber-500" : "border-stone-200"}`}
                     >
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. Himanshu"
-                        className="w-full outline-none text-base text-slate-900"
+                        className="w-full outline-none text-xs text-stone-900 bg-transparent"
+                        autoFocus
                       />
                     </div>
-                    <p className="mt-3 ml-1 text-xs text-amber-700">
-                      Special Characters like !@#$%^&*()_+={`{}`};~,. are not
-                      allowed
-                    </p>
+                    {hasSpecialChar && (
+                      <p className="mt-1 ml-1 text-[9px] text-red-500 font-semibold leading-normal">
+                        Special characters are not allowed
+                      </p>
+                    )}
                   </div>
 
-                  {/* Profession Select Trigger */}
-                  <div>
-                    <label className="text-base font-medium text-slate-800 ml-1">
-                      What work do you do?
-                    </label>
-                    <div
-                      onClick={() => setShowWorkSelect(true)}
-                      className="mt-2 flex items-center justify-between rounded-full border border-slate-300 bg-white px-5 py-3.5 cursor-pointer hover:border-blue-600 transition-all"
-                    >
-                      <span
-                        className={`text-base ${profession ? "text-slate-900" : "text-slate-400"}`}
+                  {/* Profession & City inputs side by side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Profession Select Trigger */}
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
+                        Work
+                      </label>
+                      <div
+                        onClick={() => setShowWorkSelect(true)}
+                        className="mt-1 flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-amber-500 px-3 py-1.5 cursor-pointer transition-all"
                       >
-                        {profession || "Select profession"}
-                      </span>
-                      <ChevronDown className="h-5 w-5 text-blue-600" />
+                        <span
+                          className={`text-xs truncate ${profession ? "text-stone-900 font-medium" : "text-stone-400"}`}
+                        >
+                          {profession || "Select"}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-stone-400 shrink-0 ml-1" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* City Select Trigger */}
-                  <div>
-                    <label className="text-base font-medium text-slate-800 ml-1">
-                      Where do you live?
-                    </label>
-                    <div
-                      onClick={() => setShowCitySelect(true)}
-                      className="mt-2 flex items-center justify-between rounded-full border border-slate-300 bg-white px-5 py-3.5 cursor-pointer hover:border-blue-600 transition-all"
-                    >
-                      <span
-                        className={`text-base ${city ? "text-slate-900" : "text-slate-400"}`}
+                    {/* City Select Trigger */}
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
+                        City
+                      </label>
+                      <div
+                        onClick={() => setShowCitySelect(true)}
+                        className="mt-1 flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-amber-500 px-3 py-1.5 cursor-pointer transition-all"
                       >
-                        {city || "Select your city"}
-                      </span>
-                      <ChevronDown className="h-5 w-5 text-blue-600" />
+                        <span
+                          className={`text-xs truncate ${city ? "text-stone-900 font-medium" : "text-stone-400"}`}
+                        >
+                          {city || "Select"}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-stone-400 shrink-0 ml-1" />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Bottom Actions */}
-                <div className="mt-8 flex flex-col gap-4">
-                  <label className="flex items-start gap-3 rounded-xl bg-slate-100 p-4 cursor-pointer">
-                    <div className="relative flex items-center mt-1">
-                      <input
-                        type="checkbox"
-                        checked={agreed}
-                        onChange={(e) => setAgreed(e.target.checked)}
-                        className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
-                      />
-                    </div>
-                    <p className="text-sm text-slate-700 leading-tight">
-                      By proceeding, you agree to Urban Company's <br />
-                      <span className="font-bold underline cursor-pointer">
-                        Terms & conditions
-                      </span>{" "}
-                      and{" "}
-                      <span className="font-bold underline cursor-pointer">
-                        Privacy policy
-                      </span>
+                <div className="mt-4 flex flex-col gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer py-1">
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
+                      className="h-4 w-4 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-stone-400 leading-normal">
+                      I agree to Velora's <span className="underline font-medium text-stone-500">T&C</span> and <span className="underline font-medium text-stone-500">Privacy policy</span>
                     </p>
                   </label>
 
                   <button
                     onClick={handleComplete}
                     disabled={!isFormValid}
-                    className={`w-full rounded-full py-4 font-bold text-lg transition-all active:scale-[0.98] ${
+                    className={`w-full rounded-xl py-2 font-bold text-xs transition-all active:scale-[0.98] cursor-pointer ${
                       isFormValid
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-slate-200 text-slate-400"
+                        ? "bg-amber-500 text-white shadow-md shadow-amber-500/10 hover:bg-amber-600"
+                        : "bg-stone-100 text-stone-400 cursor-not-allowed"
                     }`}
                   >
                     Continue
@@ -501,26 +484,25 @@ export default function AuthModal({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Floating Notification Message */}
-      <div
-        className={`fixed left-1/2 z-[60] w-[90%] max-w-sm -translate-x-1/2 rounded-2xl bg-slate-800 p-4 text-white shadow-2xl transition-all duration-500 ${
-          notification.visible
-            ? "bottom-6 sm:bottom-10 opacity-100"
-            : "-bottom-24 opacity-0"
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500">
-            <MessageSquare className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-300">Messages • Now</p>
-            <p className="text-sm font-medium">{notification.message}</p>
+        {/* Floating Notification Message */}
+        <div
+          className={`fixed left-1/2 z-[60] w-[90%] max-w-xs -translate-x-1/2 rounded-2xl bg-stone-900 p-3 text-white shadow-2xl transition-all duration-500 ${
+            notification.visible
+              ? "bottom-6 opacity-100"
+              : "-bottom-24 opacity-0"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500">
+              <MessageSquare className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-medium text-stone-400">Messages • Now</p>
+              <p className="text-xs font-medium">{notification.message}</p>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -12,6 +12,15 @@ export function useMobileHome() {
 
     useEffect(() => {
         setIsMounted(true);
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get("tab");
+            if (tab) {
+                setTimeout(() => {
+                    scrollToSection(tab);
+                }, 400);
+            }
+        }
     }, []);
 
     const getVisibleElementById = (id: string): HTMLElement | null => {

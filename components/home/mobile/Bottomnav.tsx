@@ -50,7 +50,7 @@ export default function BottomNav({
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-100 flex justify-around py-2.5 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-stone-100 flex justify-around py-2.5 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
             {navItems.map(({ id, label, icon: Icon, color }) => {
                 const isActive = activeTab === id || (id === "top" && activeTab === "home");
                 const colorClasses = {
