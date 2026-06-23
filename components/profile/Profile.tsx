@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { tempUser, UserProfile } from "@/utils/data/tempUserData";
+import AuthModal from "../auth/AuthModal";
 
 // ==========================================
 // 1. ACCOUNT COMPONENT
@@ -168,6 +169,7 @@ const SettingsSection = () => {
 // 4. ABOUT COMPONENT
 // ==========================================
 const AboutSection = () => {
+    const [loginOpen, setLoginOpen] = useState(false);
   return (
     <AccordionItem value="about" className="border-none py-2">
       <AccordionTrigger className="hover:no-underline">
@@ -184,7 +186,7 @@ const AboutSection = () => {
             <span className="font-medium">Privacy Policy</span>
             <span className="text-slate-400">→</span>
           </button>
-          <button className="mt-4 flex w-full items-center justify-between rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50">
+          <button onClick={() => setLoginOpen(true)} className="mt-4 flex w-full items-center justify-between rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50">
             <span className="font-medium">Log Out</span>
           </button>
         </div>
@@ -193,6 +195,8 @@ const AboutSection = () => {
           <p className="text-xs font-medium text-slate-400">App Version 1.0.4</p>
         </div>
       </AccordionContent>
+
+      {loginOpen && (<AuthModal onClose={()=> setLoginOpen(false)} />)}
     </AccordionItem>
   );
 };
@@ -223,6 +227,7 @@ export default function ProfilePage() {
           <SettingsSection />
           <AboutSection />
         </Accordion>
+        
       </div>
     </div>
   );
