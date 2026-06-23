@@ -55,8 +55,8 @@ function ServiceCard({
                 <Image
                     src={image}
                     alt={label}
-                    fill
-                    sizes="56px"
+                    width={250}
+                    height={250}
                     className="object-contain p-0"
                 />
             </div>

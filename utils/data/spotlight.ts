@@ -2,6 +2,7 @@ import { SpotlightCardItem } from "@/types";
 
 export const SPOTLIGHT_CARDS: SpotlightCardItem[] = [
     {
+        id: "1",
         badge: "Trending",
         title: "Luxury Couple Massage Retreat",
         subtitle: "Unwind together with dual custom massage treatments.",
@@ -11,6 +12,7 @@ export const SPOTLIGHT_CARDS: SpotlightCardItem[] = [
         isDarkText: false,
     },
     {
+        id: "2",
         badge: "Certified Clinical",
         title: "Posture & Spine Care",
         subtitle: "Relieve chronic back strain with specialized physio routines.",
@@ -20,6 +22,7 @@ export const SPOTLIGHT_CARDS: SpotlightCardItem[] = [
         isDarkText: true,
     },
     {
+        id: "3",
         badge: "New Launch",
         title: "Gold Radiance Skin Therapy",
         subtitle: "Dermatologist-approved facial glow in the comfort of home.",
@@ -29,6 +32,7 @@ export const SPOTLIGHT_CARDS: SpotlightCardItem[] = [
         isDarkText: false,
     },
     {
+        id: "4",
         badge: "Best Seller",
         title: "Deep Stress Release Massage",
         subtitle: "Soothing massage using lavender, chamomile & warm organic oils.",

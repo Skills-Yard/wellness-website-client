@@ -8,10 +8,10 @@ import { useCart } from "@/context/CartContext";
 import { NavLinkType } from "@/types";
 import { LOCATIONS, NAV_LINKS, SERVICE_SUGGESTIONS, UNSUPPORTED_LOCATIONS } from "@/utils/data";
 import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/dropdown-menu";
-import { Button } from "@/ui/button";
-import { Input } from "@/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Navbar() {
     const { 
@@ -124,7 +124,7 @@ export default function Navbar() {
     return (
         <nav
             className={cn(
-                "w-full sticky top-0 z-50 bg-white border-b border-gray-100 transition-all duration-300 h-16 md:h-18 flex items-center",
+                "w-full sticky top-0 z-50 bg-white border-b border-gray-100 transition-all duration-300 h-16 md:h-18 hidden md:flex items-center",
                 scrolled ? "shadow-md" : "shadow-sm"
             )}
         >
