@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import SubDetailPopUp from './subdetail/mainfile';
+import SpaBookingLayout from './SpaBookingLayout';
 
 const containerStyle: React.CSSProperties = {
   display: 'flex',
@@ -26,13 +27,18 @@ export default function ButtonPop() {
 
   return (
     <>
-      <div style={containerStyle}>
+    <section className='bg-white' >
+
+    <SpaBookingLayout/>
+    </section>
+      {/* <div style={containerStyle}>
         <button onClick={() => setOpen(true)} style={buttonStyle}>
           Open Subdetail Popup
         </button>
       </div>
 
-      {open && <SubDetailPopUp onClose={() => setOpen(false)} />}
+      {open && <SubDetailPopUp onClose={() => setOpen(false)} />} */}
+
     </>
   );
 }
