@@ -14,14 +14,27 @@ export function useMobileHome() {
         setIsMounted(true);
     }, []);
 
+    const getVisibleElementById = (id: string): HTMLElement | null => {
+        if (typeof document === "undefined") return null;
+        const elements = document.querySelectorAll(`#${id}`);
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i] as HTMLElement;
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 || rect.height > 0) {
+                return el;
+            }
+        }
+        return document.getElementById(id);
+    };
+
     useEffect(() => {
         const handleScroll = () => {
             setHeaderScrolled(window.scrollY > 20);
 
             const scrollPos = window.scrollY + 120;
-            const massageEl = document.getElementById("massage");
-            const wellnessEl = document.getElementById("wellness");
-            const physioEl = document.getElementById("physiotherapy");
+            const massageEl = getVisibleElementById("massage");
+            const wellnessEl = getVisibleElementById("wellness");
+            const physioEl = getVisibleElementById("physiotherapy");
 
             if (physioEl && scrollPos >= physioEl.offsetTop) {
                 setActiveTab("physiotherapy");
@@ -38,29 +51,27 @@ export function useMobileHome() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Traverses all offsetParents to get true absolute top position
-    // (handles overflow:hidden parents that break scrollIntoView & getBoundingClientRect)
-    const getAbsoluteOffsetTop = (el: HTMLElement): number => {
-        let top = 0;
-        let current: HTMLElement | null = el;
-        while (current) {
-            top += current.offsetTop;
-            current = current.offsetParent as HTMLElement | null;
-        }
-        return top;
-    };
-
     const scrollToSection = (id: string) => {
-        setActiveTab(id === "top" ? "home" : id);
+        // Scroll to top
         if (id === "top") {
+            setActiveTab("home");
             window.scrollTo({ top: 0, behavior: "smooth" });
             return;
         }
-        const element = document.getElementById(id);
+
+        // Scroll to section
+        const element = getVisibleElementById(id);
         if (element) {
-            const headerOffset = 70;
-            const top = getAbsoluteOffsetTop(element) - headerOffset;
-            window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+            const headerHeight = 70;
+            const elementTop = element.getBoundingClientRect().top + window.scrollY;
+            const scrollTop = elementTop - headerHeight;
+
+            window.scrollTo({
+                top: Math.max(0, scrollTop),
+                behavior: "smooth",
+            });
+
+            setActiveTab(id);
         }
     };
 
@@ -83,7 +94,9 @@ export function useMobileHome() {
         else if (SERVICE_SUGGESTIONS.Wellness.includes(suggestion)) targetId = "wellness";
         else if (SERVICE_SUGGESTIONS.Physiotherapy.includes(suggestion)) targetId = "physiotherapy";
 
-        if (targetId) scrollToSection(targetId);
+        if (targetId) {
+            setTimeout(() => scrollToSection(targetId), 0);
+        }
     };
 
     return {

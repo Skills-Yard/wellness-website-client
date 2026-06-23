@@ -64,10 +64,7 @@ export default function MobileHome() {
 
       <BottomNav
         activeTab={activeTab}
-        cartCount={cartCount}
-        isMounted={isMounted}
         onTabClick={scrollToSection}
-        onCartOpen={() => setIsCartOpen(true)}
       />
     </div>
   );
