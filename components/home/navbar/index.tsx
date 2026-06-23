@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
     const { 
@@ -31,6 +32,8 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+
+    const router = useRouter();
 
     const searchRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +123,11 @@ export default function Navbar() {
         Wellness: "Search wellness services…",
         Physiotherapy: "Search physio treatments…",
     };
+
+    const handleRedirect = () => {
+    // router.push() aapko naye path par le jayega
+    router.push("/profile"); // "/cart" ko apne target path se replace karein
+  };
 
     return (
         <nav
@@ -280,6 +288,9 @@ export default function Navbar() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] border-gray-100 bg-white">
+                            <DropdownMenuItem onClick={() => {handleRedirect}} className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors">
+                                Profile
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => alert("My Bookings section coming soon!")} className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors">
                                 My Bookings
                             </DropdownMenuItem>

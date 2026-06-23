@@ -3,6 +3,7 @@
 import { BentoCardItem, CategoryServiceItem } from "@/types";
 import { HEADER_BENTO_CARDS, HEADER_CATEGORIES } from "@/utils/data";
 import Image from "next/image";
+import Link from "next/link";
 
 
 function BentoCard({
@@ -39,31 +40,35 @@ function ServiceCard({
     badge,
     badgeColor,
     bg,
+    path
 }: CategoryServiceItem) {
     return (
-        <button
-            className={`relative flex flex-col items-center gap-3.5 p-4 rounded-2xl ${bg} hover:scale-[1.02] transition-all duration-300 group cursor-pointer w-full shadow-xs`}
-        >
-            {badge && (
-                <span
-                    className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-wider font-extrabold text-white px-2.5 py-0.5 rounded-full ${badgeColor} shadow-sm z-10 leading-none`}
-                >
-                    {badge}
+        <Link href={path}>
+
+            <button
+                className={`relative flex flex-col items-center gap-3.5 p-4 rounded-2xl ${bg} hover:scale-[1.02] transition-all duration-300 group cursor-pointer w-full shadow-xs`}
+            >
+                {badge && (
+                    <span
+                        className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-wider font-extrabold text-white px-2.5 py-0.5 rounded-full ${badgeColor} shadow-sm z-10 leading-none`}
+                    >
+                        {badge}
+                    </span>
+                )}
+                <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                    <Image
+                        src={image}
+                        alt={label}
+                        width={250}
+                        height={250}
+                        className="object-contain p-0"
+                    />
+                </div>
+                <span className="text-[12px] font-bold text-gray-800 text-center leading-tight group-hover:text-amber-500 transition-colors">
+                    {label}
                 </span>
-            )}
-            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                <Image
-                    src={image}
-                    alt={label}
-                    width={250}
-                    height={250}
-                    className="object-contain p-0"
-                />
-            </div>
-            <span className="text-[12px] font-bold text-gray-800 text-center leading-tight group-hover:text-amber-500 transition-colors">
-                {label}
-            </span>
-        </button>
+            </button>
+        </Link>
     );
 }
 

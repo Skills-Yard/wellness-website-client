@@ -13,4 +13,5 @@ export interface CategoryServiceItem {
     badge?: string | null;
     badgeColor?: string;
     bg: string;
+    path:string;
 }

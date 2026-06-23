@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -10,10 +12,10 @@ import { ArrowLeft } from "lucide-react";
 export default function SpaBookingLayout() {
   const [open, setOpen] = useState(false);
   const [selectedSubService, setSelectedSubService] = useState<any>(null);
-  
+
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type") || "massage";
-  
+
   const { addToCart } = useCart();
 
   const normalizedType = typeParam === "physiotherapy" || typeParam === "physio" ? "physio" : typeParam;
@@ -21,6 +23,19 @@ export default function SpaBookingLayout() {
 
   const activeCategories = detailData.categories;
   const activeServices = detailData.services;
+
+  React.useEffect(() => {
+    const idParam = searchParams.get("id");
+    if (idParam && activeServices) {
+      const prefix = normalizedType === "physio" ? "p" : normalizedType === "massage" ? "m" : "w";
+      const targetId = `${prefix}-s${idParam}`;
+      const foundService = activeServices.find((s) => s.id === targetId);
+      if (foundService) {
+        setSelectedSubService(foundService);
+        setOpen(true);
+      }
+    }
+  }, [searchParams, activeServices, normalizedType]);
 
   const handleOpenDetail = (service: any) => {
     setSelectedSubService(service);
@@ -62,7 +77,6 @@ export default function SpaBookingLayout() {
             </div>
           </div>
 
-          {/* Categories Box */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-4 text-xs font-bold text-slate-400 uppercase tracking-wider relative">
               <span className="bg-white pr-2 relative z-10">Select Section</span>
@@ -74,7 +88,7 @@ export default function SpaBookingLayout() {
                 <Link
                   key={cat.id}
                   href={`#${cat.id}`}
-                  className="flex cursor-pointer flex-col items-center gap-2 text-center group"
+                  className="group flex cursor-pointer flex-col items-center gap-2 text-center"
                 >
                   <div className="relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 transition-transform group-hover:scale-105">
                     <Image
@@ -117,7 +131,7 @@ export default function SpaBookingLayout() {
                 <div className="space-y-8">
                   {categoryServices.map((service, index) => {
                     const hasDiscount = !!(service.originalPrice && service.originalPrice !== service.price);
-                    
+
                     return (
                       <div
                         key={service.id}

@@ -8,6 +8,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
         badge: "Popular",
         badgeColor: "bg-amber-500",
         bg: "bg-white border border-gray-150/60 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-500/5",
+        path:"/detail?type=massage"
     },
     {
         id: 2,
@@ -16,6 +17,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
         badge: "New",
         badgeColor: "bg-emerald-500",
         bg: "bg-white border border-gray-150/60 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/5",
+        path:"/detail?type=wellness"
     },
     {
         id: 3,
@@ -24,6 +26,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
         badge: "Certified",
         badgeColor: "bg-blue-500",
         bg: "bg-white border border-gray-150/60 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5",
+        path:"/detail?type=physio"
     },
 ];
 
