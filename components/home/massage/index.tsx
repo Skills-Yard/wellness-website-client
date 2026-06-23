@@ -7,10 +7,11 @@ import { Navigation } from "swiper/modules";
 import "swiper/css";
 import { useCart } from "@/context/CartContext";
 import { MASSAGE_SERVICES } from "@/utils/data";
-
+import { useRouter } from "next/navigation";
 
 export default function MassageServices() {
     const { addToCart } = useCart();
+    const router = useRouter();
 
     return (
         <section
@@ -74,7 +75,10 @@ export default function MassageServices() {
 
                         return (
                             <SwiperSlide key={item.id} className="h-auto">
-                                <div className="group cursor-pointer select-none flex flex-col justify-between h-full">
+                                <div
+                                    onClick={() => router.push(`/detail?type=massage&id=${item.id}`)}
+                                    className="group cursor-pointer select-none flex flex-col justify-between h-full"
+                                >
                                     <div>
                                         {/* Aspect Ratio Square Image Frame */}
                                         <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-stone-100 mb-2 sm:mb-3 md:mb-4">
