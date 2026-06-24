@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Card, CardContent } from "@/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Check,
   Clock3,
@@ -57,7 +57,7 @@ export default function ServiceCard({
     ((service.originalPrice -
       service.currentPrice) /
       service.originalPrice) *
-      100
+    100
   );
 
   const isInCart = quantity > 0;

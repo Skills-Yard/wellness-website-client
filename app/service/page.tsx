@@ -6,10 +6,6 @@ import Image from "next/image";
 import PromoCard from "@/components/service/promo-card";
 import { promoCards } from "@/utils/data/service-page";
 import { useCart } from "@/context/CartContext";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Card, CardContent } from "@/ui/card";
-import { Input } from "@/ui/input";
 import {
   massageCategories,
   massageServices,
@@ -32,6 +28,9 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export default function ServicePage() {
   const promoIndexRef = useRef(0);

@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { Star, Volume2, VolumeX, Play } from "lucide-react";
-import { Card } from "@/ui/card";
 import type { PromoCardItem } from "@/types/service-page";
+import { Card } from "@/components/ui/card";
 
 interface PromoCardProps {
   data: PromoCardItem;
