@@ -440,3 +440,5 @@ export const DYNAMIC_DETAILS: Record<string, DynamicDetailData> = {
     ]
   }
 };
+
+export type DynamicService = DynamicDetailData["services"][number];

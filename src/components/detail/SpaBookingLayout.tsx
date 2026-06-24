@@ -24,13 +24,14 @@ import {
   X,
   Dot,
 } from "lucide-react";
-import { DYNAMIC_DETAILS } from "@/src/utils/data/detailPage";
+import { DYNAMIC_DETAILS, DynamicService } from "@/src/utils/data/detailPage";
 import { useCart } from "@/src/context/CartContext";
 
 export default function SpaBookingLayout() {
   const [open, setOpen] = useState(false);
 
-  const [selectedSubService, setSelectedSubService] = useState<any>(null);
+  const [selectedSubService, setSelectedSubService] =
+  useState<DynamicService | null>(null);
 
   // New States for Scroll & Menu
 
@@ -113,7 +114,7 @@ export default function SpaBookingLayout() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [activeCategories]);
 
-  const handleOpenDetail = (service: unknown) => {
+  const handleOpenDetail = (service: DynamicService) => {
     setSelectedSubService(service);
 
     setOpen(true);
@@ -793,7 +794,7 @@ export default function SpaBookingLayout() {
       {open && selectedSubService && (
         <SubDetailPopUp
           service={selectedSubService}
-          steps={detailData.steps}
+          steps={detailData.steps as unknown as []}
           onClose={() => {
             setOpen(false);
 
