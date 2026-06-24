@@ -11,8 +11,8 @@ import SetUpImage from "./StepSection/SetUpImage";
 
 type SubDetailPopUpProps = {
   onClose: () => void;
-  service: any;
-  steps: any[];
+  service: unknown;
+  steps: [];
 };
 
 export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPopUpProps) {
@@ -83,7 +83,7 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
+      className={`fixed inset-0 z-70 flex items-end justify-center bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
         mounted ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClose}
