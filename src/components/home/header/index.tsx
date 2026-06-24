@@ -59,9 +59,8 @@ function ServiceCard({
                     <Image
                         src={image}
                         alt={label}
-                        width={250}
-                        height={250}
-                        className="object-contain p-0"
+                        fill
+                        className="object-cover"
                     />
                 </div>
                 <span className="text-[12px] font-bold text-gray-800 text-center leading-tight group-hover:text-amber-500 transition-colors">

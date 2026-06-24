@@ -46,13 +46,12 @@ export default function LocationUnavailableModal({ isOpen, onClose }: LocationUn
                 <div className="p-8 space-y-8">
                     
                     {/* 3D Clay Illustration */}
-                    <div className="relative w-40 h-40 mx-auto">
+                    <div className="relative w-40 h-40 mx-auto rounded-3xl overflow-hidden border border-stone-150/40 shadow-md">
                         <Image
-                            src="/images/3d_wellness.png"
+                            src="/images/wellness_category.png"
                             alt="Vellora Location Availability"
-                            className="object-contain"
-                            width={160}
-                            height={160}
+                            className="object-cover"
+                            fill
                         />
                     </div>
 

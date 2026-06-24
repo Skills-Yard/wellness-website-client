@@ -4,7 +4,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
     {
         id: 1,
         label: "Massage Therapy",
-        image: "/images/3d_massage.png",
+        image: "/images/massage_category.png",
         badge: "Popular",
         badgeColor: "bg-amber-500",
         bg: "bg-white border border-gray-150/60 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-500/5",
@@ -13,7 +13,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
     {
         id: 2,
         label: "Wellness & Spa",
-        image: "/images/3d_wellness.png",
+        image: "/images/wellness_category.png",
         badge: "New",
         badgeColor: "bg-emerald-500",
         bg: "bg-white border border-gray-150/60 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/5",
@@ -22,7 +22,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
     {
         id: 3,
         label: "Physiotherapy",
-        image: "/images/3d_physio.png",
+        image: "/images/physio_category.png",
         badge: "Certified",
         badgeColor: "bg-blue-500",
         bg: "bg-white border border-gray-150/60 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5",
