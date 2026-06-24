@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-key */
 /* eslint-disable react-hooks/set-state-in-effect */
 
 "use client";
@@ -8,9 +9,8 @@ import Image from "next/image";
 
 import { useSearchParams } from "next/navigation";
 
-import { DYNAMIC_DETAILS } from "@/utils/data/detailPage";
 
-import { useCart } from "@/context/CartContext";
+
 
 import SubDetailPopUp from "./subdetail/mainfile";
 
@@ -24,6 +24,8 @@ import {
   X,
   Dot,
 } from "lucide-react";
+import { DYNAMIC_DETAILS } from "@/src/utils/data/detailPage";
+import { useCart } from "@/src/context/CartContext";
 
 export default function SpaBookingLayout() {
   const [open, setOpen] = useState(false);
