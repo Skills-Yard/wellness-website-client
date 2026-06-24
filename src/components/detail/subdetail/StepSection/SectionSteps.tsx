@@ -14,7 +14,7 @@ export default function StepsSection({ steps }: StepsSectionProps) {
 
   return (
     <>
-    <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Optional Heading */}
       <div className="mb-12 text-center sm:text-left">
         <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">

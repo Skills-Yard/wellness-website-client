@@ -10,6 +10,7 @@ export interface DynamicDetailData {
   rating: string;
   reviews: string;
   media: string;
+  video: string;
   categories: { id: string; name: string }[];
   services: {
     id: string;
@@ -35,6 +36,7 @@ export const DYNAMIC_DETAILS: Record<string, DynamicDetailData> = {
     rating: "4.88",
     reviews: "14.5K bookings",
     media: "/images/detail/massage_detail.png",
+    video: "/videos/Massage_Spa.mp4",
     categories: [
       { id: "c1", name: "Stress Relief" },
       { id: "c2", name: "Pain Management" },
@@ -184,6 +186,7 @@ export const DYNAMIC_DETAILS: Record<string, DynamicDetailData> = {
     rating: "4.89",
     reviews: "12.1K bookings",
     media: "/images/detail/wellness_detail.png",
+    video: "/videos/Spa_Massage.mp4",
     categories: [
       { id: "c1", name: "Facial & Glow" },
       { id: "c2", name: "Hair & Scalp Care" },
@@ -315,6 +318,7 @@ export const DYNAMIC_DETAILS: Record<string, DynamicDetailData> = {
     rating: "4.90",
     reviews: "16.4K bookings",
     media: "/images/detail/physio_detail.png",
+    video: "/videos/Massage_Spa.mp4",
     categories: [
       { id: "c1", name: "Spinal Care" },
       { id: "c2", name: "Joint Recovery" },
