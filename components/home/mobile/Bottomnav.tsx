@@ -13,7 +13,7 @@ interface BottomNavProps {
     activeTab: string;
     onTabClick: (id: string) => void;
 }
-
+//dddd
 export default function BottomNav({
     activeTab,
     onTabClick,
