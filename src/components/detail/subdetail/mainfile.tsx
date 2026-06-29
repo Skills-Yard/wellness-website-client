@@ -126,7 +126,7 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
         >
           <SectionHero service={service} />
           
-          <RequirementSelector steps={steps} service={service} />
+          <RequirementSelector steps={steps} />
           <Highlights service={service} />
           
           <SpaFeature service={service} />
