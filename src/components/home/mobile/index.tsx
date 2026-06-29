@@ -14,6 +14,8 @@ import MobileHeader from "./Mobileheader";
 import CategoryGrid from "./Categorygrid";
 import BottomNav from "./Bottomnav";
 import HeroSlider from "./HeroSlider";
+import Image from "next/image";
+import VelloraPromiseCard from "./vellora";
 
 export default function MobileHome() {
   const { location, setLocation, cartCount, setIsCartOpen } = useCart();
@@ -32,7 +34,7 @@ export default function MobileHome() {
   } = useMobileHome();
 
   return (
-    <div className="bg-stone-50/50 min-h-screen pb-24 relative">
+    <div className="bg-stone-50/50 min-h-screen">
       <MobileHeader
         location={location}
         setLocation={setLocation}
@@ -57,10 +59,17 @@ export default function MobileHome() {
         <MassageServices />
         <WallPanel />
         <WellnessServices />
+        <div className="relative my-8 w-[90%]  mx-auto overflow-hidden h-48 rounded-xl hidden max-sm:flex">
+          <Image src={"/images/featured-massage.png"} alt="featured-massage" width={500} height={500} className="absolute inset-0 w-full h-full" />
+        </div>
         <WallPanelTwo />
         <PhysioServices />
+        <div className="relative my-8 w-[90%]  mx-auto overflow-hidden h-48 rounded-xl hidden max-sm:flex">
+          <Image src={"/images/self-care.jpg"} alt="featured-massage" width={500} height={500} className="absolute inset-0 w-full h-full" />
+        </div>
         <ServiceFaq />
       </div>
+      <VelloraPromiseCard />
 
       <BottomNav
         activeTab={activeTab}

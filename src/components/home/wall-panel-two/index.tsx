@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function WallPanelTwo() {
     return (
-        <section className="w-full py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+        <section className="w-full max-sm:hidden py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
             <div className="relative overflow-hidden rounded-tr-xl border border-gray-100 rounded-bl-xl bg-[#EFF6FF] flex flex-col md:flex-row items-center justify-between p-4 sm:p-8 md:p-10 gap-2 min-h-87.5">
 
                 {/* Left Text content */}

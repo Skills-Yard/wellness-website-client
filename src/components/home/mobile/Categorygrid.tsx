@@ -4,30 +4,27 @@ import Link from "next/link";
 
 const mobileCategories = [
     {
-        id: "massage",
-        label: "Massage Therapy",
-        image: "/images/massage_category.png",
-        target: "massage",
-        badge: "Popular",
-        badgeColor: "bg-amber-500",
-        path: '/detail?type=massage',
-    },
-    {
         id: "wellness",
         label: "Wellness & Spa",
-        image: "/images/wellness_category.png",
+        image: "/images/spa/spa.webp",
         target: "wellness",
-        badge: "New",
         badgeColor: "bg-emerald-500",
         path: 'detail?type=wellness',
 
     },
     {
+        id: "massage",
+        label: "Massage Therapy",
+        image: "/images/massage/massage.webp",
+        target: "massage",
+        badgeColor: "bg-amber-500",
+        path: '/detail?type=massage',
+    },
+    {
         id: "physio",
         label: "Physiotherapy",
-        image: "/images/physio_category.png",
+        image: "/images/physiotherapy/physiotherapy.webp",
         target: "physiotherapy",
-        badge: "Certified",
         badgeColor: "bg-blue-500",
         path: '/detail?type=physio',
 
@@ -47,17 +44,7 @@ export default function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
                         <button
                             className="flex flex-col  w-full items-center group cursor-pointer"
                         >
-                            <div className="relative w-16 h-16 sm:w-14 sm:h-14 rounded-xl bg-stone-100 group-hover:bg-amber-50/30 flex items-center justify-center overflow-hidden border border-stone-100/40 shadow-2xs group-hover:border-amber-200 transition-all duration-300">
-                                {cat.badge && (
-                                    <span
-                                        className={cn(
-                                            "absolute top-0 left-1/2 -translate-x-1/2 text-[7px] uppercase font-black text-white px-1.5 py-0.5 rounded-b-md leading-none tracking-wider scale-90 z-10",
-                                            cat.badgeColor
-                                        )}
-                                    >
-                                        {cat.badge}
-                                    </span>
-                                )}
+                            <div className="relative w-18 h-18 sm:w-14 sm:h-14 rounded-xl bg-stone-100 group-hover:bg-amber-50/30 flex items-center justify-center overflow-hidden border border-stone-100/40 shadow-2xs group-hover:border-amber-200 transition-all duration-300">
                                 <Image
                                     src={cat.image}
                                     alt={cat.label}
