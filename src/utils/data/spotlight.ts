@@ -12,6 +12,18 @@ export const SPOTLIGHT_CARDS: SpotlightCardItem[] = [
         isDarkText: false,
     },
     {
+        id: "5",
+        title: "Self care isn't luxury, It's a lifestyle.",
+        subtitle: "",
+        cta: "Explore Plans",
+        bg: "bg-[#231a16]",
+        image: "/images/spotlight_selfcare.png",
+        isDarkText: false,
+        isSpecial: true,
+        specialTitle1: "Self care isn't luxury,",
+        specialTitle2: "It's a lifestyle.",
+    },
+    {
         id: "2",
         badge: "Certified Clinical",
         title: "Posture & Spine Care",

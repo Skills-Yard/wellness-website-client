@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/src/lib/utils";
 import { FAQ_DATA } from "@/src/utils/data";
 
 export default function ServiceFaq() {
     const [activeTab, setActiveTab] = useState<"massage" | "wellness" | "physiotherapy">("massage");
-    const [openId, setOpenId] = useState<number | null>(1); 
+    const [openId, setOpenId] = useState<number | null>(1);
 
     const handleTabChange = (tab: "massage" | "wellness" | "physiotherapy") => {
         setActiveTab(tab);
@@ -39,7 +40,7 @@ export default function ServiceFaq() {
     };
 
     return (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+        <section className="py-16 px-4 max-sm:hidden sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
             <div className="max-w-4xl mx-auto w-full">
                 {/* Header Title */}
                 <div className="text-center mb-10">
@@ -78,7 +79,7 @@ export default function ServiceFaq() {
                     {currentFaqs.map((faq) => {
                         const isOpen = openId === faq.id;
                         const ActiveIcon = tabConfig[activeTab].icon;
-                        
+
                         return (
                             <div
                                 key={faq.id}
@@ -125,18 +126,7 @@ export default function ServiceFaq() {
                 </div>
             </div>
 
-            {/* Bottom trust seal */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 p-5 bg-amber-50/40 border border-amber-100/50 rounded-2xl text-center sm:text-left">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                    <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div className="space-y-0.5">
-                    <h4 className="text-sm font-bold text-gray-900">Vellora Safety & Quality Protocol</h4>
-                    <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                        We screen and train 100% of our professionals. High safety standards and certified tools guaranteed.
-                    </p>
-                </div>
-            </div>
+
         </section>
     );
 }

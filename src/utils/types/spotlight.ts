@@ -7,4 +7,7 @@ export interface SpotlightCardItem {
     bg: string;
     image: string;
     isDarkText: boolean;
+    isSpecial?: boolean;
+    specialTitle1?: string;
+    specialTitle2?: string;
 }

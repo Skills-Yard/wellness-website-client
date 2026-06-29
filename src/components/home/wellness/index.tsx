@@ -8,6 +8,7 @@ import "swiper/css";
 import { useCart } from "@/src/context/CartContext";
 import { WELLNESS_SERVICES } from "@/src/utils/data";
 import { useRouter } from "next/navigation";
+import { Button } from "../../ui/button";
 
 export default function WellnessServices() {
     const { addToCart } = useCart();
@@ -31,24 +32,6 @@ export default function WellnessServices() {
                         Recharge your skin and body with our premium dermatologically tested spa essentials.
                     </p>
                 </div>
-
-                {/* Slider Controls */}
-                <div className="flex items-center gap-2 select-none flex-shrink-0">
-                    <button
-                        type="button"
-                        className="swiper-wellness-prev h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center rounded-lg sm:rounded-xl border border-gray-200 shadow-xs bg-white hover:bg-gray-50 text-gray-700 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-                        aria-label="Previous slide"
-                    >
-                        <ChevronLeft className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-                    </button>
-                    <button
-                        type="button"
-                        className="swiper-wellness-next h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center rounded-lg sm:rounded-xl border border-gray-200 shadow-xs bg-white hover:bg-gray-50 text-gray-700 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-                        aria-label="Next slide"
-                    >
-                        <ChevronRight className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-                    </button>
-                </div>
             </div>
 
             {/* Swiper Slider Relative Shell */}
@@ -62,7 +45,7 @@ export default function WellnessServices() {
                     spaceBetween={12}
                     slidesPerView={1}
                     breakpoints={{
-                        320: { slidesPerView: 2, spaceBetween: 14 },
+                        320: { slidesPerView: 2.12, spaceBetween: 14 },
                         640: { slidesPerView: 2, spaceBetween: 14 },
                         768: { slidesPerView: 3, spaceBetween: 14 },
                         1024: { slidesPerView: 4, spaceBetween: 16 },
@@ -81,7 +64,7 @@ export default function WellnessServices() {
                                 >
                                     <div>
                                         {/* Aspect Ratio Square Image Frame */}
-                                        <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-stone-100 mb-2 sm:mb-3 md:mb-4">
+                                        <div className="relative max-sm:max-h-22 aspect-square w-full rounded-sm sm:rounded-2xl overflow-hidden bg-stone-100 mb-2 sm:mb-3 md:mb-4">
                                             <Image
                                                 src={item.image}
                                                 alt={item.title}
@@ -96,8 +79,8 @@ export default function WellnessServices() {
                                         </div>
 
                                         {/* Text Information Stack */}
-                                        <div className="space-y-1 sm:space-y-1.5">
-                                            <h3 className="text-[12px] sm:text-[13px] md:text-sm lg:text-base font-semibold text-gray-900 line-clamp-2 leading-snug tracking-tight group-hover:text-emerald-600 transition-colors">
+                                        <div className="space-y-1 relative sm:space-y-1.5">
+                                            <h3 className="text-[12px] max-sm:line-clamp-1 sm:text-[13px] md:text-sm lg:text-base font-semibold text-gray-900 line-clamp-2 leading-snug tracking-tight group-hover:text-emerald-600 transition-colors">
                                                 {item.title}
                                             </h3>
 
@@ -107,11 +90,29 @@ export default function WellnessServices() {
                                                 <span className="font-semibold text-gray-900">{item.rating.toFixed(2)}</span>
                                                 <span className="truncate text-gray-600">({item.reviewsCount})</span>
                                             </div>
+
+                                            <Button
+                                                type="button"
+                                                size={"xs"}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToCart({
+                                                        id: item.id.toString() + "-massage",
+                                                        title: item.title,
+                                                        price: item.price,
+                                                        image: item.image,
+                                                        duration: item.duration,
+                                                    });
+                                                }}
+                                                className="hidden text-[8px] px-2 h-5 max-sm:flex absolute right-2 top-4.5"
+                                            >
+                                                Book
+                                            </Button>
                                         </div>
                                     </div>
 
                                     {/* Booking Button and Pricing representation Row */}
-                                    <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
+                                    <div className="flex items-center justify-between gap-2 mt-0.5 flex-wrap">
                                         <div className="flex items-baseline space-x-1 sm:space-x-1.5">
                                             <span className="text-[13px] sm:text-[14px] md:text-base font-bold text-gray-900">
                                                 ₹{item.price.toLocaleString('en-IN')}
@@ -122,22 +123,23 @@ export default function WellnessServices() {
                                                 </span>
                                             )}
                                         </div>
-                                        <button
+                                        <Button
                                             type="button"
+                                            size={"sm"}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 addToCart({
-                                                    id: item.id.toString() + "-wellness",
+                                                    id: item.id.toString() + "-massage",
                                                     title: item.title,
                                                     price: item.price,
                                                     image: item.image,
                                                     duration: item.duration,
                                                 });
                                             }}
-                                            className="px-4.5 py-1.5 text-xs font-extrabold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+                                            className="max-sm:hidden"
                                         >
-                                            ADD
-                                        </button>
+                                            Book
+                                        </Button>
                                     </div>
                                 </div>
                             </SwiperSlide>

@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function WallPanel() {
     return (
         <section className="w-full py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
-            <div className="relative overflow-hidden rounded-tr-xl rounded-bl-xl bg-[#FEF9C3] flex flex-col md:flex-row items-center justify-between p-4 sm:p-8 md:p-10 gap-0 min-h-[350px]">
+            <div className="relative max-sm:hidden overflow-hidden rounded-tr-xl rounded-bl-xl bg-[#FEF9C3] flex flex-col md:flex-row items-center justify-between p-4 sm:p-8 md:p-10 gap-0 min-h-[350px]">
 
                 {/* Left Text content */}
                 <div className="relative z-10 flex-1 flex flex-col items-start justify-center space-y-5 max-sm:space-y-4 py-4 md:py-6 pl-2 sm:pl-4">
@@ -40,6 +40,9 @@ export default function WallPanel() {
                     </Link>
                 </div>
 
+            </div>
+            <div className="w-full h-48 rounded-xl overflow-hidden hidden max-sm:block border relative">
+                <Image src={'/images/featured.webp'} alt="well-panel" className="absolute inset-0 w-full h-full" width={500} height={500} />
             </div>
         </section>
     );
