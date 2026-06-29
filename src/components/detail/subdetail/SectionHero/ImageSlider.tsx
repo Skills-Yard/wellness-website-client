@@ -31,6 +31,8 @@ export default function ImageSlider({ images, count }: ImageSliderProps) {
       <div className="aspect-[16/9] w-full overflow-hidden bg-slate-50">
         <img
           src={slides[activeIndex]}
+          width={390}
+          height={232}
           alt={`Slide ${activeIndex + 1}`}
           className="h-full w-full object-cover"
         />

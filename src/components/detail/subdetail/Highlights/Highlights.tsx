@@ -10,7 +10,7 @@ export default function Highlights({ service }: HighlightsProps) {
   const highlights = service.features || [];
 
   return (
-    <section className="mx-auto w-full border-b border-slate-100 bg-white px-6 py-8 sm:py-10">
+    <section className="mx-auto pt-24 w-full border-b border-slate-100 bg-white px-6 py-8 sm:py-10">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-3">
