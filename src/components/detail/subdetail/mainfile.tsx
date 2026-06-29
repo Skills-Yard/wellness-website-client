@@ -4,10 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import Highlights from "./Highlights/Highlights";
 import SpaFeature from "./Section4/spaFeature";
-import RequirementSelector from "./SelectPack/SelectPack";
 import SectionHero from "./SectionHero/SectionHero";
 import StepsSection from "./StepSection/SectionSteps";
 import SetUpImage from "./StepSection/SetUpImage";
+import RequirementSelector from "./SelectPack/SelectPack";
 
 type SubDetailPopUpProps = {
   onClose: () => void;
@@ -83,26 +83,16 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
 
   return (
     <div
-      className={`fixed inset-0 z-[999] flex items-end justify-center bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
+      className={`fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
         mounted ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClose}
       aria-modal="true"
       role="dialog"
     >
-      {/* Global Close Button */}
-      <button
-        type="button"
-        onClick={handleClose}
-        className="fixed right-4 top-18  z-[60] bg-white inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 shadow-md transition hover:bg-slate-50 hover:text-slate-900 sm:right-6 sm:top-6 cursor-pointer"
-        aria-label="Close popup"
-      >
-        <X className="w-5 h-5" />
-      </button>
-
       {/* Modal Container */}
       <div
-        className={`relative flex h-[92vh] w-ful border border-black max-w-2x flex-col overflow-hidden rounded-t-[32px]  shadow-2xl transition-transform sm:h-auto sm:max-h-[85vh] sm:rounded-3xl ${
+        className={`relative flex h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl transition-transform sm:h-auto sm:max-h-[85vh] sm:rounded-3xl ${
           mounted ? "translate-y-0" : "translate-y-full"
         }`}
         style={{
@@ -114,19 +104,29 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        {/* Close Button: shifted inside the upper corner of the modal */}
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute right-4 top-4 z-[60] bg-white inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 shadow-md transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+          aria-label="Close popup"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         {/* Mobile Drag Handle (Visual Indicator) */}
-        <div className="absolute  left-0 z-40 right-0 top-4 w-20 bg-white px-4 py-1 mx-auto rounded-2xl  z-10 flex items-center justify-center sm:hidden">
-          <div className="h-1.5 w-12 rounded-full bg-black/50" />
+        <div className="absolute left-0 z-40 right-0 top-4 w-20 bg-slate-100 px-4 py-1 mx-auto rounded-2xl flex items-center justify-center sm:hidden">
+          <div className="h-1.5 w-12 rounded-full bg-black/20" />
         </div>
 
         {/* Scrollable Content Area */}
         <div 
           ref={contentRef}
-          className="flex-1 overflow-y-auto hide-scrollbar overflow-x-hidden  overscroll-contain"
+          className="flex-1 mb-20 overflow-y-auto hide-scrollbar overflow-x-hidden overscroll-contain sm:pt-0"
         >
           <SectionHero service={service} />
           
-          <RequirementSelector service={service} steps={steps} />
+          <RequirementSelector steps={steps} service={service} />
           <Highlights service={service} />
           
           <SpaFeature service={service} />

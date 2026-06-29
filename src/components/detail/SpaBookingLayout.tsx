@@ -4,13 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Search,
-  Menu as MenuIcon,
-  X,
-  Star,
-} from "lucide-react";
+import { ArrowLeft, Search, Menu as MenuIcon, X, Star } from "lucide-react";
 import SubDetailPopUp from "./subdetail/mainfile";
 import { DYNAMIC_DETAILS, DynamicService } from "@/src/utils/data/detailPage";
 import { useCart } from "@/src/context/CartContext";
@@ -193,15 +187,15 @@ export default function SpaBookingLayout() {
           muted
         />
         {/* <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" /> */}
-       <div className="absolute flex justify-between bottom-0 p-[16px] inset-x-0 pt-20">
-        <div>
-          <h1 className="text-[20px] font-bold text-[#25180F] mb-[8px] tracking-tight leading-[22px]">
-            Stress Relief Starts Here
-          </h1>
-          <p className="text-[14px] text-[#ffffff] font-semibold leading-[17px]">
-            Body therapies designed for you
-          </p>
-        </div>
+        <div className="absolute flex justify-between bottom-0 p-[16px] inset-x-0 pt-20">
+          <div>
+            <h1 className="text-[20px] font-bold text-[#25180F] mb-[8px] tracking-tight leading-[22px]">
+              Stress Relief Starts Here
+            </h1>
+            <p className="text-[14px] text-[#ffffff] font-semibold leading-[17px]">
+              Body therapies designed for you
+            </p>
+          </div>
           {/* Custom Horizontal Carousel Indicators */}
           <div className="flex gap-1.5 items-end justify-end">
             <span className="w-5 h-1.5 rounded-full bg-white transition-all" />
@@ -219,7 +213,9 @@ export default function SpaBookingLayout() {
           </h2>
           <div className="flex items-center gap-1.5 text-[12px] mb-[12px] text-[#666666] leading-[14px]">
             <Star className="w-3 h-3 fill-[#FFB818] text-[#FFB818]" />
-            <span className="font-bold text-[#000000]">{detailData.rating}</span>
+            <span className="font-bold text-[#000000]">
+              {detailData.rating}
+            </span>
             <span>({detailData.reviews} bookings)</span>
           </div>
           <p className="text-[#666666]">
@@ -265,7 +261,6 @@ export default function SpaBookingLayout() {
       {/* MAIN CONTENT */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:pt-12">
         <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
-          
           {/* LEFT SIDEBAR - CATEGORIES */}
           <div className="hidden lg:block w-full shrink-0 lg:sticky lg:top-24 lg:w-[280px]">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -367,7 +362,8 @@ export default function SpaBookingLayout() {
                           );
 
                           // Mobile Layout Flag: First item OR explicitly set as spotlight
-                          const isSpotlightMobile = index === 0 || service.isSpotlight;
+                          const isSpotlightMobile =
+                            index === 0 || service.isSpotlight;
 
                           return (
                             <div
@@ -395,16 +391,18 @@ export default function SpaBookingLayout() {
                                           {service.tag}
                                         </span>
                                       )}
-                                      
+
                                       <div className="flex justify-between items-start w-full">
                                         <div className="flex flex-col max-w-[calc(100%-85px)]">
                                           <h3 className="text-[16px] font-medium text-[#000000] leading-tight">
                                             {service.title}
                                           </h3>
-                                          
+
                                           <p className="mt-0.5 text-[12px] text-[#666666] flex items-center gap-1">
                                             <Star className="w-3.5 h-3.5 fill-[#FFB818] text-[#FFB818]" />
-                                            <span className="font-medium">{service.rating}</span>
+                                            <span className="font-medium">
+                                              {service.rating}
+                                            </span>
                                             <span>({service.reviews})</span>
                                           </p>
 
@@ -417,7 +415,7 @@ export default function SpaBookingLayout() {
                                             )}
                                           </p>
                                         </div>
-                                        
+
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -430,6 +428,19 @@ export default function SpaBookingLayout() {
                                       </div>
 
                                       <div className="mt-2 flex flex-col gap-1.5">
+                                        <ul className="text-[14px] text-[#666666] font-medium leading-[1.4] space-y-1">
+                                          {service.features
+                                            ?.slice(0, 3)
+                                            .map((feat, i) => (
+                                              <li
+                                                key={i}
+                                                className="flex items-start gap-1.5"
+                                              >
+                                                <span className="w-1 h-1 rounded-full bg-[#666666] shrink-0 mt-[7px]" />
+                                                <span>{feat}</span>
+                                              </li>
+                                            ))}
+                                        </ul>
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -437,29 +448,26 @@ export default function SpaBookingLayout() {
                                           }}
                                           className="w-fit text-[12px] font-medium text-[#D38516]"
                                         >
-                                          View details
+                                          More details
                                         </button>
-                                        <ul className="text-[14px] text-[#666666] font-medium leading-[1.4] space-y-1">
-                                          {service.features?.slice(0, 3).map((feat, i) => (
-                                            <li key={i} className="flex items-start gap-1.5">
-                                              <span className="w-1 h-1 rounded-full bg-[#666666] shrink-0 mt-[7px]" />
-                                              <span>{feat}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
                                       </div>
                                     </div>
                                   </div>
                                 ) : (
                                   /* STANDARD (OTHER ITEMS) */
                                   <div className="flex gap-4 w-full">
-                                    <div className="relative shrink-0 w-[150px] sm:w-[194px] h-[120px] sm:h-[139px] overflow-hidden rounded-lg bg-slate-100 shadow-xs">
+                                    <div className="group relative shrink-0 w-[194px] h-[139px] overflow-hidden rounded-lg bg-slate-100 shadow-xs cursor-pointer">
                                       <Image
                                         src={service.media}
                                         alt={service.title}
                                         fill
                                         className="object-cover"
                                       />
+
+                                      {/* View More Overlay */}
+                                      <div className="absolute bottom-0 inset-x-0 bg-black/60  py-1.5 text-center text-[12px] font-bold text-[#D38516] transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100">
+                                        View Details
+                                      </div>
                                     </div>
 
                                     <div className="flex flex-col flex-1 justify-between py-0.5">
@@ -467,11 +475,15 @@ export default function SpaBookingLayout() {
                                         <h3 className="text-[14px] font-medium text-[#000000] leading-snug">
                                           {service.title}
                                         </h3>
-                                        
+
                                         <p className="mt-1 text-[12px] text-[#666666] flex items-center gap-1">
                                           <Star className="w-3.5 h-3.5 fill-[#FFB818] text-[#FFB818]" />
-                                          <span className="font-medium">{service.rating}</span>
-                                          <span className="truncate">({service.reviews})</span>
+                                          <span className="font-medium">
+                                            {service.rating}
+                                          </span>
+                                          <span className="truncate">
+                                            ({service.reviews})
+                                          </span>
                                         </p>
 
                                         <p className="mt-1 text-[14px] text-[#000000] font-medium flex items-center gap-1.5">
@@ -482,16 +494,6 @@ export default function SpaBookingLayout() {
                                             </span>
                                           )}
                                         </p>
-                                        
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenDetail(service);
-                                          }}
-                                          className="mt-1 w-fit text-[12px] font-medium text-[#D38516]"
-                                        >
-                                          View details
-                                        </button>
                                       </div>
 
                                       <button
@@ -560,12 +562,21 @@ export default function SpaBookingLayout() {
                                       </button>
                                     </div>
                                     <ul className="mt-2 space-y-1.5 text-xs text-slate-500">
-                                      {service.features?.slice(0, 3).map((feat, i) => (
-                                        <li key={i} className="flex items-start gap-3">
-                                          <span className="text-amber-500 font-bold">•</span>
-                                          <span className="line-clamp-1">{feat}</span>
-                                        </li>
-                                      ))}
+                                      {service.features
+                                        ?.slice(0, 3)
+                                        .map((feat, i) => (
+                                          <li
+                                            key={i}
+                                            className="flex items-start gap-3"
+                                          >
+                                            <span className="text-amber-500 font-bold">
+                                              •
+                                            </span>
+                                            <span className="line-clamp-1">
+                                              {feat}
+                                            </span>
+                                          </li>
+                                        ))}
                                     </ul>
                                     <div className="mt-1 flex pt-0">
                                       <button
