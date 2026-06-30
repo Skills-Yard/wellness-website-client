@@ -155,11 +155,26 @@ export default function RequirementSelector({
 
   // Dummy data representing the FAQs
   const faqs = [
-    "How often should I get this spa?",
-    "What are the benefits of this spa",
-    "How often should I get this spa?",
-    "How often should I get this spa?",
-    "How often should I get this spa?",
+    {
+      question: "How often should I get this spa?",
+      answer:
+        "For optimal results and relaxation, we recommend getting this spa treatment once every 2 to 4 weeks.",
+    },
+    {
+      question: "What are the benefits of this spa?",
+      answer:
+        "It deeply hydrates your skin, relieves muscle tension, reduces stress, and improves blood circulation.",
+    },
+    {
+      question: "Is it suitable for sensitive skin?",
+      answer:
+        "Yes, our products are infused with natural lavender essential oils which are generally safe and soothing for sensitive skin.",
+    },
+    {
+      question: "Can I shower immediately after?",
+      answer:
+        "We recommend waiting at least 2 hours before taking a shower with lukewarm water to let the oils absorb.",
+    },
   ];
 
   const toggleFaq = (index) => {
@@ -610,33 +625,54 @@ export default function RequirementSelector({
           </h2>
 
           <div className="flex flex-col">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between py-3.5 border-b border-[#F0F0F0] cursor-pointer group"
-                onClick={() => toggleFaq(index)}
-              >
-                <span className="text-[12px] font-semibold text-[#1A1A1A] pr-4">
-                  {faq}
-                </span>
-                {/* Chevron Icon */}
-                <svg
-                  className={`w-3.5 h-3.5 text-[#1A1A1A] shrink-0 transition-transform duration-200 ${
-                    openFaq === index ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            ))}
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+
+              return (
+                <div key={index} className="border-b border-[#F0F0F0]">
+                  {/* Question Header */}
+                  <div
+                    className="flex items-center justify-between py-3.5 cursor-pointer group"
+                    onClick={() => toggleFaq(index)}
+                  >
+                    <span className="text-[12px] font-semibold text-[#1A1A1A] pr-4">
+                      {faq.question}
+                    </span>
+                    {/* Chevron Icon */}
+                    <svg
+                      className={`w-3.5 h-3.5 text-[#1A1A1A] shrink-0 transition-transform duration-300 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+
+                  {/* Answer Content (Animated Collapse) */}
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isOpen
+                        ? "grid-rows-[1fr] opacity-100 pb-3"
+                        : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="text-[11px] font-medium text-[#666666] leading-[1.5]">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
