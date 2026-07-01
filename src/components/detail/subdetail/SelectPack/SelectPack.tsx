@@ -428,22 +428,22 @@ export default function RequirementSelector({
         <div className="my-[40px]  h-px w-full bg-[#F3EFEB]" />
 
         {/* ---Disclaimer--- */}
-        <div className="w-full max-w-[358px] flex flex-col items-start p-0 gap-4 bg-white font-sans">
+        <div className="w-full max-w-[358px] md:max-w-[700px] lg:max-w-[1000px] md:mx-auto flex flex-col items-start p-0 gap-4 md:gap-6 lg:gap-8 bg-white font-sans">
           {/* Disclaimer Title */}
-          <h3 className="text-[20px] font-semibold leading-[1.16] text-[#000000] tracking-tight m-0">
+          <h3 className="text-[20px] md:text-[24px] lg:text-[28px] font-semibold leading-[1.16] text-[#000000] tracking-tight m-0">
             Disclaimer
           </h3>
 
           {/* Lists Layout */}
-          <ul className="w-full p-0 m-0 space-y-3 list-none">
+          <ul className="w-full p-0 m-0 space-y-3 md:space-y-4 lg:space-y-5 list-none">
             {disclaimerItems.map((item, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-[14px] font-medium leading-[1.16] text-[#000000]"
+                className="flex items-start gap-2.5 md:gap-3 lg:gap-4 text-[14px] md:text-[16px] lg:text-[18px] font-medium leading-[1.16] md:leading-[1.4] text-[#000000]"
               >
                 {/* Custom styled check mark mirroring the brown tint screenshot line */}
                 <Check
-                  className="mt-[3px] h-[17px] w-[17px] shrink-0 text-[#8B5A2B]"
+                  className="mt-[3px] md:mt-[4px] lg:mt-[5px] h-[17px] w-[17px] md:h-[20px] md:w-[20px] lg:h-[24px] lg:w-[24px] shrink-0 text-[#8B5A2B]"
                   strokeWidth={2.5}
                 />
                 <span className="flex-1">{item}</span>
