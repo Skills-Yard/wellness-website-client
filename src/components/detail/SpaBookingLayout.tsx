@@ -121,7 +121,7 @@ export default function SpaBookingLayout() {
     <div className="relative w-full bg-white pb-20">
       {/* MOBILE STICKY NAVBAR */}
       <div
-        className={`fixed lg:hidden top-0 inset-x-0 z-[50] transition-colors duration-300  ${
+        className={`fixed lg:hidden md:hidden top-0 inset-x-0 z-[50] transition-colors duration-300  ${
           isScrolled ? "bg-white shadow-sm" : "bg-transparent"
         }`}
       >

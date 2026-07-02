@@ -139,7 +139,7 @@ export default function RequirementSelector({
     {
       title: "Head Massage Oil",
       description: "Infused with Lavendar Essential Oil to calm the senses.",
-      img: "https://images.unsplash.com/photo-1608248593842-8d76e73686da?auto=format&fit=crop&w=150&q=80",
+      img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=150&q=80",
     },
     {
       title: "Hydrating Gel",
@@ -177,7 +177,7 @@ export default function RequirementSelector({
     },
   ];
 
-  const toggleFaq = (index) => {
+  const toggleFaq = (index:any) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
@@ -219,7 +219,7 @@ export default function RequirementSelector({
                     <button
                       key={duration.id}
                       onClick={() => setSelectedDuration(duration.id)}
-                      className={`flex flex-col h-[60px] md:h-[72px] w-[86px] rounded-[8px] items-start border p-3 text-left transition-colors sm:w-24 md:w-32 md:p-4 ${
+                      className={`flex flex-col h-[60px] md:h-18 w-21.5 rounded-[8px] items-start border p-3 text-left transition-colors sm:w-24 md:w-32 md:p-4 ${
                         isSelected
                           ? "border-[#D38516] bg-[#FDFBF8]"
                           : "border-[#000000]/25 bg-[#FDFBF8] hover:border-slate-400"
@@ -456,7 +456,7 @@ export default function RequirementSelector({
         <div className="my-[40px]  h-px w-full bg-[#F3EFEB]" />
 
         {/* --- Item Used --- */}
-        <div className="w-[358px] bg-white font-sans">
+        <div className="w-full bg-white font-sans">
           {/* Title */}
           <h2 className="text-[20px] font-semibold text-[#000000] mb-5">
             Items Used
@@ -547,7 +547,7 @@ export default function RequirementSelector({
             Pre & Post Care
           </h2>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-3 w-full">
             {[
               "Avoid heavy meal before & after massage.",
               "Drink plenty of water before & after the service.",
@@ -581,13 +581,13 @@ export default function RequirementSelector({
         <div className="my-[40px]  h-px w-full bg-[#F3EFEB]" />
 
         {/* ---Include and FAQ's--- */}
-        <div className="w-[359px] bg-white font-sans py-2">
+        <div className="max-sm:w-[359px] max-md:w-[768px]w-full  bg-white font-sans py-2">
           {/* --- What's Included Section --- */}
           <h2 className="text-[17px] font-bold text-[#1A1A1A] mb-5 tracking-tight">
             What's Included
           </h2>
 
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 w-full">
             {includedItems.map((item, index) => (
               <div
                 key={index}

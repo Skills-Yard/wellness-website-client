@@ -177,7 +177,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
               <button
                 key={link}
@@ -206,7 +206,7 @@ export default function Navbar() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 rounded-xl h-9 px-3.5 max-w-[180px] lg:max-w-[220px] justify-start gap-2 data-[state=open]:bg-amber-50 data-[state=open]:border-amber-200 data-[state=open]:text-gray-900 font-normal cursor-pointer"
+                className=" bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 rounded-xl h-9 px-3.5 max-w-[300px] lg:max-w-[350px] justify-start gap-2 data-[state=open]:bg-amber-50 data-[state=open]:border-amber-200 data-[state=open]:text-gray-900 font-normal cursor-pointer"
               >
                 <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span className="truncate flex-1 text-left">
@@ -377,7 +377,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile View Structure: Actions and Shadcn Sheet Side Panel */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-2 ">
           <Button
             onClick={() => setIsCartOpen(true)}
             variant="outline"
