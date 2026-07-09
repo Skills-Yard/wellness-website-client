@@ -19,7 +19,7 @@ export default function SpaBookingLayout() {
 
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type") || "massage";
-  const { addToCart } = useCart();
+  const { addToCart, cartItems, isCartOpen } = useCart();
 
   const normalizedType =
     typeParam === "physiotherapy" || typeParam === "physio"
@@ -708,14 +708,18 @@ export default function SpaBookingLayout() {
       </div>
 
       {/* FLOATING MENU BUTTON - MOBILE ONLY */}
-      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]">
-        <button
-          onClick={() => setIsMenuOpen(true)}
-          className="flex text-[15px] items-center gap-2 bg-[#25180F] text-white px-6 py-3 rounded-full font-bold shadow-xl shadow-black/20 active:scale-95 transition-transform"
-        >
-          <MenuIcon className="w-4 h-4" />
-          Menu
-        </button>
+      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-60">
+        {!isCartOpen && (
+          <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-60">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="flex text-[15px] items-center gap-2 bg-[#25180F] text-white px-6 py-3 rounded-full font-bold shadow-xl shadow-black/20 active:scale-95 transition-transform"
+            >
+              <MenuIcon className="w-4 h-4" />
+              Menu
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MOBILE MENU MODAL */}

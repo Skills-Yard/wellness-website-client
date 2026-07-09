@@ -103,6 +103,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCartItems((prev) => prev.filter((item) => item.id !== id));
     };
 
+    const increaseQuantity = (id: string) => {
+        setCartItems((prev) =>
+            prev.map((item) =>
+                item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+            )
+        );
+    };
+
+    const decreaseQuantity = (id: string) => {
+        setCartItems((prev) =>
+            prev.map((item) =>
+                item.id === id && item.quantity > 1
+                    ? { ...item, quantity: item.quantity - 1 }
+                    : item
+            )
+        );
+    };
+
     const clearCart = () => {
         setCartItems([]);
     };
@@ -130,6 +148,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 setIsCartOpen,
                 addToCart,
                 removeFromCart,
+                increaseQuantity,
+                decreaseQuantity,
                 clearCart,
                 location,
                 setLocation,
