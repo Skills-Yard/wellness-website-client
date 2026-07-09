@@ -8,7 +8,6 @@ import {
   SheetTitle,
 } from "@/src/components/ui/sheet";
 import { useCart } from "@/src/context/CartContext";
-import { BookingDetails, BookingStep } from "@/src/utils/types/Booking";
 import EmptyCart from "./Emptycart";
 import CartView from "./CartView";
 import BookingConfirmation from "./Bookingconfirmation";
@@ -17,6 +16,7 @@ import {
   generateBookingId,
   getTomorrowDateTime,
 } from "@/src/utils/data/Booking";
+import { BookingDetails, BookingStep } from "@/src/utils/types/booking";
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
 export default function CartSheet() {
