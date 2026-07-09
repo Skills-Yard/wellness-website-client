@@ -30,28 +30,10 @@ export default function Inspotlight() {
           <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
             In The Spotlight
           </h2>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed max-sm:hidden">
             Handpicked premium experiences and consultations curated just for
             you
           </p>
-        </div>
-
-        {/* Slider Controls */}
-        <div className="absolute sm:relative right-4 sm:right-0 top-1 sm:top-0 flex items-center gap-2 select-none shrink-0">
-          <button
-            type="button"
-            className="swiper-spotlight-prev h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center rounded-xl border border-gray-200 shadow-xs bg-white hover:bg-gray-50 text-gray-700 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-            aria-label="Previous slide"
-          >
-            <ChevronLeft className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-          </button>
-          <button
-            type="button"
-            className="swiper-spotlight-next h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center rounded-xl border border-gray-200 shadow-xs bg-white hover:bg-gray-50 text-gray-700 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-            aria-label="Next slide"
-          >
-            <ChevronRight className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-          </button>
         </div>
       </div>
 

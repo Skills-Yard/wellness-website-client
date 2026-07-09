@@ -23,12 +23,12 @@ export default function WellnessServices() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-10">
                 <div className="flex-1">
                     <span className="text-emerald-600 font-bold text-xs sm:text-xs md:text-sm uppercase tracking-widest block mb-1 sm:mb-2">
-                        Luxury Beauty Care
+                      PREMIUM BEAUTY CARE
                     </span>
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
-                        Wellness & Beauty Escapes
+                      Most Loved Spa
                     </h2>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed max-sm:hidden">
                         Recharge your skin and body with our premium dermatologically tested spa essentials.
                     </p>
                 </div>
@@ -91,23 +91,6 @@ export default function WellnessServices() {
                                                 <span className="truncate text-gray-600">({item.reviewsCount})</span>
                                             </div>
 
-                                            <Button
-                                                type="button"
-                                                size={"xs"}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    addToCart({
-                                                        id: item.id.toString() + "-massage",
-                                                        title: item.title,
-                                                        price: item.price,
-                                                        image: item.image,
-                                                        duration: item.duration,
-                                                    });
-                                                }}
-                                                className="hidden text-[8px] px-2 h-5 max-sm:flex absolute right-2 top-4.5"
-                                            >
-                                                Book
-                                            </Button>
                                         </div>
                                     </div>
 

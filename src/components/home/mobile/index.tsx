@@ -56,25 +56,34 @@ export default function MobileHome() {
 
       <div className="space-y-2 mt-4">
         <Inspotlight />
-        <MassageServices />
         <WallPanel />
         <WellnessServices />
         <div className="relative my-8 w-[90%]  mx-auto overflow-hidden h-48 rounded-xl hidden max-sm:flex">
-          <Image src={"/images/featured-massage.png"} alt="featured-massage" width={500} height={500} className="absolute inset-0 w-full h-full" />
+          <Image
+            src={"/images/featured-massage.png"}
+            alt="featured-massage"
+            width={500}
+            height={500}
+            className="absolute inset-0 w-full h-full"
+          />
         </div>
+        <MassageServices />
         <WallPanelTwo />
-        <PhysioServices />
         <div className="relative my-8 w-[90%]  mx-auto overflow-hidden h-48 rounded-xl hidden max-sm:flex">
-          <Image src={"/images/self-care.jpg"} alt="featured-massage" width={500} height={500} className="absolute inset-0 w-full h-full" />
+          <Image
+            src={"/images/self-care.jpg"}
+            alt="featured-massage"
+            width={500}
+            height={500}
+            className="absolute inset-0 w-full h-full"
+          />
         </div>
+        <PhysioServices />
         <ServiceFaq />
       </div>
       <VelloraPromiseCard />
 
-      <BottomNav
-        activeTab={activeTab}
-        onTabClick={scrollToSection}
-      />
+      <BottomNav activeTab={activeTab} onTabClick={scrollToSection} />
     </div>
   );
 }
