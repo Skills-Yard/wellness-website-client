@@ -5,7 +5,7 @@ import Link from "next/link";
 const mobileCategories = [
     {
         id: "wellness",
-        label: "Wellness & Spa",
+        label: "Spa",
         image: "/images/spa/spa.webp",
         target: "wellness",
         badgeColor: "bg-emerald-500",
@@ -14,7 +14,7 @@ const mobileCategories = [
     },
     {
         id: "massage",
-        label: "Massage Therapy",
+        label: "Massage ",
         image: "/images/massage/massage.webp",
         target: "massage",
         badgeColor: "bg-amber-500",
@@ -37,14 +37,14 @@ interface CategoryGridProps {
 
 export default function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
     return (
-        <div className="relative p-4 z-20 flex item-center justify-between w-full bg-white">
+        <div className="relative p-4 z-20 flex item-center justify-between w-full bg-white mt-5">
             <div className="grid grid-cols-3  item-center w-full  place-content-center place-items-center mx-auto">
                 {mobileCategories.map((cat) => (
                     <Link href={cat.path} key={cat.id} className="w-full mx-auto ">
                         <button
                             className="flex flex-col  w-full items-center group cursor-pointer"
                         >
-                            <div className="relative w-18 h-18 sm:w-14 sm:h-14 rounded-xl bg-stone-100 group-hover:bg-amber-50/30 flex items-center justify-center overflow-hidden border border-stone-100/40 shadow-2xs group-hover:border-amber-200 transition-all duration-300">
+                            <div className="relative w-20 h-20 sm:w-14 sm:h-14 rounded-xl bg-stone-100 group-hover:bg-amber-50/30 flex items-center justify-center overflow-hidden border border-stone-100/40 shadow-2xs group-hover:border-amber-200 transition-all duration-300">
                                 <Image
                                     src={cat.image}
                                     alt={cat.label}

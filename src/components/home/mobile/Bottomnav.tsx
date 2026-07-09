@@ -1,91 +1,95 @@
-import {
-    Home as HomeIcon,
-    Flower2,
-    Sparkles,
-    ShoppingCart,
-    User,
-    Activity,
-} from "lucide-react";
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/src/lib/utils";
 
 interface BottomNavProps {
-    activeTab: string;
-    onTabClick: (id: string) => void;
+  activeTab: string;
+  onTabClick: (id: string) => void;
 }
-//dddd
-export default function BottomNav({
-    activeTab,
-    onTabClick,
-}: BottomNavProps) {
-    const handleNavClick = (tabId: string) => {
-        onTabClick(tabId);
-    };
 
-    const navItems = [
-        {
-            id: "top",
-            label: "Home",
-            icon: HomeIcon,
-            color: "amber",
-        },
-        {
-            id: "massage",
-            label: "Massage",
-            icon: Flower2,
-            color: "amber",
-        },
-        {
-            id: "wellness",
-            label: "Wellness",
-            icon: Sparkles,
-            color: "emerald",
-        },
-        {
-            id: "physiotherapy",
-            label: "Physio",
-            icon: Activity,
-            color: "blue",
-        },
-    ];
+export default function BottomNav({ activeTab, onTabClick }: BottomNavProps) {
+  const navItems = [
+    { id: "top", label: "Home", icon: "/icon/Home.png", color: "amber" },
+    { id: "wellness", label: "Spa", icon: "/icon/spa.png", color: "emerald" },
+    { id: "massage", label: "Massage", icon: "/icon/Massage.png", color: "rose" },
+    { id: "physiotherapy", label: "Physiotherapy", icon: "/icon/Physio.png", color: "blue" },
+  ];
 
-    return (
-        <nav className="fixed w-[95%] shadow mx-auto bottom-3 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-stone-100 flex justify-around py-2.5 px-1 rounded-3xl">
-            {navItems.map(({ id, label, icon: Icon, color }) => {
-                const isActive = activeTab === id || (id === "top" && activeTab === "home");
-                const colorClasses = {
-                    amber: isActive ? "text-amber-500" : "text-stone-400",
-                    emerald: isActive ? "text-emerald-500" : "text-stone-400",
-                    blue: isActive ? "text-blue-500" : "text-stone-400",
-                };
+  const colorMap = {
+    amber: { active: "bg-amber-500", inactive: "bg-stone-400" },
+    emerald: { active: "bg-emerald-500", inactive: "bg-stone-400" },
+    blue: { active: "bg-blue-500", inactive: "bg-stone-400" },
+    rose: { active: "bg-rose-500", inactive: "bg-stone-400" },
+  };
 
-                return (
-                    <button
-                        key={id}
-                        onClick={() => handleNavClick(id)}
-                        className={cn(
-                            "flex flex-col items-center gap-1 flex-1 py-1 transition-colors duration-200 cursor-pointer active:scale-90",
-                            colorClasses[color as keyof typeof colorClasses]
-                        )}
-                        type="button"
-                        aria-label={label}
-                    >
-                        <Icon className="w-4.5 h-4.5" strokeWidth={1.5} />
-                        <span className="text-[9px] font-bold">{label}</span>
-                    </button>
-                );
-            })}
+  const textColorMap = {
+    amber: { active: "text-amber-500", inactive: "text-stone-400" },
+    emerald: { active: "text-emerald-500", inactive: "text-stone-400" },
+    blue: { active: "text-blue-500", inactive: "text-stone-400" },
+    rose: { active: "text-rose-500", inactive: "text-stone-400" },
+  };
 
-            <Link
-                href="/profile"
-                className={cn(
-                    "flex flex-col items-center gap-1 flex-1 py-1 transition-colors duration-200 cursor-pointer active:scale-90",
-                    activeTab === "profile" ? "text-stone-900" : "text-stone-400"
-                )}
-            >
-                <User className="w-4.5 h-4.5" strokeWidth={1.5} />
-                <span className="text-[9px] font-bold">Profile</span>
-            </Link>
-        </nav>
-    );
+  return (
+    <nav className="fixed w-[95%] shadow mx-auto bottom-3 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-stone-100 flex justify-around py-2.5 px-1 rounded-3xl">
+      {navItems.map(({ id, label, icon, color }) => {
+        const isActive =
+          id === "top" ? activeTab === "top" || activeTab === "home" : activeTab === id;
+
+        const c = colorMap[color as keyof typeof colorMap];
+        const t = textColorMap[color as keyof typeof textColorMap];
+
+        return (
+          <button
+            key={id}
+            onClick={() => onTabClick(id)}
+            className={cn(
+              "flex flex-col items-center gap-1 flex-1 py-1 transition-colors duration-200 cursor-pointer active:scale-90",
+              isActive ? t.active : t.inactive,
+            )}
+            type="button"
+            aria-label={label}
+          >
+            <span
+              className={cn("w-4.5 h-4.5 transition-colors duration-200", isActive ? c.active : c.inactive)}
+              style={{
+                WebkitMaskImage: `url(${icon})`,
+                maskImage: `url(${icon})`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+              }}
+            />
+            <span className="text-[9px] font-bold">{label}</span>
+          </button>
+        );
+      })}
+
+      <Link
+        href="/profile"
+        className={cn(
+          "flex flex-col items-center gap-1 flex-1 py-1 transition-colors duration-200 cursor-pointer active:scale-90",
+          activeTab === "profile" ? "text-stone-900" : "text-stone-400",
+        )}
+      >
+        <span
+          className={cn("w-4.5 h-4.5 transition-colors duration-200", activeTab === "profile" ? "bg-stone-900" : "bg-stone-400")}
+          style={{
+            WebkitMaskImage: `url(/icon/Profile.png)`,
+            maskImage: `url(/icon/Profile.png)`,
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+          }}
+        />
+        <span className="text-[9px] font-bold">Profile</span>
+      </Link>
+    </nav>
+  );
 }

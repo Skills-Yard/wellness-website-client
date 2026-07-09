@@ -27,7 +27,7 @@ export default function Inspotlight() {
       {/* Section Header Wrapper */}
       <div className="flex relative sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 px-4 sm:px-0 mb-6 sm:mb-8 md:mb-10">
         <div className="flex-1 pr-16 sm:pr-0">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-xl font-semibold text-gray-900">
             In The Spotlight
           </h2>
           <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed max-sm:hidden">
