@@ -79,7 +79,7 @@ export default function BookingConfirmation({
         <h2 className="relative z-10 text-[22px] font-extrabold text-white text-center leading-tight mb-1">
           Booking Confirmed!
         </h2>
-        <p className="relative z-10 text-[13px] text-white/60 text-center max-w-[220px]">
+        <p className="relative z-10 text-[13px] text-white/60 text-center max-w-55">
           We&apos;ve sent the details to your email and SMS
         </p>
       </div>
@@ -93,7 +93,7 @@ export default function BookingConfirmation({
               key={item.id}
               className="flex items-center gap-3 p-3 rounded-2xl bg-[#FAFAFA] border border-[#F0EDEA]"
             >
-              <div className="relative w-[56px] h-[56px] rounded-xl overflow-hidden shrink-0 bg-gray-100">
+              <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-gray-100">
                 <Image
                   src={item.image}
                   alt={item.title}
@@ -129,7 +129,7 @@ export default function BookingConfirmation({
               <span className="text-[12px] text-gray-400 font-medium shrink-0 pt-0.5">
                 Address
               </span>
-              <span className="text-[12px] font-semibold text-gray-800 text-right max-w-[180px]">
+              <span className="text-[12px] font-semibold text-gray-800 text-right max-w-45">
                 {booking.address}
               </span>
             </div>

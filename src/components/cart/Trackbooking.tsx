@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { useCart } from "@/src/context/CartContext";
-import { BookingDetails } from "@/src/utils/types/Booking";
 import TrackStep from "./Trackstep ";
+import { BookingDetails } from "@/src/utils/types/booking";
 
 
 interface TrackBookingProps {
