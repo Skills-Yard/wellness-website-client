@@ -4,7 +4,7 @@ import Image from "next/image";
 import { CheckCircle2, Clock, ArrowLeft, X } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { useCart } from "@/src/context/CartContext";
-import { BookingDetails } from "@/src/utils/types/Booking";
+import { BookingDetails } from "@/src/utils/types/booking";
 
 interface BookingConfirmationProps {
   booking: BookingDetails;
