@@ -333,7 +333,7 @@ export default function ProfilePage() {
            UNAUTHENTICATED STATE (Empty Profile View)
            ========================================== */
         <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 animate-in fade-in duration-500">
-          <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="w-full max-w-md  p-8 text-center ">
             {/* Decorative Icon */}
             <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-amber-50 text-amber-500 shadow-inner">
               <UserCircle2 className="h-12 w-12" strokeWidth={1.5} />

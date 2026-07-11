@@ -402,7 +402,7 @@ export default function AuthModal({
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Himanshu"
+                        placeholder="e.g. Jhon Doe"
                         className="w-full outline-none text-xs text-stone-900 bg-transparent"
                         autoFocus
                       />

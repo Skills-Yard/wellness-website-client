@@ -121,9 +121,8 @@ export default function SpaBookingLayout() {
     <div className="relative w-full bg-white pb-20">
       {/* MOBILE STICKY NAVBAR */}
       <div
-        className={`fixed lg:hidden md:hidden top-0 inset-x-0 z-[50] transition-colors duration-300  ${
-          isScrolled ? "bg-white shadow-sm" : "bg-transparent"
-        }`}
+        className={`fixed lg:hidden md:hidden top-0 inset-x-0 z-[50] transition-colors duration-300  ${isScrolled ? "bg-white shadow-sm" : "bg-transparent"
+          }`}
       >
         <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
@@ -135,11 +134,10 @@ export default function SpaBookingLayout() {
             </Link>
 
             <h1
-              className={`text-[16px] font-bold text-[#000000] transition-all duration-300 ${
-                isScrolled
+              className={`text-[16px] font-bold text-[#000000] transition-all duration-300 ${isScrolled
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 -translate-y-2 pointer-events-none"
-              }`}
+                }`}
             >
               {detailData.title}
             </h1>
@@ -154,11 +152,10 @@ export default function SpaBookingLayout() {
 
         {/* Mini Category Navbar */}
         <div
-          className={`border-t border-[#F3EFEB] bg-white lg:hidden transition-all duration-300 ${
-            isScrolled
+          className={`border-t border-[#F3EFEB] bg-white lg:hidden transition-all duration-300 ${isScrolled
               ? "translate-y-0 opacity-100"
               : "-translate-y-full opacity-0 pointer-events-none"
-          }`}
+            }`}
         >
           <div className="flex overflow-x-auto hide-scrollbar px-4 py-2 gap-6 max-w-7xl mx-auto">
             {activeCategories.map(
@@ -241,11 +238,10 @@ export default function SpaBookingLayout() {
                   </div>
                 </div>
                 <span
-                  className={`text-[14px] font-medium leading-[17px] text-center break-words max-w-[96px] transition-colors ${
-                    activeTab === cat.id
+                  className={`text-[14px] font-medium leading-[17px] text-center break-words max-w-[96px] transition-colors ${activeTab === cat.id
                       ? "text-[#D38516] font-bold"
                       : "text-[#000000]"
-                  }`}
+                    }`}
                 >
                   {cat.name}
                 </span>
@@ -256,7 +252,7 @@ export default function SpaBookingLayout() {
       </div>
 
       {/* DIVIDER */}
-      <div className="block lg:hidden my-8 border-b-[8px] border-[#F3EFEB] w-full" />
+      <div className="block lg:hidden my-8 border-b-[3px] border-[#F3EFEB] w-full" />
 
       {/* MAIN CONTENT */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:pt-12">
@@ -275,11 +271,10 @@ export default function SpaBookingLayout() {
                     className="group flex cursor-pointer flex-col items-center gap-2 text-center transition-transform hover:scale-105"
                   >
                     <div
-                      className={`relative h-14 w-14 overflow-hidden rounded-xl border-2 transition-colors ${
-                        activeTab === cat.id
+                      className={`relative h-14 w-14 overflow-hidden rounded-xl border-2 transition-colors ${activeTab === cat.id
                           ? "border-amber-500"
                           : "border-slate-200"
-                      }`}
+                        }`}
                     >
                       <Image
                         src={detailData.media}
@@ -290,11 +285,10 @@ export default function SpaBookingLayout() {
                       />
                     </div>
                     <span
-                      className={`text-[11px] font-medium leading-tight break-words max-w-[70px] transition-colors ${
-                        activeTab === cat.id
+                      className={`text-[11px] font-medium leading-tight break-words max-w-[70px] transition-colors ${activeTab === cat.id
                           ? "text-amber-600"
                           : "text-slate-700"
-                      }`}
+                        }`}
                     >
                       {cat.name}
                     </span>
@@ -708,19 +702,17 @@ export default function SpaBookingLayout() {
       </div>
 
       {/* FLOATING MENU BUTTON - MOBILE ONLY */}
-      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-60">
-        {!isCartOpen && (
-          <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-60">
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              className="flex text-[15px] items-center gap-2 bg-[#25180F] text-white px-6 py-3 rounded-full font-bold shadow-xl shadow-black/20 active:scale-95 transition-transform"
-            >
-              <MenuIcon className="w-4 h-4" />
-              Menu
-            </button>
-          </div>
-        )}
-      </div>
+      {!isCartOpen && (
+        <div className="lg:hidden w-full fixed bottom-8 z-60">
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="flex text-[15px] mx-auto items-center gap-2 bg-[#25180F] text-white px-4 py-1.5 rounded-xl font-bold shadow-xl shadow-black/20 active:scale-95 transition-transform"
+          >
+            <MenuIcon className="w-4 h-4" />
+            Menu
+          </button>
+        </div>
+      )}
 
       {/* MOBILE MENU MODAL */}
       {isMenuOpen && (
@@ -755,11 +747,10 @@ export default function SpaBookingLayout() {
                   </div>
 
                   <span
-                    className={`text-[13px] font-medium leading-tight transition-colors ${
-                      activeTab === cat.id
+                    className={`text-[13px] font-medium leading-tight transition-colors ${activeTab === cat.id
                         ? "bg-amber-50 text-amber-600"
                         : "text-slate-700"
-                    }`}
+                      }`}
                   >
                     {cat.name}
                   </span>

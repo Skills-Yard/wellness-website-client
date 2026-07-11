@@ -13,21 +13,21 @@ export default function BottomNav({ activeTab, onTabClick }: BottomNavProps) {
     { id: "top", label: "Home", icon: "/icon/Home.png", color: "amber" },
     { id: "wellness", label: "Spa", icon: "/icon/spa.png", color: "emerald" },
     { id: "massage", label: "Massage", icon: "/icon/Massage.png", color: "rose" },
-    { id: "physiotherapy", label: "Physiotherapy", icon: "/icon/Physio.png", color: "blue" },
+    { id: "physiotherapy", label: "Physio", icon: "/icon/Physio.png", color: "blue" },
   ];
 
   const colorMap = {
     amber: { active: "bg-amber-500", inactive: "bg-stone-400" },
-    emerald: { active: "bg-emerald-500", inactive: "bg-stone-400" },
-    blue: { active: "bg-blue-500", inactive: "bg-stone-400" },
-    rose: { active: "bg-rose-500", inactive: "bg-stone-400" },
+    emerald: { active: "bg-amber-500", inactive: "bg-stone-400" },
+    blue: { active: "bg-amber-500", inactive: "bg-stone-400" },
+    rose: { active: "bg-amber-500", inactive: "bg-stone-400" },
   };
 
   const textColorMap = {
     amber: { active: "text-amber-500", inactive: "text-stone-400" },
-    emerald: { active: "text-emerald-500", inactive: "text-stone-400" },
-    blue: { active: "text-blue-500", inactive: "text-stone-400" },
-    rose: { active: "text-rose-500", inactive: "text-stone-400" },
+    emerald: { active: "text-amber-500", inactive: "text-stone-400" },
+    blue: { active: "text-amber-500", inactive: "text-stone-400" },
+    rose: { active: "text-amber-500", inactive: "text-stone-400" },
   };
 
   return (
@@ -72,11 +72,11 @@ export default function BottomNav({ activeTab, onTabClick }: BottomNavProps) {
         href="/profile"
         className={cn(
           "flex flex-col items-center gap-1 flex-1 py-1 transition-colors duration-200 cursor-pointer active:scale-90",
-          activeTab === "profile" ? "text-stone-900" : "text-stone-400",
+          activeTab === "profile" ? "text-amber-500" : "text-stone-400",
         )}
       >
         <span
-          className={cn("w-4.5 h-4.5 transition-colors duration-200", activeTab === "profile" ? "bg-stone-900" : "bg-stone-400")}
+          className={cn("w-4.5 h-4.5 transition-colors duration-200", activeTab === "profile" ? "bg-amber-500" : "bg-stone-400")}
           style={{
             WebkitMaskImage: `url(/icon/Profile.png)`,
             maskImage: `url(/icon/Profile.png)`,
