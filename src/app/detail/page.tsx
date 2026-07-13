@@ -1,4 +1,4 @@
-import ButtonPop from "@/src/components/detail/detail";
+import ButtonPop from "@/src/components/detail";
 import { Suspense } from "react";
 
 export default function Detail() {
