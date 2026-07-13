@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles, Mail, MapPin } from "lucide-react";
+import { Sparkles} from "lucide-react";
 
 const FOOTER_SECTIONS = [
   {

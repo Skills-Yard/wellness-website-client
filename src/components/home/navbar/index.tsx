@@ -12,7 +12,6 @@ import {
   Menu,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useCart } from "@/src/context/CartContext";
 import { NavLinkType } from "@/src/utils/types";
 import {
@@ -44,7 +43,6 @@ import CartSheet from "@/src/components/cart/CartSheet";
 export default function Navbar() {
   const {
     cartCount,
-    isCartOpen,
     setIsCartOpen,
     location,
     setLocation,

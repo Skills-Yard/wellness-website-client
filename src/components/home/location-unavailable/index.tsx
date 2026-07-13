@@ -4,8 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { MapPin, Send, CheckCircle, X } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
-import { ACTIVE_AREAS, COMING_SOON_CITIES } from "@/src/utils/data";
-import { cn } from "@/src/lib/utils";
+import { ACTIVE_AREAS} from "@/src/utils/data";
 
 interface LocationUnavailableModalProps {
     isOpen: boolean;
@@ -64,7 +63,7 @@ export default function LocationUnavailableModal({ isOpen, onClose }: LocationUn
                             Not available in your area yet
                         </h2>
                         <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                            Select your area to get started. We're expanding fast!
+                            Select your area to get started. We&apos;re expanding fast!
                         </p>
                     </div>
 
@@ -73,7 +72,7 @@ export default function LocationUnavailableModal({ isOpen, onClose }: LocationUn
                         {notified ? (
                             <div className="flex items-center justify-center gap-2 p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-2xl text-sm font-semibold">
                                 <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                                <span>Subscribed! We'll notify you soon.</span>
+                                <span>Subscribed! We&apos;ll notify you soon.</span>
                             </div>
                         ) : (
                             <form onSubmit={handleNotify} className="flex gap-2 p-1.5 rounded-2xl bg-gray-50 border border-gray-200">

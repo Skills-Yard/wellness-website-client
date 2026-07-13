@@ -23,7 +23,7 @@ export default function Highlights({ service }: HighlightsProps) {
           
           <div className="space-y-2">
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-              What's included in the session
+              What&apos;s included in the session
             </h2>
             <p className="text-sm text-slate-500">
               Everything you need for a complete and premium relaxation experience

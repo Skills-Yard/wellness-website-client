@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { cn } from "@/src/lib/utils";
 import Link from "next/link";
 
 const mobileCategories = [
@@ -31,11 +30,8 @@ const mobileCategories = [
     },
 ];
 
-interface CategoryGridProps {
-    onCategoryClick: (target: string) => void;
-}
 
-export default function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
+export default function CategoryGrid() {
     return (
         <div className="relative p-4 z-20 flex item-center justify-between w-full bg-white mt-5">
             <div className="grid grid-cols-3  item-center w-full  place-content-center place-items-center mx-auto">

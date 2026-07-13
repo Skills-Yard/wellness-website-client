@@ -10,7 +10,6 @@ interface RequirementSelectorProps {
 }
 
 export default function RequirementSelector({
-  onSelectionChange,
   steps,
 }: RequirementSelectorProps) {
   // State for selections based on the image's layout
@@ -583,7 +582,7 @@ export default function RequirementSelector({
           <div className="w-full bg-white font-sans">
             {/* --- What's Included --- */}
             <h2 className="text-base sm:text-lg md:text-xl font-bold text-black mb-4 sm:mb-5 tracking-tight">
-              What's Included
+              What&apos;s Included
             </h2>
 
             <div className="flex flex-col gap-4 sm:gap-5 w-full mb-6 sm:mb-8">

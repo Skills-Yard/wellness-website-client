@@ -3,8 +3,8 @@ import { CategoryServiceItem, BentoCardItem } from "@/src/utils/types";
 export const HEADER_CATEGORIES: CategoryServiceItem[] = [
     {
         id: 1,
-        label: "Massage Therapy",
-        image: "/images/massage_category.png",
+        label: "Massage",
+        image: "/images/massage/massage.webp",
         badge: "Popular",
         badgeColor: "bg-amber-500",
         bg: "bg-white border border-gray-150/60 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-500/5",
@@ -12,8 +12,8 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
     },
     {
         id: 2,
-        label: "Wellness & Spa",
-        image: "/images/wellness_category.png",
+        label: "Spa",
+        image: "/images/spa/spa.webp",
         badge: "New",
         badgeColor: "bg-emerald-500",
         bg: "bg-white border border-gray-150/60 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/5",
@@ -22,7 +22,7 @@ export const HEADER_CATEGORIES: CategoryServiceItem[] = [
     {
         id: 3,
         label: "Physiotherapy",
-        image: "/images/physio_category.png",
+        image: "/images/physiotherapy/physiotherapy.webp",
         badge: "Certified",
         badgeColor: "bg-blue-500",
         bg: "bg-white border border-gray-150/60 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5",

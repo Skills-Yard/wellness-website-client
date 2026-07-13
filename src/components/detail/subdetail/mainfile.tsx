@@ -2,11 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
-import Highlights from "./Highlights/Highlights";
-import SpaFeature from "./Section4/spaFeature";
 import SectionHero from "./SectionHero/SectionHero";
-import StepsSection from "./StepSection/SectionSteps";
-import SetUpImage from "./StepSection/SetUpImage";
 import RequirementSelector from "./SelectPack/SelectPack";
 
 type SubDetailPopUpProps = {

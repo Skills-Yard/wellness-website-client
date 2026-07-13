@@ -19,7 +19,7 @@ export default function SpaBookingLayout() {
 
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type") || "massage";
-  const { addToCart, cartItems, isCartOpen } = useCart();
+  const { addToCart, isCartOpen } = useCart();
 
   const normalizedType =
     typeParam === "physiotherapy" || typeParam === "physio"

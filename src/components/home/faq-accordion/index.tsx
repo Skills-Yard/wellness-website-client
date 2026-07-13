@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity } from "lucide-react";
-import Image from "next/image";
 import { cn } from "@/src/lib/utils";
 import { FAQ_DATA } from "@/src/utils/data";
 
@@ -78,7 +77,6 @@ export default function ServiceFaq() {
                 <div className="space-y-3.5">
                     {currentFaqs.map((faq) => {
                         const isOpen = openId === faq.id;
-                        const ActiveIcon = tabConfig[activeTab].icon;
 
                         return (
                             <div

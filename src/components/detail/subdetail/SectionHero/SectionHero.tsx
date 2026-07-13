@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Star, Clock, TrendingUp } from "lucide-react";
+import { Star } from "lucide-react";
 import { useState } from "react";
 
 interface SectionHeroProps {
@@ -14,9 +14,7 @@ export default function SectionHero({ service }: SectionHeroProps) {
   if (!service) return null;
 
   const rating = parseFloat(service.rating || "4.8");
-  const reviewsText = service.reviews || "1K reviews";
   const startingPrice = service.price;
-  const duration = service.duration || "60 mins";
 
   return (
     <section className="mx-auto w-full border-b border-slate-100 bg-white px-0 py-0">
