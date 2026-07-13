@@ -52,7 +52,7 @@ export default function MobileHome() {
 
       <HeroSlider />
 
-      <CategoryGrid onCategoryClick={scrollToSection} />
+      <CategoryGrid/>
 
       <div className="space-y-2 mt-4">
         <Inspotlight />

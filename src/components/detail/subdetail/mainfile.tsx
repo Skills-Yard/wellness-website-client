@@ -79,7 +79,7 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
 
   return (
     <div
-      className={`fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
+      className={`fixed inset-0 z-70 flex items-end justify-center bg-black/80 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
         mounted ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClose}
@@ -104,7 +104,7 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
         <button
           type="button"
           onClick={handleClose}
-          className="absolute right-4 top-4 z-[60] bg-white inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 shadow-md transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+          className="absolute right-4 top-4 z-60 bg-white inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 shadow-md transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
           aria-label="Close popup"
         >
           <X className="w-5 h-5" />
