@@ -12,7 +12,6 @@ import {
   Menu,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useCart } from "@/src/context/CartContext";
 import { NavLinkType } from "@/src/utils/types";
 import {
@@ -39,15 +38,12 @@ import {
 } from "@/src/components/ui/sheet";
 import { useRouter } from "next/navigation";
 import AuthModal from "@/src/components/auth/AuthModal";
+import CartSheet from "@/src/components/cart/CartSheet";
 
 export default function Navbar() {
   const {
-    cartItems,
     cartCount,
-    isCartOpen,
     setIsCartOpen,
-    removeFromCart,
-    clearCart,
     location,
     setLocation,
   } = useCart();
@@ -177,7 +173,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
               <button
                 key={link}
@@ -206,7 +202,7 @@ export default function Navbar() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 rounded-xl h-9 px-3.5 max-w-[180px] lg:max-w-[220px] justify-start gap-2 data-[state=open]:bg-amber-50 data-[state=open]:border-amber-200 data-[state=open]:text-gray-900 font-normal cursor-pointer"
+                className=" bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 rounded-xl h-9 px-3.5 max-w-[300px] lg:max-w-[350px] justify-start gap-2 data-[state=open]:bg-amber-50 data-[state=open]:border-amber-200 data-[state=open]:text-gray-900 font-normal cursor-pointer"
               >
                 <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span className="truncate flex-1 text-left">
@@ -377,7 +373,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile View Structure: Actions and Shadcn Sheet Side Panel */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-2 ">
           <Button
             onClick={() => setIsCartOpen(true)}
             variant="outline"
@@ -524,108 +520,8 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Global Slide-Over Cart Drawer Component */}
-      <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <SheetContent
-          side="right"
-          className="w-full max-w-[420px] p-6 flex flex-col bg-white border-l border-gray-100 shadow-[0_8px_40px_rgba(0,0,0,0.12)]"
-        >
-          <SheetHeader className="border-b border-gray-100 pb-4 mb-4">
-            <SheetTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-              <ShoppingCart className="w-5 h-5 text-amber-500" />
-              Your Cart ({isMounted ? cartCount : 0}{" "}
-              {cartCount === 1 ? "item" : "items"})
-            </SheetTitle>
-          </SheetHeader>
-
-          {isMounted && cartItems.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
-                <ShoppingCart className="w-8 h-8" />
-              </div>
-              <div>
-                <p className="font-bold text-gray-800">Your cart is empty</p>
-                <p className="text-sm text-gray-400">
-                  Add spa or clinical treatments to get started.
-                </p>
-              </div>
-            </div>
-          ) : (
-            isMounted && (
-              <>
-                {/* Cart Items List */}
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-3.5 pb-4 border-b border-gray-50"
-                    >
-                      <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100">
-                        <Image
-                          src={item.image}
-                          alt={item.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-bold text-gray-900 truncate leading-snug">
-                          {item.title}
-                        </h4>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {item.duration}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm font-extrabold text-amber-600">
-                            ₹{item.price.toLocaleString("en-IN")}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Qty: {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer border-none"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Cart Summary & Checkout */}
-                <div className="border-t border-gray-100 pt-4 mt-auto space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 font-medium">Subtotal</span>
-                    <span className="text-lg font-extrabold text-gray-900">
-                      ₹
-                      {cartItems
-                        .reduce(
-                          (sum, item) => sum + item.price * item.quantity,
-                          0,
-                        )
-                        .toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      alert(
-                        "Booking Placed Successfully! Our representative will call you shortly.",
-                      );
-                      clearCart();
-                      setIsCartOpen(false);
-                    }}
-                    className="w-full bg-amber-500 text-white hover:bg-amber-600 font-bold h-11 rounded-xl cursor-pointer shadow-lg shadow-amber-500/10 active:scale-[0.98] transition-all border-none"
-                  >
-                    Proceed to Checkout
-                  </Button>
-                </div>
-              </>
-            )
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* Global Booking Flow Cart Drawer */}
+      <CartSheet />
       {loginOpen && (<AuthModal onClose={()=> setLoginOpen(false)} />)}
     </nav>
   );

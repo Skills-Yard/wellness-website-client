@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock, Star } from "lucide-react";
+import { Clock, Star } from "lucide-react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
@@ -28,7 +28,7 @@ export default function PhysioServices() {
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
                         Physiotherapy & Rehab
                     </h2>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed max-sm:hidden">
                         Doctor-prescribed treatment, joint adjustments, and active movement programs at home.
                     </p>
                 </div>
@@ -91,24 +91,6 @@ export default function PhysioServices() {
                                                 <span className="font-semibold text-gray-900">{item.rating.toFixed(2)}</span>
                                                 <span className="truncate text-gray-600">({item.reviewsCount})</span>
                                             </div>
-
-                                            <Button
-                                                type="button"
-                                                size={"xs"}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    addToCart({
-                                                        id: item.id.toString() + "-massage",
-                                                        title: item.title,
-                                                        price: item.price,
-                                                        image: item.image,
-                                                        duration: item.duration,
-                                                    });
-                                                }}
-                                                className="hidden text-[8px] px-2 h-5 max-sm:flex absolute right-2 top-4.5"
-                                            >
-                                                Book
-                                            </Button>
                                         </div>
                                     </div>
 

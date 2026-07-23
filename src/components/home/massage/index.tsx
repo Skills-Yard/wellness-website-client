@@ -6,9 +6,9 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import { useCart } from "@/src/context/CartContext";
-import { MASSAGE_SERVICES } from "@/src/utils/data";
 import { useRouter } from "next/navigation";
 import { Button } from "../../ui/button";
+import { MASSAGE_SERVICES } from "@/src/utils/data";
 
 export default function MassageServices() {
     const { addToCart } = useCart();
@@ -23,13 +23,13 @@ export default function MassageServices() {
             <div className="flex flex-col relative sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-10">
                 <div className="flex-1">
                     <span className="text-amber-500 font-bold text-xs sm:text-xs md:text-sm uppercase tracking-widest block mb-1 sm:mb-2">
-                        Soothing Bodywork
+                     Signature massage therapies
                     </span>
 
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
-                        Premium Massage Therapies
+                      Wellness Beyond Massage
                     </h2>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-2 sm:mt-2.5 font-medium max-w-2xl leading-relaxed max-sm:hidden">
                         Delivered by certified spa therapists in the comfort and privacy of your home.
                     </p>
                 </div>
@@ -90,23 +90,7 @@ export default function MassageServices() {
                                             <span className="font-semibold text-gray-900">{item.rating.toFixed(2)}</span>
                                             <span className="truncate text-gray-600">({item.reviewsCount})</span>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            size={"xs"}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                addToCart({
-                                                    id: item.id.toString() + "-massage",
-                                                    title: item.title,
-                                                    price: item.price,
-                                                    image: item.image,
-                                                    duration: item.duration,
-                                                });
-                                            }}
-                                            className="hidden text-[8px] px-2 h-5 max-sm:flex absolute right-2 top-4.5"
-                                        >
-                                            Book
-                                        </Button>
+                               
                                     </div>
                                 </div>
 

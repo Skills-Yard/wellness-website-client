@@ -1,6 +1,6 @@
 "use client"
 
-import SpaBookingLayout from './SpaBookingLayout';
+import SpaBookingLayout from './spa-booking';
 
 export default function ButtonPop() {
 

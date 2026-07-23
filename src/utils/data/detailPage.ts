@@ -1,3 +1,6 @@
+import { DynamicService } from "@/src/utils/types/spabooking";
+export type { DynamicService };
+
 export interface DynamicStep {
   id: string;
   title: string;
@@ -12,20 +15,7 @@ export interface DynamicDetailData {
   media: string;
   video: string;
   categories: { id: string; name: string }[];
-  services: {
-    id: string;
-    category: string;
-    isSpotlight: boolean;
-    tag?: string;
-    title: string;
-    rating: string;
-    reviews: string;
-    price: string;
-    originalPrice: string | null;
-    duration: string;
-    features: string[];
-    media: string;
-  }[];
+  services: DynamicService[];
   steps: DynamicStep[];
 }
 
@@ -444,5 +434,3 @@ export const DYNAMIC_DETAILS: Record<string, DynamicDetailData> = {
     ]
   }
 };
-
-export type DynamicService = DynamicDetailData["services"][number];

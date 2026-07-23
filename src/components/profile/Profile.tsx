@@ -10,15 +10,9 @@ import {
 import { Switch } from "@/src/components/ui/switch";
 import { tempUser, UserProfile } from "@/src/utils/data/tempUserData";
 import {
-  Home as HomeIcon,
-  Flower2,
-  Sparkles,
-  ShoppingCart,
-  User,
   ShieldCheck,
   UserCircle2,
 } from "lucide-react";
-import Link from "next/link";
 import { useCart } from "@/src/context/CartContext";
 import AuthModal from "../auth/AuthModal";
 import BottomNav from "../home/mobile/Bottomnav";
@@ -38,12 +32,6 @@ const AccountSection = ({
 
 
   return (
-
-
-
-    /* ==========================================
-       AUTHENTICATED STATE (Actual Profile)
-       ========================================== */
     <AccordionItem value="account" className="border-b-slate-200 py-2">
       <AccordionTrigger className="hover:no-underline">
         <div className="flex items-center gap-3 text-left">
@@ -333,7 +321,7 @@ export default function ProfilePage() {
            UNAUTHENTICATED STATE (Empty Profile View)
            ========================================== */
         <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 animate-in fade-in duration-500">
-          <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="w-full max-w-md  p-4 text-center ">
             {/* Decorative Icon */}
             <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-amber-50 text-amber-500 shadow-inner">
               <UserCircle2 className="h-12 w-12" strokeWidth={1.5} />
@@ -343,7 +331,7 @@ export default function ProfilePage() {
             <h2 className="mb-3 text-2xl font-bold text-slate-900">
               Your Profile
             </h2>
-            <p className="mb-10 text-base text-slate-500 leading-relaxed px-4">
+            <p className="mb-6 text-base text-slate-500 leading-relaxed">
               Log in or sign up to view your account details, manage saved
               addresses, and check your bookings.
             </p>
@@ -351,7 +339,7 @@ export default function ProfilePage() {
             {/* Shadcn-style Button */}
             <button
               onClick={() => setShowAuthModal(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-full bg-amber-500 px-6 py-4 font-bold text-white transition-all active:scale-[0.98] hover:bg-amber-600 hover:shadow-lg hover:shadow-amber-500/20 cursor-pointer"
+              className="w-fit mx-auto flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-8 py-3 font-bold text-white transition-all active:scale-[0.98] hover:bg-amber-500/90 hover:scale-101  cursor-pointer"
             >
               <ShieldCheck className="h-5 w-5" />
               Login to continue

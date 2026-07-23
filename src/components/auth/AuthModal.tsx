@@ -447,7 +447,7 @@ export default function AuthModal({
                   A 6-digit code has been sent on +91 {phone}
                 </p>
 
-                <div className="mt-5 flex justify-between gap-1.5 max-w-[280px]">
+                <div className="mt-5 flex justify-between gap-1.5 max-w-70">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -523,7 +523,7 @@ export default function AuthModal({
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Himanshu"
+                        placeholder="e.g. Jhon Doe"
                         className="w-full outline-none text-xs text-stone-900 bg-transparent"
                         autoFocus
                       />
@@ -656,7 +656,7 @@ export default function AuthModal({
         </div>
         {/* Floating Notification Message */}
         <div
-          className={`fixed left-1/2 z-[60] w-[90%] max-w-xs -translate-x-1/2 rounded-2xl bg-stone-900 p-3 text-white shadow-2xl transition-all duration-500 ${
+          className={`fixed left-1/2 z-60 w-[90%] max-w-xs -translate-x-1/2 rounded-2xl bg-stone-900 p-3 text-white shadow-2xl transition-all duration-500 ${
             notification.visible
               ? "bottom-6 opacity-100"
               : "-bottom-24 opacity-0"

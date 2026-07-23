@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SERVICE_SUGGESTIONS } from "@/src/utils/data";
 
 export function useMobileHome() {
@@ -9,6 +9,8 @@ export function useMobileHome() {
     const [activeTab, setActiveTab] = useState("home");
     const [isMounted, setIsMounted] = useState(false);
     const [headerScrolled, setHeaderScrolled] = useState(false);
+    const isProgrammaticScroll = useRef(false);
+    const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -36,52 +38,76 @@ export function useMobileHome() {
         return document.getElementById(id);
     };
 
+    // ✅ header scroll shadow ke liye simple listener (isme koi tab-logic nahi)
     useEffect(() => {
-        const handleScroll = () => {
+        const handleHeaderScroll = () => {
             setHeaderScrolled(window.scrollY > 20);
-
-            const scrollPos = window.scrollY + 120;
-            const massageEl = getVisibleElementById("massage");
-            const wellnessEl = getVisibleElementById("wellness");
-            const physioEl = getVisibleElementById("physiotherapy");
-
-            if (physioEl && scrollPos >= physioEl.offsetTop) {
-                setActiveTab("physiotherapy");
-            } else if (wellnessEl && scrollPos >= wellnessEl.offsetTop) {
-                setActiveTab("wellness");
-            } else if (massageEl && scrollPos >= massageEl.offsetTop) {
-                setActiveTab("massage");
-            } else {
-                setActiveTab("home");
-            }
         };
-
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
+        window.addEventListener("scroll", handleHeaderScroll);
+        return () => window.removeEventListener("scroll", handleHeaderScroll);
     }, []);
 
+    // ✅ IntersectionObserver — DOM order pe depend nahi karta, sirf jo section
+    // actually screen ke "trigger zone" mein visible hai wahi active hota hai
+    useEffect(() => {
+        if (!isMounted) return;
+
+        const sectionIds = ["massage", "wellness", "physiotherapy"];
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (isProgrammaticScroll.current) return;
+
+                // jo section sabse zyada visible hai (top ke sabse najdeek) usko lo
+                const visible = entries
+                    .filter((e) => e.isIntersecting)
+                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+                if (visible.length > 0) {
+                    setActiveTab(visible[0].target.id);
+                } else if (window.scrollY < 150) {
+                    setActiveTab("home");
+                }
+            },
+            {
+                // top se 120px neeche se lekar screen ke 60% tak "active zone"
+                rootMargin: "-120px 0px -60% 0px",
+                threshold: 0,
+            }
+        );
+
+        sectionIds.forEach((id) => {
+            const el = getVisibleElementById(id);
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, [isMounted]);
+
     const scrollToSection = (id: string) => {
-        // Scroll to top
+        isProgrammaticScroll.current = true;
+        if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
+
         if (id === "top") {
             setActiveTab("home");
             window.scrollTo({ top: 0, behavior: "smooth" });
-            return;
+        } else {
+            const element = getVisibleElementById(id);
+            if (element) {
+                const headerHeight = 70;
+                const elementTop = element.getBoundingClientRect().top + window.scrollY;
+                const scrollTop = elementTop - headerHeight;
+
+                setActiveTab(id);
+                window.scrollTo({
+                    top: Math.max(0, scrollTop),
+                    behavior: "smooth",
+                });
+            }
         }
 
-        // Scroll to section
-        const element = getVisibleElementById(id);
-        if (element) {
-            const headerHeight = 70;
-            const elementTop = element.getBoundingClientRect().top + window.scrollY;
-            const scrollTop = elementTop - headerHeight;
-
-            window.scrollTo({
-                top: Math.max(0, scrollTop),
-                behavior: "smooth",
-            });
-
-            setActiveTab(id);
-        }
+        scrollEndTimer.current = setTimeout(() => {
+            isProgrammaticScroll.current = false;
+        }, 700);
     };
 
     const allSuggestions = [

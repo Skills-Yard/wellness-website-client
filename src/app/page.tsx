@@ -35,9 +35,9 @@ export default function Home() {
         <div className="hidden md:block">
           <Header />
           <Inspotlight />
-          <MassageServices />
-          <WallPanel />
           <WellnessServices />
+          <WallPanel />
+          <MassageServices />
           <WallPanelTwo />
           <PhysioServices />
           <ServiceFaq />
