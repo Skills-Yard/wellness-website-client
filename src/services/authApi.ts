@@ -1,12 +1,5 @@
-import {
-  authClient,
-  CreateUserBody,
-  CreateUserResponse,
-  OtpRequestBody,
-  OtpRequestResponse,
-  OtpVerifyBody,
-  OtpVerifyResponse,
-} from "../lib/api/authClient";
+import { authClient } from "../lib/api/authClient";
+import { OtpRequestBody, OtpRequestResponse, OtpVerifyBody, OtpVerifyResponse, CreateUserBody, CreateUserResponse } from "../types/auth";
 
 export const authApi = {
   requestOtp(body: OtpRequestBody) {
