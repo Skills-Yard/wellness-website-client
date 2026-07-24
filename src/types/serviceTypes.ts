@@ -5,6 +5,8 @@ export type ZonesQuery = {
 };
 
 // Replace `any` with a concrete shape if known later
-export type Zone = any;
+export type Zone = string;
+
+
 
 // Add other service-related types here as needed (e.g. AuthResponse, User, etc.)
