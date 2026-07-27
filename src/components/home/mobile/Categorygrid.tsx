@@ -8,7 +8,7 @@ const mobileCategories = [
         image: "/images/spa/spa.webp",
         target: "wellness",
         badgeColor: "bg-emerald-500",
-        path: 'detail?type=wellness',
+        path: '/detail/wellness',
 
     },
     {
@@ -17,7 +17,7 @@ const mobileCategories = [
         image: "/images/massage/massage.webp",
         target: "massage",
         badgeColor: "bg-amber-500",
-        path: '/detail?type=massage',
+        path: '/detail/massage',
     },
     {
         id: "physio",
@@ -25,7 +25,7 @@ const mobileCategories = [
         image: "/images/physiotherapy/physiotherapy.webp",
         target: "physiotherapy",
         badgeColor: "bg-blue-500",
-        path: '/detail?type=physio',
+        path: '/detail/physio',
 
     },
 ];

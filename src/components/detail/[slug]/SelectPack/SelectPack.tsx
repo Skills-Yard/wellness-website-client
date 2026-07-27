@@ -1,66 +1,49 @@
 "use client";
 
+import {
+  ServiceAddOn,
+  ServiceDuration,
+  ServicePackage,
+} from "@/src/types/serviceDetailTypes";
+import { DynamicService } from "@/src/utils/types/spabooking";
+import { DynamicStep } from "@/src/utils/data/detailPage";
+import { ChevronRight, Check } from "lucide-react";
 import { useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
 import StepsSection from "../StepSection/SectionSteps";
 
+type ServiceDetails = {
+  durations: ServiceDuration[];
+  packages: ServicePackage[];
+  addOns: ServiceAddOn[];
+};
+
 interface RequirementSelectorProps {
+  service: DynamicService;
+  serviceDetails: ServiceDetails;
+  steps: DynamicStep[];
   onSelectionChange?: (data: any) => void;
-  steps: [];
 }
 
 export default function RequirementSelector({
+  service,
+  serviceDetails,
   steps,
+  onSelectionChange,
 }: RequirementSelectorProps) {
+  const { durations, packages, addOns } = serviceDetails;
   // State for selections based on the image's layout
-  const [selectedDuration, setSelectedDuration] = useState("60 mins");
-  const [selectedPack, setSelectedPack] = useState("1 Sessions");
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [selectedDurationId, setSelectedDurationId] = useState<string | null>(
+    durations[0]?.id ?? null,
+  );
+
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
+    packages[0]?.id ?? null,
+  );
+
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [openFaq, setOpenFaq] = useState(null);
 
-  // Static durations mapping
-  const durations = [
-    { id: "60 mins", price: "₹1,199" },
-    { id: "90 mins", price: "₹2,199" },
-  ];
 
-  // Base price selection configuration based on duration
-  const basePrice = selectedDuration === "60 mins" ? 1199 : 2199;
-
-  // Dynamic packs calculation based on selected duration base price
-  const packs = [
-    {
-      id: "1 Sessions",
-      price: `₹${basePrice.toLocaleString("en-IN")}`,
-      perSession: `(₹${basePrice.toLocaleString("en-IN")}/session)`,
-      numericPrice: basePrice,
-    },
-    {
-      id: "4 Sessions",
-      price: `₹${Math.round(basePrice * 4 * 0.9).toLocaleString("en-IN")}`,
-      originalPrice: `₹${(basePrice * 4).toLocaleString("en-IN")}`,
-      discount: "10% off",
-      perSession: `(₹${Math.round((basePrice * 4 * 0.9) / 4).toLocaleString("en-IN")}/session)`,
-      numericPrice: Math.round(basePrice * 4 * 0.9),
-    },
-    {
-      id: "8 Sessions",
-      price:
-        basePrice === 1199
-          ? "₹8,316"
-          : `₹${Math.round(basePrice * 8 * 0.9).toLocaleString("en-IN")}`,
-      originalPrice:
-        basePrice === 1199
-          ? "₹8,996"
-          : `₹${(basePrice * 8).toLocaleString("en-IN")}`,
-      discount: "10% off",
-      perSession:
-        basePrice === 1199
-          ? "(₹1,039/session)"
-          : `(₹${Math.round((basePrice * 8 * 0.9) / 8).toLocaleString("en-IN")}/session)`,
-      numericPrice: basePrice === 1199 ? 8316 : Math.round(basePrice * 8 * 0.9),
-    },
-  ];
 
   const treatments = [
     {
@@ -95,15 +78,6 @@ export default function RequirementSelector({
     "Hydrate your skin and avoid strong skincare products.",
   ];
 
-  const addons = [
-    { id: "Meditation Session", price: "+₹299", icon: "🧘", numericPrice: 299 },
-    {
-      id: "Personalized Diet Plan",
-      price: "+₹399",
-      icon: "🥗",
-      numericPrice: 399,
-    },
-  ];
 
   const items = [
     {
@@ -181,14 +155,24 @@ export default function RequirementSelector({
   };
 
   // Calculate Total Dynamic Price (Selected Pack + Selected Addons)
-  const packPriceNum =
-    packs.find((p) => p.id === selectedPack)?.numericPrice || 0;
-  const addonsPriceNum = selectedAddons.reduce((sum, addonId) => {
-    const addon = addons.find((a) => a.id === addonId);
-    return sum + (addon ? addon.numericPrice : 0);
-  }, 0);
+  const selectedPackage = packages.find(
+  (pack) => pack.id === selectedPackageId,
+);
 
-  const currentPrice = `₹${(packPriceNum + addonsPriceNum).toLocaleString("en-IN")}`;
+const selectedAddons = addOns.filter((addon) =>
+  selectedAddonIds.includes(addon.id),
+);
+
+const packagePrice = Number(selectedPackage?.price ?? 0);
+
+const addonsPrice = selectedAddons.reduce(
+  (total, addon) => total + Number(addon.price ?? 0),
+  0,
+);
+
+const totalPrice = packagePrice + addonsPrice;
+
+const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
 
   // Helper to toggle add-ons
   const toggleAddon = (addonId: string) => {
@@ -215,11 +199,13 @@ export default function RequirementSelector({
                 </h3>
                 <div className="flex gap-3 sm:gap-3">
                   {durations.map((duration) => {
-                    const isSelected = selectedDuration === duration.id;
+                    const isSelected = selectedDurationId === duration.id;
+
                     return (
                       <button
                         key={duration.id}
-                        onClick={() => setSelectedDuration(duration.id)}
+                        type="button"
+                        onClick={() => setSelectedDurationId(duration.id)}
                         className={`flex flex-col flex-1 sm:flex-none h-16 sm:h-20 md:h-20 sm:w-28 md:w-32 rounded-lg items-start border p-3 text-left transition-colors ${
                           isSelected
                             ? "border-[#D38516] bg-[#FDFBF8]"
@@ -227,14 +213,15 @@ export default function RequirementSelector({
                         }`}
                       >
                         <span className="text-xs sm:text-sm font-medium text-black">
-                          {duration.id}
+                          {duration.name ?? duration.title ?? duration.duration}
                         </span>
+
                         <span
                           className={`text-sm md:text-base font-semibold mt-auto ${
                             isSelected ? "text-[#D38516]" : "text-[#666666]"
                           }`}
                         >
-                          {duration.id === "60 mins" ? "₹1,199" : "₹2,199"}
+                          ₹{Number(duration.price ?? 0).toLocaleString("en-IN")}
                         </span>
                       </button>
                     );
@@ -256,53 +243,40 @@ export default function RequirementSelector({
 
                 {/* Cards Container - Responsive */}
                 <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  {packs.map((pack) => {
-                    const isSelected = selectedPack === pack.id;
+                  {packages.map((pack) => {
+                    const isSelected = selectedPackageId === pack.id;
 
                     return (
                       <button
                         key={pack.id}
-                        onClick={() => setSelectedPack(pack.id)}
-                        className={`box-border flex flex-col items-start shrink-0 w-28 sm:w-32 md:w-36 h-32 sm:h-36 p-3 sm:p-4 rounded-lg text-left transition-colors ${
+                        type="button"
+                        onClick={() => setSelectedPackageId(pack.id)}
+                        className={`box-border flex flex-col items-start shrink-0 w-28 sm:w-32 md:w-36 min-h-32 p-3 sm:p-4 rounded-lg text-left transition-colors ${
                           isSelected
                             ? "bg-[#FDFBF8] border border-[#904720] gap-2"
                             : "bg-white border border-[#BFBFBF] justify-center gap-2"
                         }`}
                       >
-                        {/* Session Title */}
-                        <span className="text-xs sm:text-sm font-medium leading-tight text-black">
-                          {pack.id}
+                        <span className="text-xs sm:text-sm font-medium text-black">
+                          {pack.name ?? pack.title}
                         </span>
 
-                        {/* Price Container */}
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm sm:text-base font-medium leading-tight text-black">
-                            {pack.price}
-                          </span>
+                        <span className="text-sm sm:text-base font-medium text-black">
+                          ₹{Number(pack.price ?? 0).toLocaleString("en-IN")}
+                        </span>
 
-                          {/* Original Price */}
-                          {pack.originalPrice && (
-                            <span className="text-xs sm:text-sm font-medium leading-tight text-[#808080] line-through">
-                              {pack.originalPrice}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Discount Tag */}
-                        {pack.discount && (
-                          <span className="text-xs sm:text-sm font-medium leading-tight text-[#1E9E13]">
-                            {pack.discount}
+                        {pack.originalPrice && (
+                          <span className="text-xs text-[#808080] line-through">
+                            ₹
+                            {Number(pack.originalPrice).toLocaleString("en-IN")}
                           </span>
                         )}
 
-                        {/* Per Session text */}
-                        <span
-                          className={`text-xs font-medium leading-tight text-[#808080] ${
-                            isSelected ? "mt-auto" : ""
-                          }`}
-                        >
-                          {pack.perSession}
-                        </span>
+                        {pack.discount && (
+                          <span className="text-xs text-[#1E9E13]">
+                            {pack.discount}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -329,28 +303,32 @@ export default function RequirementSelector({
                   </span>
                 </h3>
                 <div className="space-y-2 sm:space-y-3">
-                  {addons.map((addon) => {
-                    const isSelected = selectedAddons.includes(addon.id);
+                  {addOns.map((addon) => {
+                    const isSelected = selectedAddonIds.includes(addon.id);
+
                     return (
                       <button
                         key={addon.id}
-                        onClick={() => toggleAddon(addon.id)}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAddonIds((prev) =>
+                            prev.includes(addon.id)
+                              ? prev.filter((id) => id !== addon.id)
+                              : [...prev, addon.id],
+                          );
+                        }}
                         className={`flex w-full h-12 sm:h-14 items-center justify-between rounded-lg border p-3 sm:p-4 transition-colors ${
                           isSelected
                             ? "border-amber-400 bg-amber-50/30"
                             : "border-slate-200 bg-white hover:bg-slate-50"
                         }`}
                       >
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                          <span className="text-sm sm:text-lg shrink-0">
-                            {addon.icon}
-                          </span>
-                          <span className="text-sm sm:text-base font-medium text-slate-700 truncate">
-                            {addon.id}
-                          </span>
-                        </div>
-                        <span className="text-xs sm:text-sm font-semibold text-slate-800 shrink-0 ml-2">
-                          {addon.price}
+                        <span className="text-sm sm:text-base font-medium text-slate-700">
+                          {addon.name ?? addon.title}
+                        </span>
+
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          +₹{Number(addon.price ?? 0).toLocaleString("en-IN")}
                         </span>
                       </button>
                     );
@@ -407,7 +385,10 @@ export default function RequirementSelector({
             {/* Services Grid - Responsive columns */}
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {treatments.map((item) => (
-                <div key={item.id} className="flex flex-col items-center w-full">
+                <div
+                  key={item.id}
+                  className="flex flex-col items-center w-full"
+                >
                   <img
                     src={item.imgSrc}
                     alt={item.title}
@@ -743,14 +724,16 @@ export default function RequirementSelector({
                   >
                     <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                   </svg>
-                  <span className="text-xs font-medium text-[#666666]">4.7</span>
+                  <span className="text-xs font-medium text-[#666666]">
+                    4.7
+                  </span>
                 </div>
               </div>
 
               {/* Review Text */}
               <p className="mt-2 sm:mt-3 text-xs sm:text-sm font-medium text-black leading-relaxed">
-                Amazing experience! The instructor was patient and explained every
-                pose so well. Felt so relaxed and light.
+                Amazing experience! The instructor was patient and explained
+                every pose so well. Felt so relaxed and light.
               </p>
             </div>
           </div>

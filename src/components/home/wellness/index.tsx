@@ -59,7 +59,7 @@ export default function WellnessServices() {
                         return (
                             <SwiperSlide key={item.id} className="h-auto">
                                 <div
-                                    onClick={() => router.push(`/detail?type=wellness&id=${item.id}`)}
+                                    onClick={() => router.push(`/detail/wellness?id=${item.id}`)}
                                     className="group cursor-pointer select-none flex flex-col justify-between h-full"
                                 >
                                     <div>

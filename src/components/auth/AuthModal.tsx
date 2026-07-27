@@ -12,15 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/src/components/ui/dialog";
-import {
-  authClient,
-  type CreateUserBody,
-  type CreateUserResponse,
-  type OtpRequestBody,
-  type OtpRequestResponse,
-  type OtpVerifyBody,
-  type OtpVerifyResponse,
-} from "@/src/lib/api/authClient";
+import type { CreateUserBody } from "@/src/types/auth";
 import { professions } from "@/src/utils/data/authData";
 import { authApi } from "@/src/services/authApi";
 

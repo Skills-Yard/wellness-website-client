@@ -60,7 +60,7 @@ export default function MassageServices() {
                         return (
                             <SwiperSlide key={item.id} className="h-auto ">
                                 <div
-                                    onClick={() => router.push(`/detail?type=massage&id=${item.id}`)}
+                                    onClick={() => router.push(`/detail/massage?id=${item.id}`)}
                                     className="group cursor-pointer select-none flex flex-col justify-between h-full"
                                 >
                                     {/* Aspect Ratio Square Image Frame */}

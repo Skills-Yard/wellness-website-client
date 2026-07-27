@@ -1,11 +1,14 @@
 import { apiClient } from "../lib/api/apiClient";
-import { ZonesQuery, Zone } from "../types/serviceTypes";
+import { ApiResponse, ZoneDetails, ZonesQuery } from "../types/serviceTypes";
 
-export const getZones = ({ lat, long }: ZonesQuery): Promise<Zone[]> => {
-  return apiClient.get<Zone[]>("/zones", {
+export const getZones = ({
+  lat,
+  long,
+}: ZonesQuery): Promise<ApiResponse<ZoneDetails>> => {
+  return apiClient.get<ApiResponse<ZoneDetails>>("/zones", {
     params: {
-      latitude: 28.6109538,
-      longitude: 77.2059958,
+      latitude: 28.6311026,
+      longitude: 77.2183546,
     },
   });
 };

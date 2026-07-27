@@ -16,7 +16,7 @@ export default function WallPanelTwo() {
                     <p className="text-base sm:text-lg text-neutral-800 font-medium tracking-wide">
                         Physiotherapy & Rehab Packages
                     </p>
-                    <Link href="/detail?type=physio">
+                    <Link href="/detail/physio">
                         <Button className="bg-[#111111] max-sm:hidden text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
                             Book assessment
                         </Button>
@@ -33,7 +33,7 @@ export default function WallPanelTwo() {
                         className="object-cover transition-transform duration-500 hover:scale-[1.02]"
                         priority
                     />
-                    <Link href="/detail?type=physio">
+                    <Link href="/detail/physio">
                         <Button className="bg-[#ffffff] hidden absolute max-sm:flex text-black hover:bg-black hover:text-white font-bold text-sm 
                         h-9 px-7 bottom-4 left-4 rounded-sm cursor-pointer transition-all active:scale-95 border-none shadow-sm">
                             Book assessment

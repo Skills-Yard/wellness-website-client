@@ -20,7 +20,9 @@ export default function ServicesList({
     <div className="space-y-8 xs:space-y-10 md:space-y-12 flex-1">
       {categories.map((category) => {
         const categoryServices = services.filter(
-          (s) => s.category === category.name,
+          (service) =>
+            service.subCategoryId === category.id ||
+            service.category === category.name,
         );
 
         if (categoryServices.length === 0) return null;

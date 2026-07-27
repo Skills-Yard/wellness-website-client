@@ -8,6 +8,7 @@ export interface DynamicService {
   rating: string | number; 
   reviews: string | number;  
   category: string;
+  subCategoryId?: string;
   tag?: string;
   isSpotlight?: boolean;
   features?: string[];

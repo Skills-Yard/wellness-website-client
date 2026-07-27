@@ -6,6 +6,7 @@ interface DesktopHeroProps {
   rating: string | number;
   reviews: string | number;
   media: string;
+  subtitle?: string;
 }
 
 export default function DesktopHero({
@@ -13,6 +14,7 @@ export default function DesktopHero({
   rating,
   reviews,
   media,
+  subtitle,
 }: DesktopHeroProps) {
   return (
     <div className="hidden lg:block relative w-full h-87.5 xl:h-100 bg-slate-900 overflow-hidden rounded-3xl shadow-sm mb-12">
@@ -32,10 +34,15 @@ export default function DesktopHero({
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-2">
           {title}
         </h1>
+        {subtitle ? (
+          <p className="mb-3 max-w-2xl text-sm sm:text-base text-slate-200">
+            {subtitle}
+          </p>
+        ) : null}
         <p className="flex items-center text-sm sm:text-base text-slate-200">
           <Star className="w-4 h-4 fill-amber-400 text-amber-400 mr-1.5" />
-          <span className="font-bold text-white mr-1.5">{rating}</span>
-          ({reviews})
+          <span className="font-bold text-white mr-1.5">{rating}</span>(
+          {reviews})
         </p>
       </div>
     </div>

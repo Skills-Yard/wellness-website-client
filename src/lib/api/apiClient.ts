@@ -10,6 +10,11 @@ type ApiError = {
   };
 };
 
+/** Options shared by every request made through the application's API client. */
+export type ApiRequestConfig = AxiosRequestConfig & {
+  accessToken?: string;
+};
+
 export class ApiClientError extends Error {
   constructor(
     public readonly status: number,
@@ -40,6 +45,18 @@ class ApiClient {
     });
   }
 
+  private buildConfig(config?: ApiRequestConfig): AxiosRequestConfig {
+    const { accessToken, headers, ...requestConfig } = config ?? {};
+
+    return {
+      ...requestConfig,
+      headers: {
+        ...headers,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+    };
+  }
+
   private handleError(error: unknown): never {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
@@ -53,11 +70,9 @@ class ApiClient {
     throw error;
   }
 
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T>(path: string, config?: ApiRequestConfig): Promise<T> {
     try {
-      console.log("config: ", config);
-      console.log("URL: ", url);
-      const response = await this.client.get<T>(url, config);
+      const response = await this.client.get<T>(path, this.buildConfig(config));
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -65,12 +80,12 @@ class ApiClient {
   }
 
   async post<TBody, TResponse>(
-    url: string,
+    path: string,
     body: TBody,
-    config?: AxiosRequestConfig,
+    config?: ApiRequestConfig,
   ): Promise<TResponse> {
     try {
-      const response = await this.client.post<TResponse>(url, body, config);
+      const response = await this.client.post<TResponse>(path, body, this.buildConfig(config));
 
       return response.data;
     } catch (error) {
@@ -79,12 +94,12 @@ class ApiClient {
   }
 
   async put<TBody, TResponse>(
-    url: string,
+    path: string,
     body: TBody,
-    config?: AxiosRequestConfig,
+    config?: ApiRequestConfig,
   ): Promise<TResponse> {
     try {
-      const response = await this.client.put<TResponse>(url, body, config);
+      const response = await this.client.put<TResponse>(path, body, this.buildConfig(config));
 
       return response.data;
     } catch (error) {
@@ -93,12 +108,12 @@ class ApiClient {
   }
 
   async patch<TBody, TResponse>(
-    url: string,
+    path: string,
     body: TBody,
-    config?: AxiosRequestConfig,
+    config?: ApiRequestConfig,
   ): Promise<TResponse> {
     try {
-      const response = await this.client.patch<TResponse>(url, body, config);
+      const response = await this.client.patch<TResponse>(path, body, this.buildConfig(config));
 
       return response.data;
     } catch (error) {
@@ -106,9 +121,9 @@ class ApiClient {
     }
   }
 
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T>(path: string, config?: ApiRequestConfig): Promise<T> {
     try {
-      const response = await this.client.delete<T>(url, config);
+      const response = await this.client.delete<T>(path, this.buildConfig(config));
 
       return response.data;
     } catch (error) {

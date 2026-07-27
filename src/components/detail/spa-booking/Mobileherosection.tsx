@@ -1,8 +1,14 @@
 interface MobileHeroSectionProps {
   videoSrc: string;
+  title?: string;
+  subtitle?: string;
 }
 
-export default function MobileHeroSection({ videoSrc }: MobileHeroSectionProps) {
+export default function MobileHeroSection({
+  videoSrc,
+  title,
+  subtitle,
+}: MobileHeroSectionProps) {
   return (
     <div className="relative block w-full lg:hidden h-60 xs:h-[280px] sm:h-74.25 overflow-hidden bg-linear-to-br from-[#FFC09E] via-[#FFD1BF]/33 to-transparent">
       <video
@@ -15,10 +21,10 @@ export default function MobileHeroSection({ videoSrc }: MobileHeroSectionProps) 
       <div className="absolute flex justify-between bottom-0 p-3 xs:p-4 inset-x-0 pt-16 xs:pt-20">
         <div className="pr-2">
           <h1 className="text-base xs:text-lg sm:text-xl font-bold text-[#25180F] mb-1.5 xs:mb-2 tracking-tight leading-tight">
-            Stress Relief Starts Here
+            {title || "Stress Relief Starts Here"}
           </h1>
           <p className="text-xs xs:text-sm text-[#ffffff] font-semibold leading-tight">
-            Body therapies designed for you
+            {subtitle || "Body therapies designed for you"}
           </p>
         </div>
         {/* Custom Horizontal Carousel Indicators */}

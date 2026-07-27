@@ -1,23 +1,30 @@
-import { authClient } from "../lib/api/authClient";
-import { OtpRequestBody, OtpRequestResponse, OtpVerifyBody, OtpVerifyResponse, CreateUserBody, CreateUserResponse } from "../types/auth";
+import { apiClient } from "../lib/api/apiClient";
+import {
+  CreateUserBody,
+  CreateUserResponse,
+  OtpRequestBody,
+  OtpRequestResponse,
+  OtpVerifyBody,
+  OtpVerifyResponse,
+} from "../types/auth";
 
 export const authApi = {
   requestOtp(body: OtpRequestBody) {
-    return authClient.post<OtpRequestBody, OtpRequestResponse>(
+    return apiClient.post<OtpRequestBody, OtpRequestResponse>(
       "/auth/otp/request",
       body,
     );
   },
 
   verifyOtp(body: OtpVerifyBody) {
-    return authClient.post<OtpVerifyBody, OtpVerifyResponse>(
+    return apiClient.post<OtpVerifyBody, OtpVerifyResponse>(
       "/auth/otp/verify",
       body,
     );
   },
 
   createUser(body: CreateUserBody, signupToken: string) {
-    return authClient.post<CreateUserBody, CreateUserResponse>("/users", body, {
+    return apiClient.post<CreateUserBody, CreateUserResponse>("/users", body, {
       accessToken: signupToken,
     });
   },
