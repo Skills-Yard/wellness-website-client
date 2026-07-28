@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 
-const API_V1_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL || ""}/api/v1`;
-console.log("ENV URL: ", process.env.NEXT_PUBLIC_API_BASE_URL);
+// Use the same-origin Next.js proxy so browsers never call the backend cross-origin.
+export const API_V1_URL = "/api/v1";
 
 type ApiError = {
   message?: string;
@@ -32,12 +32,13 @@ export class ApiClientError extends Error {
   }
 }
 
-class ApiClient {
+export class ApiClient {
   private client: AxiosInstance;
 
-  constructor() {
+  constructor(baseURL = API_V1_URL, withCredentials = false) {
     this.client = axios.create({
-      baseURL: API_V1_URL,
+      baseURL,
+      withCredentials,
       headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "1",

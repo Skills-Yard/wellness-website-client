@@ -21,7 +21,12 @@ export type OtpVerifyBody = OtpRequestBody & {
 };
 
 export type OtpVerifyResponse = ApiSuccess<{
-  signupToken: string;
+  message?: string;
+  /** Returned for a new phone number; use only to create the user profile. */
+  signupToken?: string;
+  /** Returned for an existing user and completes login immediately. */
+  accessToken?: string;
+  refreshToken?: string;
 }>;
 
 export type CreateUserBody = {
@@ -31,6 +36,7 @@ export type CreateUserBody = {
   profilePhotoKey: string;
   dateOfBirth: string;
   gender: "MALE" | "FEMALE" | "OTHER";
+  referredBy?: string;
 };
 
 export type CreateUserResponse = ApiSuccess<{
@@ -39,3 +45,14 @@ export type CreateUserResponse = ApiSuccess<{
     refreshToken?: string;
   };
 }>;
+
+export type RefreshTokenBody = {
+  refreshToken: string;
+};
+
+export type RefreshTokenResponse = ApiSuccess<{
+  accessToken: string;
+  refreshToken?: string;
+}>;
+
+export type LogoutResponse = ApiSuccess<Record<string, never>>;

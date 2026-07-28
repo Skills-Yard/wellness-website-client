@@ -18,6 +18,7 @@ import AuthModal from "../auth/AuthModal";
 import BottomNav from "../home/mobile/Bottomnav";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
+import { authApi } from "@/src/services/authApi";
 
 const AccountSection = ({
   user,
@@ -223,15 +224,13 @@ const SettingsSection = () => {
 // ==========================================
 // 4. ABOUT COMPONENT
 // ==========================================
-const AboutSection = () => {
-  const [loginOpen, setLoginOpen] = useState(false);
-  const handleLogout = () => {
-    // 1. Clears all local storage data
-    localStorage.clear();
-
-    // 2. Refreshes the page to reset the app state
-    window.location.reload();
-  };
+const AboutSection = ({
+  onLogout,
+  isLoggingOut,
+}: {
+  onLogout: () => void;
+  isLoggingOut: boolean;
+}) => {
   return (
     <AccordionItem value="about" className="border-none py-2">
       <AccordionTrigger className="hover:no-underline">
@@ -251,10 +250,13 @@ const AboutSection = () => {
             <span className="text-slate-400">→</span>
           </button>
           <button
-            onClick={() => handleLogout()}
+            onClick={onLogout}
+            disabled={isLoggingOut}
             className="mt-4 flex w-full items-center justify-between rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 cursor-pointer"
           >
-            <span className="font-medium">Log Out</span>
+            <span className="font-medium">
+              {isLoggingOut ? "Logging out..." : "Log Out"}
+            </span>
           </button>
         </div>
 
@@ -264,8 +266,6 @@ const AboutSection = () => {
           </p>
         </div>
       </AccordionContent>
-
-      {loginOpen && <AuthModal onClose={() => setLoginOpen(false)} />}
     </AccordionItem>
   );
 };
@@ -275,11 +275,12 @@ const AboutSection = () => {
 // ==========================================
 export default function ProfilePage() {
   const router = useRouter();
-  const [user] = useState<UserProfile>(tempUser);
+  const [user, setUser] = useState<UserProfile>(tempUser);
   const { cartCount, setIsCartOpen } = useCart();
 
   const [isLogin, setIsLogin] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   // Prevents Next.js hydration mismatch errors
   const [isMounted, setIsMounted] = useState(false);
 
@@ -288,6 +289,19 @@ export default function ProfilePage() {
   useEffect(() => {
     setIsMounted(true);
     const storedLoginState = localStorage.getItem("isUserLoggedIn");
+
+    const storedProfile = localStorage.getItem("userProfile");
+    if (storedProfile) {
+      try {
+        const profile = JSON.parse(storedProfile) as Pick<
+          UserProfile,
+          "phone" | "name" | "email"
+        >;
+        setUser((currentUser) => ({ ...currentUser, ...profile }));
+      } catch {
+        localStorage.removeItem("userProfile");
+      }
+    }
 
     if (storedLoginState === "true") {
       setIsLogin(true);
@@ -310,6 +324,25 @@ export default function ProfilePage() {
 
   const handleEditProfile = () => {
     alert("Open an edit modal or navigate to an edit page here!");
+  };
+
+  const handleLogout = async () => {
+    const accessToken = localStorage.getItem("accessToken");
+    setIsLoggingOut(true);
+
+    try {
+      if (accessToken) await authApi.logout(accessToken);
+    } catch {
+      // The local session should still end if the server session has expired.
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userProfile");
+      localStorage.removeItem("isUserLoggedIn");
+      setIsLogin(false);
+      setIsLoggingOut(false);
+      router.replace("/");
+    }
   };
 
   return (
@@ -367,7 +400,10 @@ export default function ProfilePage() {
                 <AccountSection user={user} onEdit={handleEditProfile} />
                 <AddressSection user={user} />
                 <SettingsSection />
-                <AboutSection />
+                <AboutSection
+                  onLogout={handleLogout}
+                  isLoggingOut={isLoggingOut}
+                />
               </Accordion>
             </div>
           </div>

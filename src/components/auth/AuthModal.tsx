@@ -1,34 +1,20 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client";
 
-import React, { useState, useEffect } from "react";
-// Assuming you have lucide-react installed for standard icons. If not, you can replace these with SVGs.
-import {
-  ChevronDown,
-  ArrowLeft,
-  Search,
-  PhoneCall,
-  MessageSquare,
-} from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowLeft, ChevronDown, MessageSquare, PhoneCall } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/src/components/ui/dialog";
 import type { CreateUserBody } from "@/src/types/auth";
-import { professions } from "@/src/utils/data/authData";
 import { authApi } from "@/src/services/authApi";
-
-const cities = [
-  "Delhi NCR",
-  "Mumbai",
-  "Bangalore",
-  "Noida",
-  "Gurugram",
-  "Kolkata",
-  "Chennai",
-  "Hyderabad",
-  "Pune",
-];
+import { userApi } from "@/src/services/userApi";
 
 type AuthStep = "PHONE" | "OTP" | "ONBOARDING";
+
+type StoredProfile = {
+  phone: string;
+  name: string;
+  email: string;
+};
 
 export default function AuthModal({
   onClose,
@@ -38,95 +24,56 @@ export default function AuthModal({
   onComplete?: () => void;
 }) {
   const router = useRouter();
-
   const [step, setStep] = useState<AuthStep>("PHONE");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [timer, setTimer] = useState(26);
   const [signupToken, setSignupToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Onboarding Form State
   const [name, setName] = useState("");
-  const [profession, setProfession] = useState("");
-  const [city, setCity] = useState("");
-  const [agreed, setAgreed] = useState(false);
   const [email, setEmail] = useState("");
+  const [profilePhotoKey, setProfilePhotoKey] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<CreateUserBody["gender"] | "">("");
+  const [referredBy, setReferredBy] = useState("");
+  const [notification, setNotification] = useState({ visible: false, message: "" });
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Sub-view states
-  const [showCitySelect, setShowCitySelect] = useState(false);
-  const [citySearch, setCitySearch] = useState("");
-
-  const [showWorkSelect, setShowWorkSelect] = useState(false);
-  const [workSearch, setWorkSearch] = useState("");
-
-  const [notification, setNotification] = useState({
-    visible: false,
-    message: "",
-  });
-
-  // ==========================================
-  // 1. PHONE STEP logic
-  // ==========================================
   const showMessage = (message: string) => {
     setNotification({ visible: true, message });
-    window.setTimeout(
-      () => setNotification({ visible: false, message: "" }),
-      3500,
-    );
+    window.setTimeout(() => setNotification({ visible: false, message: "" }), 3500);
   };
 
+  useEffect(() => {
+    if (step !== "OTP") return;
+    const countdown = window.setInterval(() => setTimer((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(countdown);
+  }, [step]);
+
   const handlePhoneSubmit = async () => {
-    if (phone.length < 10) return;
+    if (phone.length !== 10 || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await authApi.requestOtp({
-        countryCode: "+91",
-        phone,
-      });
+      await authApi.requestOtp({ countryCode: "+91", phone });
       setOtp(Array(6).fill(""));
       setTimer(26);
       setStep("OTP");
       showMessage("Verification code sent.");
     } catch (error) {
-      showMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not send verification code.",
-      );
+      showMessage(error instanceof Error ? error.message : "Could not send verification code.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSkip = () => {
-    onClose(); // Skip functionality
-  };
-  // ==========================================
-  // 2. OTP logic
-  // ==========================================
-  useEffect(() => {
-    let countdown: NodeJS.Timeout;
-    if (step === "OTP") {
-      // Timer countdown
-      countdown = setInterval(() => {
-        setTimer((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-
-      return () => {
-        clearInterval(countdown);
-      };
-    }
-  }, [step]);
-
-  // ==========================================
-  const handleOtpChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    setOtp((current) =>
-      current.map((item, itemIndex) => (itemIndex === index ? digit : item)),
-    );
+  const completeAuthentication = (accessToken: string, refreshToken?: string, profile?: StoredProfile) => {
+    localStorage.setItem("accessToken", accessToken);
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    if (profile) localStorage.setItem("userProfile", JSON.stringify(profile));
+    localStorage.setItem("isUserLoggedIn", "true");
+    onComplete?.();
+    onClose();
+    router.push("/profile");
   };
 
   const verifyOtp = async () => {
@@ -143,530 +90,117 @@ export default function AuthModal({
         deviceType: "WEB",
         deviceName: navigator.userAgent,
       });
-      setSignupToken(response.data.signupToken);
-      setStep("ONBOARDING");
+      const { accessToken, refreshToken, signupToken } = response.data;
+
+      if (accessToken) {
+        completeAuthentication(accessToken, refreshToken);
+        return;
+      }
+      if (signupToken) {
+        setSignupToken(signupToken);
+        setStep("ONBOARDING");
+        return;
+      }
+      showMessage("The verification response did not include an access or signup token.");
     } catch (error) {
-      showMessage(
-        error instanceof Error ? error.message : "Could not verify the code.",
-      );
+      showMessage(error instanceof Error ? error.message : "Could not verify the code.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 3. ONBOARDING logic
-  // ==========================================
+  const isFormValid = Boolean(name.trim() && email.trim() && dateOfBirth && gender);
+
   const handleComplete = async () => {
-    if (!isFormValid || !signupToken) return;
+    if (!isFormValid || !signupToken || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const response = await authApi.createUser(
+      const response = await userApi.create(
         {
           countryCode: "+91",
           name: name.trim(),
           email: email.trim(),
-          profilePhotoKey: "",
+          profilePhotoKey: profilePhotoKey.trim(),
           dateOfBirth,
-          gender: gender as CreateUserBody["gender"],
+          gender,
+          ...(referredBy.trim() ? { referredBy: referredBy.trim() } : {}),
         },
         signupToken,
       );
-
-      const accessToken = response.data.tokens.accessToken;
-
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("isUserLoggedIn", "true");
-      onComplete?.();
-      onClose();
-      router.push("/");
+      completeAuthentication(response.data.tokens.accessToken, response.data.tokens.refreshToken, {
+        phone: `+91 ${phone}`,
+        name: name.trim(),
+        email: email.trim(),
+      });
     } catch (error) {
-      showMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not create your account.",
-      );
+      showMessage(error instanceof Error ? error.message : "Could not create your account.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const hasSpecialChar = name.trim().length > 0 && /[^a-zA-Z\s]/.test(name);
-  const isFormValid =
-    name.trim().length > 0 &&
-    !hasSpecialChar &&
-    profession &&
-    city &&
-    email.trim().length > 0 &&
-    dateOfBirth &&
-    gender &&
-    agreed;
-
-  // Filter lists based on search
-  const filteredCities = cities.filter((c) =>
-    c.toLowerCase().includes(citySearch.toLowerCase()),
-  );
-  const filteredProfessions = professions.filter((p) =>
-    p.toLowerCase().includes(workSearch.toLowerCase()),
-  );
+  const updateOtp = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    setOtp((current) => current.map((item, itemIndex) => itemIndex === index ? digit : item));
+    if (digit) otpRefs.current[index + 1]?.focus();
+  };
 
   return (
-    <Dialog
-      open={true}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <DialogContent
-        className="w-[calc(100%-2rem)] max-w-sm p-0 overflow-hidden bg-white rounded-[24px] border border-stone-100 shadow-2xl flex flex-col gap-0 h-auto max-h-[90vh] outline-none animate-in fade-in duration-200"
-        showCloseButton={false}
-      >
-        {/* ==========================================
-            VIEW: CITY SELECTION (Overlay)
-        ========================================== */}
-        {showCitySelect && step === "ONBOARDING" ? (
-          <div className="absolute inset-0 z-20 flex flex-col bg-white h-full slide-in-from-right-full duration-300">
-            <div className="flex items-center px-4 py-3 border-b border-stone-100">
-              <button
-                onClick={() => setShowCitySelect(false)}
-                className="mr-3 p-1 hover:bg-stone-50 rounded-full transition-colors cursor-pointer flex items-center justify-center"
-              >
-                <ArrowLeft className="h-4 w-4 text-stone-700" />
-              </button>
-              <h2 className="text-xs font-bold text-stone-800">Select City</h2>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-sm gap-0 overflow-hidden rounded-[24px] border border-stone-100 bg-white p-0 shadow-2xl" showCloseButton={false}>
+        {step === "PHONE" && (
+          <div className="flex flex-col px-5 py-5">
+            <div className="mb-4 h-10 w-10 rounded-full bg-amber-50 p-2.5 text-amber-500"><PhoneCall className="h-5 w-5" /></div>
+            <h2 className="text-lg font-bold text-stone-900">Continue with your phone number</h2>
+            <p className="mt-1 text-xs text-stone-500">We&apos;ll send a verification code to your phone.</p>
+            <div className="mt-5 flex overflow-hidden rounded-xl border border-stone-200 bg-stone-50/20 focus-within:border-amber-500">
+              <span className="flex items-center gap-1 border-r border-stone-200 px-3 text-sm font-medium text-stone-700">+91 <ChevronDown className="h-3.5 w-3.5 text-stone-400" /></span>
+              <input type="tel" maxLength={10} autoFocus value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, ""))} className="w-full bg-transparent px-3 py-2.5 text-sm font-medium outline-none" placeholder="Phone number" />
             </div>
-
-            <div className="px-4 py-3">
-              <div className="flex items-center rounded-full border border-stone-200 bg-stone-50/50 px-3 py-1.5 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all focus-within:bg-white">
-                <Search className="h-3.5 w-3.5 text-stone-400 mr-2" />
-                <input
-                  type="text"
-                  placeholder="Search your city"
-                  value={citySearch}
-                  onChange={(e) => setCitySearch(e.target.value)}
-                  className="w-full text-xs outline-none text-stone-800 bg-transparent"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
-              {filteredCities.map((c, idx) => (
-                <label
-                  key={idx}
-                  className="flex items-center justify-between py-2 border-b border-dashed border-stone-100 cursor-pointer animate-in fade-in duration-150"
-                >
-                  <span className="text-xs text-stone-700">{c}</span>
-                  <div
-                    className={`h-4 w-4 rounded-full border flex items-center justify-center ${city === c ? "border-amber-500" : "border-stone-300"}`}
-                  >
-                    {city === c && (
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                    )}
-                  </div>
-                  <input
-                    type="radio"
-                    name="city"
-                    value={c}
-                    checked={city === c}
-                    onChange={() => {
-                      setCity(c);
-                      setShowCitySelect(false);
-                    }}
-                    className="hidden"
-                  />
-                </label>
-              ))}
-            </div>
+            <button onClick={handlePhoneSubmit} disabled={phone.length !== 10 || isSubmitting} className="mt-8 w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400">
+              {isSubmitting ? "Sending..." : "Continue"}
+            </button>
           </div>
-        ) : null}
+        )}
 
-        {/* ==========================================
-            VIEW: WORK SELECTION (Overlay)
-        ========================================== */}
-        {showWorkSelect && step === "ONBOARDING" ? (
-          <div className="absolute inset-0 z-20 flex flex-col bg-white h-full slide-in-from-right-full duration-300">
-            <div className="flex items-center px-4 py-3 border-b border-stone-100">
-              <button
-                onClick={() => setShowWorkSelect(false)}
-                className="mr-3 p-1 hover:bg-stone-50 rounded-full transition-colors cursor-pointer flex items-center justify-center"
-              >
-                <ArrowLeft className="h-4 w-4 text-stone-700" />
-              </button>
-              <h2 className="text-xs font-bold text-stone-800">
-                Select Profession
-              </h2>
+        {step === "OTP" && (
+          <div className="flex flex-col px-5 py-5">
+            <button onClick={() => setStep("PHONE")} className="mb-4 w-fit p-1"><ArrowLeft className="h-4 w-4 text-stone-700" /></button>
+            <div className="mb-4 h-10 w-10 rounded-xl bg-amber-50 p-2.5 text-amber-500"><MessageSquare className="h-5 w-5" /></div>
+            <h2 className="text-lg font-bold text-stone-900">Enter verification code</h2>
+            <p className="mt-1 text-xs text-stone-500">A 6-digit code was sent to +91 {phone}.</p>
+            <div className="mt-5 flex justify-between gap-1.5">
+              {otp.map((digit, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element; }} inputMode="numeric" maxLength={1} value={digit} onChange={(event) => updateOtp(index, event.target.value)} onKeyDown={(event) => { if (event.key === "Backspace" && !digit) otpRefs.current[index - 1]?.focus(); }} className="h-10 w-9 rounded-lg border border-stone-200 text-center text-sm font-semibold outline-none focus:border-amber-500" />)}
             </div>
-
-            <div className="px-4 py-3">
-              <div className="flex items-center rounded-full border border-stone-200 bg-stone-50/50 px-3 py-1.5 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all focus-within:bg-white">
-                <Search className="h-3.5 w-3.5 text-stone-400 mr-2" />
-                <input
-                  type="text"
-                  placeholder="Search profession"
-                  value={workSearch}
-                  onChange={(e) => setWorkSearch(e.target.value)}
-                  className="w-full text-xs outline-none text-stone-800 bg-transparent"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
-              {filteredProfessions.map((p, idx) => (
-                <label
-                  key={idx}
-                  className="flex items-center justify-between py-2 border-b border-dashed border-stone-100 cursor-pointer animate-in fade-in duration-150"
-                >
-                  <span className="text-xs text-stone-700">{p}</span>
-                  <div
-                    className={`h-4 w-4 rounded-full border flex items-center justify-center ${profession === p ? "border-amber-500" : "border-stone-300"}`}
-                  >
-                    {profession === p && (
-                      <div className="h-2 w-2 rounded-full bg-amber-500" />
-                    )}
-                  </div>
-                  <input
-                    type="radio"
-                    name="profession"
-                    value={p}
-                    checked={profession === p}
-                    onChange={() => {
-                      setProfession(p);
-                      setShowWorkSelect(false);
-                    }}
-                    className="hidden"
-                  />
-                </label>
-              ))}
-            </div>
+            <button onClick={verifyOtp} disabled={otp.join("").length !== 6 || isSubmitting} className="mt-5 w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400">{isSubmitting ? "Verifying..." : "Verify code"}</button>
+            <p className="mt-5 text-xs text-stone-400">Resend available in 0:{timer.toString().padStart(2, "0")}</p>
           </div>
-        ) : null}
+        )}
 
-        {/* ==========================================
-            MAIN CONTENT AREA
-        ========================================== */}
-        <div className="flex-1 flex flex-col">
-          {/* --- STEP 1: PHONE --- */}
-          {step === "PHONE" && (
-            <div className="flex flex-col px-5 py-5 animate-in fade-in duration-350">
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={handleSkip}
-                  className="rounded-full border border-stone-200 px-4 py-1 text-xs font-semibold text-stone-600 active:scale-95 transition-transform hover:bg-stone-50 cursor-pointer"
-                >
-                  Skip
-                </button>
+        {step === "ONBOARDING" && (
+          <div className="px-5 py-5">
+            <button onClick={() => setStep("OTP")} className="mb-4 w-fit p-1"><ArrowLeft className="h-4 w-4 text-stone-700" /></button>
+            <h2 className="text-lg font-bold text-stone-900">Complete your profile</h2>
+            <p className="mt-1 text-xs text-stone-500">Add your details to finish creating your account.</p>
+            <div className="mt-5 space-y-3">
+              <Field label="Full name"><input value={name} onChange={(event) => setName(event.target.value)} className="field" placeholder="John Doe" autoFocus /></Field>
+              <Field label="Email address"><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="field" placeholder="john@example.com" /></Field>
+              <Field label="Profile photo key"><input value={profilePhotoKey} onChange={(event) => setProfilePhotoKey(event.target.value)} className="field" placeholder="s3-key-123" /></Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Date of birth"><input type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} className="field" /></Field>
+                <Field label="Gender"><select value={gender} onChange={(event) => setGender(event.target.value as CreateUserBody["gender"] | "")} className="field"><option value="">Select</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></Field>
               </div>
-
-              <div className="flex-1 flex flex-col">
-                <div className="mb-4 h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
-                  <PhoneCall className="h-5 w-5" />
-                </div>
-
-                <h2 className="text-lg font-bold text-stone-900">
-                  Enter your phone number
-                </h2>
-                <p className="mt-1 text-xs text-stone-500 leading-normal">
-                  We'll send you a text with a verification code.
-                </p>
-
-                <div className="mt-5 flex rounded-xl border border-stone-200 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 overflow-hidden transition-all bg-stone-50/20">
-                  <div className="flex items-center gap-1 border-r border-stone-200 px-3 bg-stone-50/50">
-                    <span className="text-sm text-stone-700 font-medium">
-                      +91
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-stone-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    maxLength={10}
-                    autoFocus
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(e.target.value.replace(/\D/g, ""))
-                    }
-                    className="w-full px-3 py-2.5 text-sm text-stone-900 outline-none font-medium animate-none bg-transparent"
-                    placeholder="Phone number"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-stone-100 text-center">
-                <p className="text-[11px] text-stone-400 mb-3">
-                  By continuing, you agree to our{" "}
-                  <span className="underline font-medium cursor-pointer text-stone-500">
-                    T&C
-                  </span>{" "}
-                  and{" "}
-                  <span className="underline font-medium cursor-pointer text-stone-500">
-                    Privacy policy
-                  </span>
-                </p>
-                <button
-                  onClick={handlePhoneSubmit}
-                  disabled={phone.length < 10 || isSubmitting}
-                  className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer ${
-                    phone.length >= 10
-                      ? "bg-amber-500 text-white shadow-md shadow-amber-500/10 hover:bg-amber-600"
-                      : "bg-stone-100 text-stone-400 cursor-not-allowed"
-                  }`}
-                >
-                  {isSubmitting ? "Sending..." : "Continue"}
-                </button>
-              </div>
+              <Field label="Referral code (optional)"><input value={referredBy} onChange={(event) => setReferredBy(event.target.value)} className="field" placeholder="clh123xyz..." /></Field>
             </div>
-          )}
-
-          {/* --- STEP 2: OTP --- */}
-          {step === "OTP" && (
-            <div className="flex flex-col px-5 py-5 animate-in fade-in duration-350">
-              <button
-                onClick={() => setStep("PHONE")}
-                className="mb-4 w-fit p-1 hover:bg-stone-50 rounded-full transition-colors cursor-pointer flex items-center justify-center"
-              >
-                <ArrowLeft className="h-4 w-4 text-stone-700" />
-              </button>
-
-              <div className="flex-1 flex flex-col">
-                <div className="mb-4 h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
-                  <MessageSquare className="h-5 w-5" />
-                </div>
-
-                <h2 className="text-lg font-bold text-stone-900">
-                  Enter verification code
-                </h2>
-                <p className="mt-1 text-xs text-stone-500 leading-normal">
-                  A 6-digit code has been sent on +91 {phone}
-                </p>
-
-                <div className="mt-5 flex justify-between gap-1.5 max-w-70">
-                  {otp.map((digit, index) => (
-                    <input
-                      key={index}
-                      inputMode="numeric"
-                      autoComplete={index === 0 ? "one-time-code" : "off"}
-                      maxLength={1}
-                      value={digit}
-                      onChange={(event) =>
-                        handleOtpChange(index, event.target.value)
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Backspace" && !digit && index > 0) {
-                          document.getElementById(`otp-${index - 1}`)?.focus();
-                        }
-                      }}
-                      id={`otp-${index}`}
-                      className={`flex h-10 w-9 items-center justify-center rounded-lg border text-center text-sm font-semibold outline-none transition-all ${
-                        digit !== ""
-                          ? "border-stone-850 text-stone-900 bg-stone-50/30"
-                          : index === 0
-                            ? "border-amber-500 shadow-[0_0_0_1px_rgba(245,158,11,1)]"
-                            : "border-stone-200"
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  onClick={verifyOtp}
-                  disabled={otp.join("").length !== 6 || isSubmitting}
-                  className="mt-5 w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
-                >
-                  {isSubmitting ? "Verifying..." : "Verify code"}
-                </button>
-
-                <div className="mt-5 flex items-center gap-2 text-[10px] text-amber-600 bg-amber-50/50 px-2.5 py-1 rounded-full w-fit">
-                  <span className="h-1 w-1 rounded-full bg-amber-500" />
-                  <span>Enter the code sent to your phone.</span>
-                </div>
-
-                <div className="mt-6 border-t border-dashed border-stone-200 pt-4 flex items-center gap-1.5 text-stone-400 font-medium text-xs">
-                  <span>⏱</span>
-                  <span>0:{timer < 10 ? `0${timer}` : timer}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- STEP 3: ONBOARDING --- */}
-          {step === "ONBOARDING" && (
-            <div className="flex flex-col bg-white animate-in fade-in duration-350">
-              <div className="flex justify-end p-3 pb-0">
-                <button className="flex items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[10px] font-bold shadow-xs hover:bg-stone-50 cursor-pointer">
-                  <span className="text-xs">Aअ</span> English
-                </button>
-              </div>
-
-              <div className="px-5 pt-2 pb-5 flex-1 flex flex-col">
-                <h2 className="text-lg font-bold text-stone-900 mb-3.5">
-                  Tell us about yourself!
-                </h2>
-
-                <div className="space-y-3 flex-1">
-                  {/* Name Input */}
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
-                      What's your name?
-                    </label>
-                    <div
-                      className={`mt-1 rounded-xl border px-3 py-1.5 bg-stone-50/50 hover:bg-stone-50 focus-within:bg-white focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all ${name ? "border-amber-500" : "border-stone-200"}`}
-                    >
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Jhon Doe"
-                        className="w-full outline-none text-xs text-stone-900 bg-transparent"
-                        autoFocus
-                      />
-                    </div>
-                    {hasSpecialChar && (
-                      <p className="mt-1 ml-1 text-[9px] text-red-500 font-semibold leading-normal">
-                        Special characters are not allowed
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Profession & City inputs side by side */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Profession Select Trigger */}
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
-                        Work
-                      </label>
-                      <div
-                        onClick={() => setShowWorkSelect(true)}
-                        className="mt-1 flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-amber-500 px-3 py-1.5 cursor-pointer transition-all"
-                      >
-                        <span
-                          className={`text-xs truncate ${profession ? "text-stone-900 font-medium" : "text-stone-400"}`}
-                        >
-                          {profession || "Select"}
-                        </span>
-                        <ChevronDown className="h-3.5 w-3.5 text-stone-400 shrink-0 ml-1" />
-                      </div>
-                    </div>
-
-                    {/* City Select Trigger */}
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
-                        City
-                      </label>
-                      <div
-                        onClick={() => setShowCitySelect(true)}
-                        className="mt-1 flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 hover:border-amber-500 px-3 py-1.5 cursor-pointer transition-all"
-                      >
-                        <span
-                          className={`text-xs truncate ${city ? "text-stone-900 font-medium" : "text-stone-400"}`}
-                        >
-                          {city || "Select"}
-                        </span>
-                        <ChevronDown className="h-3.5 w-3.5 text-stone-400 shrink-0 ml-1" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
-                      Email address
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3 py-2 text-xs text-stone-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
-                        Date of birth
-                      </label>
-                      <input
-                        type="date"
-                        value={dateOfBirth}
-                        onChange={(e) => setDateOfBirth(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3 py-2 text-xs text-stone-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500 ml-1">
-                        Gender
-                      </label>
-                      <select
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3 py-2 text-xs text-stone-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      >
-                        <option value="">Select</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="mt-4 flex flex-col gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer py-1">
-                    <input
-                      type="checkbox"
-                      checked={agreed}
-                      onChange={(e) => setAgreed(e.target.checked)}
-                      className="h-4 w-4 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                    />
-                    <p className="text-[10px] text-stone-400 leading-normal">
-                      I agree to Velora's{" "}
-                      <span className="underline font-medium text-stone-500">
-                        T&C
-                      </span>{" "}
-                      and{" "}
-                      <span className="underline font-medium text-stone-500">
-                        Privacy policy
-                      </span>
-                    </p>
-                  </label>
-
-                  <button
-                    onClick={handleComplete}
-                    disabled={!isFormValid || isSubmitting}
-                    className={`w-full rounded-xl py-2 font-bold text-xs transition-all active:scale-[0.98] cursor-pointer ${
-                      isFormValid
-                        ? "bg-amber-500 text-white shadow-md shadow-amber-500/10 hover:bg-amber-600"
-                        : "bg-stone-100 text-stone-400 cursor-not-allowed"
-                    }`}
-                  >
-                    {isSubmitting ? "Creating account..." : "Continue"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Floating Notification Message */}
-        <div
-          className={`fixed left-1/2 z-60 w-[90%] max-w-xs -translate-x-1/2 rounded-2xl bg-stone-900 p-3 text-white shadow-2xl transition-all duration-500 ${
-            notification.visible
-              ? "bottom-6 opacity-100"
-              : "-bottom-24 opacity-0"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500">
-              <MessageSquare className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-[10px] font-medium text-stone-400">
-                Messages • Now
-              </p>
-              <p className="text-xs font-medium">{notification.message}</p>
-            </div>
+            <button onClick={handleComplete} disabled={!isFormValid || isSubmitting} className="mt-6 w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400">{isSubmitting ? "Creating account..." : "Create account"}</button>
           </div>
-        </div>
+        )}
+        <div className={`fixed bottom-6 left-1/2 z-60 w-[90%] max-w-xs -translate-x-1/2 rounded-2xl bg-stone-900 p-3 text-xs text-white shadow-2xl transition-all ${notification.visible ? "opacity-100" : "pointer-events-none translate-y-24 opacity-0"}`}>{notification.message}</div>
       </DialogContent>
     </Dialog>
   );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-500">{label}{children}</label>;
 }

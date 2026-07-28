@@ -99,6 +99,12 @@ body {
   scrollbar-width: none; /* Firefox */
 }
 
+@layer components {
+  .field {
+    @apply mt-1 w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3 py-2 text-xs text-stone-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500;
+  }
+}
+
 
 @layer base {
   * {

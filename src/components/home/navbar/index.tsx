@@ -39,6 +39,7 @@ import {
 import { useRouter } from "next/navigation";
 import AuthModal from "@/src/components/auth/AuthModal";
 import CartSheet from "@/src/components/cart/CartSheet";
+import { authApi } from "@/src/services/authApi";
 
 export default function Navbar() {
   const {
@@ -55,6 +56,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const router = useRouter();
 
@@ -63,6 +65,7 @@ export default function Navbar() {
   // Mount hydration checks
   useEffect(() => {
     setIsMounted(true);
+    setIsLoggedIn(localStorage.getItem("isUserLoggedIn") === "true");
   }, []);
 
   useEffect(() => {
@@ -149,8 +152,23 @@ export default function Navbar() {
   };
 
   const handleRedirect = () => {
-    // router.push() aapko naye path par le jayega
-    router.push("/profile"); // "/cart" ko apne target path se replace karein
+    router.push("/profile");
+  };
+
+  const handleLogout = async () => {
+    const accessToken = localStorage.getItem("accessToken");
+    try {
+      if (accessToken) await authApi.logout(accessToken);
+    } catch {
+      // End the local session even when the server session has expired.
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userProfile");
+      localStorage.removeItem("isUserLoggedIn");
+      setIsLoggedIn(false);
+      router.replace("/");
+    }
   };
 
   return (
@@ -341,33 +359,39 @@ export default function Navbar() {
             >
               <DropdownMenuItem
                 onClick={() => {
-                  handleRedirect;
+                  if (isLoggedIn) handleRedirect();
+                  else setLoginOpen(true);
                 }}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
-                Profile
+                {isLoggedIn ? "Profile" : "Log in"}
               </DropdownMenuItem>
+              {isLoggedIn && (
               <DropdownMenuItem
                 onClick={() => alert("My Bookings section coming soon!")}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
                 My Bookings
               </DropdownMenuItem>
+              )}
+              {isLoggedIn && (
               <DropdownMenuItem
                 onClick={() => alert("Account Settings coming soon!")}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
                 Account Settings
               </DropdownMenuItem>
+              )}
+              {isLoggedIn && (
               <DropdownMenuItem
                 onClick={() => {
-                  alert("Logged out successfully!");
-                  setLoginOpen(true);
+                  void handleLogout();
                 }}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-red-600 focus:bg-red-50 focus:text-red-700 transition-colors font-medium"
               >
                 Logout
               </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -522,7 +546,12 @@ export default function Navbar() {
 
       {/* Global Booking Flow Cart Drawer */}
       <CartSheet />
-      {loginOpen && (<AuthModal onClose={()=> setLoginOpen(false)} />)}
+      {loginOpen && (
+        <AuthModal
+          onClose={() => setLoginOpen(false)}
+          onComplete={() => setIsLoggedIn(true)}
+        />
+      )}
     </nav>
   );
 }
