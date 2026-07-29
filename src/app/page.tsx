@@ -19,7 +19,7 @@ import { getHomeDetails } from "@/src/services/homeApi";
 import { HomeDetails, ZoneDetails } from "@/src/types/serviceTypes";
 
 export default function Home() {
-  const { setLocation } = useCart();
+  const { setLocation, setZoneId: setCartZoneId } = useCart();
 
   const [zoneDetails, setZoneDetails] = useState<ZoneDetails | null>(null);
   const [homeDetails, setHomeDetails] = useState<HomeDetails | null>(null);
@@ -47,12 +47,14 @@ export default function Home() {
 
       if (zoneResponse?.exists && zoneResponse?.zoneId) {
         setZoneId(zoneResponse.zoneId);
+        setCartZoneId(zoneResponse.zoneId);
         setZoneExists(true);
 
         // If your CartContext needs location/zone
         setLocation(zoneResponse.zoneId);
       } else {
         setZoneId(null);
+        setCartZoneId(null);
         setZoneExists(false);
         setHomeDetails(null);
       }
@@ -60,6 +62,7 @@ export default function Home() {
       console.error("Error fetching zone:", error);
 
       setZoneId(null);
+      setCartZoneId(null);
       setZoneExists(false);
       setHomeDetails(null);
     }

@@ -2,9 +2,33 @@
 
 import { LOCATIONS } from "@/src/utils/data";
 import { CartItem, CartContextType } from "@/src/utils/types";
+import { cartApi, type CartApiItem } from "@/src/services/cartApi";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+const toCartItem = (item: CartApiItem): CartItem => ({
+    id:
+        item.id ??
+        `${item.serviceItemId}-${item.durationId}-${item.packageId}-${(item.addOnIds ?? []).join("-")}`,
+    serviceItemId: item.serviceItemId,
+    durationId: item.durationId,
+    packageId: item.packageId,
+    addOnIds: item.addOnIds ?? [],
+    quantity: item.quantity,
+    title: item.serviceItem?.title ?? item.serviceItem?.name ?? "Selected service",
+    image:
+        item.serviceItem?.image ??
+        item.serviceItem?.media ??
+        "/placeholder.svg",
+    duration:
+        item.duration?.label ??
+        item.duration?.name ??
+        item.duration?.title ??
+        item.duration?.duration ??
+        "Selected duration",
+    price: Number(item.package?.price ?? item.serviceItem?.price ?? 0),
+});
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -13,6 +37,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [location, setLocationState] = useState("");
     const [isLocationDetected, setIsLocationDetected] = useState<boolean | null>(null);
     const [isManuallySelected, setIsManuallySelected] = useState(false);
+    const [zoneId, setZoneIdState] = useState<string | null>(null);
+    const [cartId, setCartId] = useState<string | null>(null);
+    const [addressId, setAddressId] = useState<string | null>(null);
+    const [scheduledDate, setScheduledDate] = useState("");
+    const [scheduledTime, setScheduledTime] = useState("");
+    const [isOnDemand, setIsOnDemand] = useState(true);
+    const [couponCode, setCouponCode] = useState("");
 
     // Check geolocation on mount
     useEffect(() => {
@@ -56,6 +87,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
 
         const storedLoc = localStorage.getItem("vellora_location");
+        const storedZoneId = localStorage.getItem("vellora_zone_id");
         const storedManual = localStorage.getItem("vellora_manual_location");
 
         if (storedLoc) {
@@ -66,7 +98,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             setIsManuallySelected(false);
         }
 
+        setZoneIdState(storedZoneId);
         setIsHydrated(true);
+    }, []);
+
+    useEffect(() => {
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) return;
+
+        const loadCart = async () => {
+            try {
+                const response = await cartApi.get(accessToken);
+                setCartItems(response.data.items.map(toCartItem));
+                setCartId(response.data.id ?? response.data.cartId ?? null);
+                setAddressId(response.data.addressId ?? null);
+                setScheduledDate(response.data.scheduledDate ?? "");
+                setScheduledTime(response.data.scheduledTime ?? "");
+                setIsOnDemand(response.data.isOnDemand ?? true);
+                setCouponCode(response.data.couponCode ?? "");
+            } catch {
+                // Retain the locally cached cart if the API is unavailable.
+            }
+        };
+
+        void loadCart();
     }, []);
 
     // Save to localStorage whenever cartItems changes
@@ -86,43 +141,113 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    const setZoneId = useCallback((id: string | null) => {
+        setZoneIdState(id);
+        if (typeof window !== "undefined") {
+            if (id) localStorage.setItem("vellora_zone_id", id);
+            else localStorage.removeItem("vellora_zone_id");
+        }
+
+    }, []);
+
+    const syncCart = async (
+        items: CartItem[],
+        selectedAddressId = addressId,
+        details: Partial<Pick<import("@/src/services/cartApi").UpdateCartBody, "scheduledDate" | "scheduledTime" | "isOnDemand" | "couponCode">> = {},
+    ) => {
+        const accessToken = localStorage.getItem("accessToken");
+        const apiItems: CartApiItem[] = items.flatMap((item) =>
+            item.serviceItemId && item.durationId && item.packageId
+                ? [{
+                    serviceItemId: item.serviceItemId,
+                    durationId: item.durationId,
+                    packageId: item.packageId,
+                    addOnIds: item.addOnIds ?? [],
+                    quantity: item.quantity,
+                }]
+                : [],
+        );
+
+        if (!accessToken) return;
+        try {
+            await cartApi.update({
+                items: apiItems,
+                ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
+                scheduledDate: details.scheduledDate ?? scheduledDate,
+                scheduledTime: details.scheduledTime ?? scheduledTime,
+                isOnDemand: details.isOnDemand ?? isOnDemand,
+                couponCode: details.couponCode ?? couponCode,
+            }, accessToken);
+        } catch {
+            // The cart remains available locally if the server update fails.
+        }
+    };
+
     const addToCart = (item: Omit<CartItem, "quantity">) => {
         setCartItems((prev) => {
             const existing = prev.find((i) => i.id === item.id);
-            if (existing) {
-                return prev.map((i) =>
+            const next = existing
+                ? prev.map((i) =>
                     i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-                );
-            }
-            return [...prev, { ...item, quantity: 1 }];
+                )
+                : [...prev, { ...item, quantity: 1 }];
+            void syncCart(next);
+            return next;
         });
         setIsCartOpen(true);
     };
 
     const removeFromCart = (id: string) => {
-        setCartItems((prev) => prev.filter((item) => item.id !== id));
+        setCartItems((prev) => {
+            const next = prev.filter((item) => item.id !== id);
+            void syncCart(next);
+            return next;
+        });
     };
 
     const increaseQuantity = (id: string) => {
-        setCartItems((prev) =>
-            prev.map((item) =>
+        setCartItems((prev) => {
+            const next = prev.map((item) =>
                 item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-            )
-        );
+            );
+            void syncCart(next);
+            return next;
+        });
     };
 
     const decreaseQuantity = (id: string) => {
-        setCartItems((prev) =>
-            prev.map((item) =>
+        setCartItems((prev) => {
+            const next = prev.map((item) =>
                 item.id === id && item.quantity > 1
                     ? { ...item, quantity: item.quantity - 1 }
                     : item
-            )
-        );
+            );
+            void syncCart(next);
+            return next;
+        });
     };
 
     const clearCart = () => {
         setCartItems([]);
+        void syncCart([]);
+    };
+
+    const updateCartAddress = (nextAddressId: string) => {
+        setAddressId(nextAddressId);
+        void syncCart(cartItems, nextAddressId);
+    };
+
+    const updateCartSchedule = (details: {
+        scheduledDate?: string;
+        scheduledTime?: string;
+        isOnDemand?: boolean;
+        couponCode?: string;
+    }) => {
+        if (details.scheduledDate !== undefined) setScheduledDate(details.scheduledDate);
+        if (details.scheduledTime !== undefined) setScheduledTime(details.scheduledTime);
+        if (details.isOnDemand !== undefined) setIsOnDemand(details.isOnDemand);
+        if (details.couponCode !== undefined) setCouponCode(details.couponCode);
+        void syncCart(cartItems, addressId, details);
     };
 
     const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
@@ -154,6 +279,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 location,
                 setLocation,
                 isLocationSupported,
+                zoneId,
+                setZoneId,
+                cartId,
+                addressId,
+                updateCartAddress,
+                scheduledDate,
+                scheduledTime,
+                isOnDemand,
+                couponCode,
+                updateCartSchedule,
             }}
         >
             {children}

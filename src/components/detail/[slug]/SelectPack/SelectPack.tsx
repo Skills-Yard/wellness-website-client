@@ -10,6 +10,7 @@ import { DynamicStep } from "@/src/utils/data/detailPage";
 import { ChevronRight, Check } from "lucide-react";
 import { useState } from "react";
 import StepsSection from "../StepSection/SectionSteps";
+import { useCart } from "@/src/context/CartContext";
 
 type ServiceDetails = {
   durations: ServiceDuration[];
@@ -22,6 +23,7 @@ interface RequirementSelectorProps {
   serviceDetails: ServiceDetails;
   steps: DynamicStep[];
   onSelectionChange?: (data: any) => void;
+  onAddedToCart?: () => void;
 }
 
 export default function RequirementSelector({
@@ -29,7 +31,9 @@ export default function RequirementSelector({
   serviceDetails,
   steps,
   onSelectionChange,
+  onAddedToCart,
 }: RequirementSelectorProps) {
+  const { addToCart } = useCart();
   const { durations, packages, addOns } = serviceDetails;
   // State for selections based on the image's layout
   const [selectedDurationId, setSelectedDurationId] = useState<string | null>(
@@ -42,8 +46,6 @@ export default function RequirementSelector({
 
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [openFaq, setOpenFaq] = useState(null);
-
-
 
   const treatments = [
     {
@@ -77,7 +79,6 @@ export default function RequirementSelector({
     "Choose comfortable clothing for a relaxing experience.",
     "Hydrate your skin and avoid strong skincare products.",
   ];
-
 
   const items = [
     {
@@ -156,27 +157,52 @@ export default function RequirementSelector({
 
   // Calculate Total Dynamic Price (Selected Pack + Selected Addons)
   const selectedPackage = packages.find(
-  (pack) => pack.id === selectedPackageId,
-);
+    (pack) => pack.id === selectedPackageId,
+  );
+  const selectedDuration = durations.find(
+    (duration) => duration.id === selectedDurationId,
+  );
 
-const selectedAddons = addOns.filter((addon) =>
-  selectedAddonIds.includes(addon.id),
-);
+  const selectedAddons = addOns.filter((addon) =>
+    selectedAddonIds.includes(addon.id),
+  );
 
-const packagePrice = Number(selectedPackage?.price ?? 0);
+  const packagePrice = Number(selectedPackage?.price ?? 0);
 
-const addonsPrice = selectedAddons.reduce(
-  (total, addon) => total + Number(addon.price ?? 0),
-  0,
-);
+  const addonsPrice = selectedAddons.reduce(
+    (total, addon) => total + Number(addon.price ?? 0),
+    0,
+  );
 
-const totalPrice = packagePrice + addonsPrice;
+  const totalPrice = packagePrice + addonsPrice;
 
-const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
+  const handleAddToCart = () => {
+    if (!selectedDurationId || !selectedPackageId) return;
+
+    addToCart({
+      id: `${service.id}-${selectedDurationId}-${selectedPackageId}-${selectedAddonIds.join("-")}`,
+      serviceItemId: service.id,
+      durationId: selectedDurationId,
+      packageId: selectedPackageId,
+      addOnIds: selectedAddonIds,
+      title: service.label,
+      price: totalPrice,
+      image: service.media,
+      duration:
+        selectedDuration?.label ??
+        selectedDuration?.name ??
+        selectedDuration?.title ??
+        selectedDuration?.duration ??
+        service.duration,
+    });
+    onAddedToCart?.();
+  };
+
+  const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
 
   // Helper to toggle add-ons
   const toggleAddon = (addonId: string) => {
-    setSelectedAddons((prev) =>
+    setSelectedAddonIds((prev) =>
       prev.includes(addonId)
         ? prev.filter((id) => id !== addonId)
         : [...prev, addonId],
@@ -213,7 +239,7 @@ const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
                         }`}
                       >
                         <span className="text-xs sm:text-sm font-medium text-black">
-                          {duration.name ?? duration.title ?? duration.duration}
+                          {duration.label ?? duration.title ?? duration.duration}
                         </span>
 
                         <span
@@ -258,7 +284,7 @@ const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
                         }`}
                       >
                         <span className="text-xs sm:text-sm font-medium text-black">
-                          {pack.name ?? pack.title}
+                          {pack.label ?? pack.name ?? pack.title}
                         </span>
 
                         <span className="text-sm sm:text-base font-medium text-black">
@@ -272,9 +298,9 @@ const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
                           </span>
                         )}
 
-                        {pack.discount && (
+                        {(pack.discount ?? pack.savingsPercent ?? pack.savings) && (
                           <span className="text-xs text-[#1E9E13]">
-                            {pack.discount}
+                            {pack.discount ?? (pack.savingsPercent ? `Save ${pack.savingsPercent}%` : `Save ₹${Number(pack.savings).toLocaleString("en-IN")}`)}
                           </span>
                         )}
                       </button>
@@ -756,9 +782,14 @@ const currentPrice = `₹${totalPrice.toLocaleString("en-IN")}`;
               </div>
 
               {/* Action Button */}
-              <button className="flex w-full sm:w-auto h-11 sm:h-12 items-center justify-center gap-2 rounded-lg bg-[#0F0F0E] px-6 sm:px-8 py-3 transition-transform active:scale-95 hover:bg-black/80">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!selectedDurationId || !selectedPackageId}
+                className="flex w-full sm:w-auto h-11 sm:h-12 items-center justify-center gap-2 rounded-lg bg-[#0F0F0E] px-6 sm:px-8 py-3 transition-transform active:scale-95 hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <span className="text-sm sm:text-base font-medium text-white whitespace-nowrap">
-                  Continue
+                  Add to cart
                 </span>
               </button>
             </div>

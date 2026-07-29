@@ -86,6 +86,7 @@ export default function SubDetailPopUp({
             service={service}
             serviceDetails={serviceDetails}
             steps={steps}
+            onAddedToCart={close}
           />
         </div>
       </div>

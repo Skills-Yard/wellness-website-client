@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { CheckCircle2, Clock, ArrowLeft, X } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { useCart } from "@/src/context/CartContext";
 import { BookingDetails } from "@/src/utils/types/booking";
 
 interface BookingConfirmationProps {
@@ -22,8 +21,6 @@ export default function BookingConfirmation({
   onBack,
   onClose,
 }: BookingConfirmationProps) {
-  const { cartItems } = useCart();
-
   // Stable confetti dots (avoid hydration mismatch by using fixed values)
   const confettiDots = [
     { top: "8%", left: "12%", color: "#FFB818", delay: "0s", dur: "1.2s" },
@@ -88,7 +85,7 @@ export default function BookingConfirmation({
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         {/* Booked Items */}
         <div className="space-y-2">
-          {cartItems.map((item) => (
+          {booking.items.map((item) => (
             <div
               key={item.id}
               className="flex items-center gap-3 p-3 rounded-2xl bg-[#FAFAFA] border border-[#F0EDEA]"

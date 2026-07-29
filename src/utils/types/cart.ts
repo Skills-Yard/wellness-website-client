@@ -5,6 +5,10 @@ export interface CartItem {
   image: string;
   duration: string;
   quantity: number;
+  serviceItemId?: string;
+  durationId?: string;
+  packageId?: string;
+  addOnIds?: string[];
 }
 
 export interface CartContextType {
@@ -20,4 +24,14 @@ export interface CartContextType {
   location: string;
   setLocation: (loc: string) => void;
   isLocationSupported: boolean;
+  zoneId: string | null;
+  setZoneId: (zoneId: string | null) => void;
+  cartId: string | null;
+  addressId: string | null;
+  updateCartAddress: (addressId: string) => void;
+  scheduledDate: string;
+  scheduledTime: string;
+  isOnDemand: boolean;
+  couponCode: string;
+  updateCartSchedule: (details: { scheduledDate?: string; scheduledTime?: string; isOnDemand?: boolean; couponCode?: string }) => void;
 }

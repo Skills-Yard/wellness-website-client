@@ -15,6 +15,53 @@ export type ApiRequestConfig = AxiosRequestConfig & {
   accessToken?: string;
 };
 
+type RetryableRequestConfig = AxiosRequestConfig & { _retriedAfterRefresh?: boolean };
+
+let refreshRequest: Promise<string | null> | null = null;
+
+const getAuthorizationHeader = (headers: AxiosRequestConfig["headers"]) => {
+  if (!headers) return undefined;
+  if (typeof (headers as { get?: (name: string) => string | undefined }).get === "function") {
+    return (headers as { get: (name: string) => string | undefined }).get("Authorization");
+  }
+  return (headers as Record<string, string | undefined>).Authorization;
+};
+
+const refreshAccessToken = async () => {
+  if (typeof window === "undefined") return null;
+
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) return null;
+
+  if (!refreshRequest) {
+    refreshRequest = axios
+      .post<{ data?: { accessToken?: string; refreshToken?: string } }>(
+        "/api/v1/auth/refresh",
+        { refreshToken },
+        { withCredentials: true },
+      )
+      .then((response) => {
+        const tokens = response.data.data;
+        if (!tokens?.accessToken) return null;
+
+        localStorage.setItem("accessToken", tokens.accessToken);
+        if (tokens.refreshToken) localStorage.setItem("refreshToken", tokens.refreshToken);
+        return tokens.accessToken;
+      })
+      .catch(() => {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("isUserLoggedIn");
+        return null;
+      })
+      .finally(() => {
+        refreshRequest = null;
+      });
+  }
+
+  return refreshRequest;
+};
+
 export class ApiClientError extends Error {
   constructor(
     public readonly status: number,
@@ -71,11 +118,32 @@ export class ApiClient {
     throw error;
   }
 
+  private async retryAfterRefresh<T>(error: unknown): Promise<T | null> {
+    if (!axios.isAxiosError(error) || error.response?.status !== 401) return null;
+
+    const request = error.config as RetryableRequestConfig | undefined;
+    if (!request || request._retriedAfterRefresh || request.url?.endsWith("/refresh")) return null;
+    if (!getAuthorizationHeader(request.headers)) return null;
+
+    const accessToken = await refreshAccessToken();
+    if (!accessToken) return null;
+
+    request._retriedAfterRefresh = true;
+    request.headers = {
+      ...request.headers,
+      Authorization: `Bearer ${accessToken}`,
+    };
+    const response = await this.client.request<T>(request);
+    return response.data;
+  }
+
   async get<T>(path: string, config?: ApiRequestConfig): Promise<T> {
     try {
       const response = await this.client.get<T>(path, this.buildConfig(config));
       return response.data;
     } catch (error) {
+      const response = await this.retryAfterRefresh<T>(error);
+      if (response) return response;
       this.handleError(error);
     }
   }
@@ -90,6 +158,8 @@ export class ApiClient {
 
       return response.data;
     } catch (error) {
+      const response = await this.retryAfterRefresh<TResponse>(error);
+      if (response) return response;
       this.handleError(error);
     }
   }
@@ -104,6 +174,8 @@ export class ApiClient {
 
       return response.data;
     } catch (error) {
+      const response = await this.retryAfterRefresh<TResponse>(error);
+      if (response) return response;
       this.handleError(error);
     }
   }
@@ -118,6 +190,8 @@ export class ApiClient {
 
       return response.data;
     } catch (error) {
+      const response = await this.retryAfterRefresh<TResponse>(error);
+      if (response) return response;
       this.handleError(error);
     }
   }
@@ -128,6 +202,8 @@ export class ApiClient {
 
       return response.data;
     } catch (error) {
+      const response = await this.retryAfterRefresh<T>(error);
+      if (response) return response;
       this.handleError(error);
     }
   }

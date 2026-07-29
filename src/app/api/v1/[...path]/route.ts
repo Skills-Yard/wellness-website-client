@@ -17,3 +17,12 @@ export async function POST(
   const backendPath = `/api/v1/${path.map(encodeURIComponent).join("/")}`;
   return forwardToBackend(request, backendPath);
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const { path } = await params;
+  const backendPath = `/api/v1/${path.map(encodeURIComponent).join("/")}`;
+  return forwardToBackend(request, backendPath);
+}

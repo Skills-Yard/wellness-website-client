@@ -41,7 +41,7 @@ const formatPrice = (price?: string | number | null) => {
 
 const getOptionLabel = (
   option?: ServiceDuration | ServicePackage | ServiceAddOn,
-) => option?.name ?? option?.title ?? option?.duration ?? "";
+) => option?.label ?? option?.name ?? option?.title ?? option?.duration ?? "";
 
 const belongsToService = (
   option: ServiceDuration | ServicePackage | ServiceAddOn,
@@ -51,7 +51,7 @@ const belongsToService = (
 export default function SpaBookingLayout() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
-  const { isCartOpen, addToCart } = useCart();
+  const { isCartOpen, addToCart, setZoneId: setCartZoneId } = useCart();
   const {
     isLoading: categoriesLoading,
     error: categoriesError,
@@ -119,7 +119,10 @@ export default function SpaBookingLayout() {
             throw new Error("Services are not available in your location yet.");
           }
 
-          if (isMounted) setZoneId(zone.zoneId);
+          if (isMounted) {
+            setZoneId(zone.zoneId);
+            setCartZoneId(zone.zoneId);
+          }
         } catch (error) {
           if (isMounted) {
             setZoneError(
