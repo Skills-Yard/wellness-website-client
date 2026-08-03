@@ -20,13 +20,31 @@ export type HomeCategory = {
   title?: string;
   subtitle?: string;
   homeBannerKey?: string | null;
+  homeBannerType?: CampaignMediaType | null;
 };
+
+export type CampaignType = "SPOTLIGHT" | "HERO" | "BANNER";
+export type CampaignTargetType = "CATEGORY" | "SUB_CATEGORY" | "SERVICE_ITEM" | "DEEPLINK";
+export type CampaignMediaType = "IMAGE" | "VIDEO";
 
 export type HomeCampaign = {
   id: string;
+  type: CampaignType;
+  targetType: CampaignTargetType;
+  categoryId?: string | null;
+  subCategoryId?: string | null;
+  serviceItemId?: string | null;
   title: string;
   subtitle?: string;
-  bannerKey?: string | null;
+  mediaType: CampaignMediaType;
+  s3Key?: string | null;
+  cdnUrl?: string | null;
+  ctaText?: string | null;
+  ctaDeeplink?: string | null;
+  displayOrder?: number;
+  isActive?: boolean;
+  startsAt?: string;
+  endsAt?: string;
 };
 
 export type HomeServiceItem = {

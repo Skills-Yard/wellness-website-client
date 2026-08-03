@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeDetails } from "@/src/types/serviceTypes";
+import { CampaignMediaType, HomeDetails } from "@/src/types/serviceTypes";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -12,6 +12,7 @@ type BentoCardProps = {
   title: string;
   subtitle?: string;
   img?: string;
+  mediaType?: CampaignMediaType;
   borderRounded?: string;
 };
 
@@ -24,14 +25,23 @@ type ServiceCardProps = {
   path: string;
 };
 
-function BentoCard({ title, subtitle, img, borderRounded }: BentoCardProps) {
+function BentoCard({ title, subtitle, img, mediaType, borderRounded }: BentoCardProps) {
   return (
     <div
       className={`relative ${
         borderRounded ?? ""
       } overflow-hidden border border-stone-100 group cursor-pointer h-full w-full shadow-xs hover:shadow-md transition-all duration-300`}
     >
-      {img && (
+      {img && mediaType === "VIDEO" ? (
+        <video
+          src={img}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : img ? (
         <Image
           src={img}
           alt={title || "Bento Image"}
@@ -39,7 +49,7 @@ function BentoCard({ title, subtitle, img, borderRounded }: BentoCardProps) {
           sizes="(max-width: 1280px) 50vw, 33vw"
           className="absolute inset-0 object-cover transition-transform duration-500 group-hover:scale-103"
         />
-      )}
+      ) : null}
 
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
@@ -117,7 +127,9 @@ export default function Header({ homeDetails }: HeaderProps) {
 
   const categories = homeDetails?.categories ?? [];
 
-  const campaigns = homeDetails?.promotionalCampaigns ?? [];
+  const campaigns = [...(homeDetails?.promotionalCampaigns ?? [])]
+    .filter((campaign) => campaign.isActive !== false)
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
   return (
     <header className="w-full bg-gradient-to-b from-white to-stone-50/30 flex items-center py-10 lg:py-16 border-b border-stone-100/50">
@@ -201,7 +213,8 @@ export default function Header({ homeDetails }: HeaderProps) {
                       <BentoCard
                         title={campaigns[0].title}
                         subtitle={campaigns[0].subtitle ?? ""}
-                        img={campaigns[0].bannerKey ?? ""}
+                        img={campaigns[0].cdnUrl ?? ""}
+                        mediaType={campaigns[0].mediaType}
                       />
                     )}
                   </div>
@@ -213,7 +226,8 @@ export default function Header({ homeDetails }: HeaderProps) {
                       <BentoCard
                         title={campaigns[2].title}
                         subtitle={campaigns[2].subtitle ?? ""}
-                        img={campaigns[2].bannerKey ?? ""}
+                        img={campaigns[2].cdnUrl ?? ""}
+                        mediaType={campaigns[2].mediaType}
                       />
                     )}
                   </div>
@@ -226,7 +240,8 @@ export default function Header({ homeDetails }: HeaderProps) {
                     <BentoCard
                       title={campaigns[1].title}
                       subtitle={campaigns[1].subtitle ?? ""}
-                      img={campaigns[1].bannerKey ?? ""}
+                      img={campaigns[1].cdnUrl ?? ""}
+                      mediaType={campaigns[1].mediaType}
                     />
                   )}
                 </div>

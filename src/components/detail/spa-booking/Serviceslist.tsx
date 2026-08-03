@@ -50,19 +50,9 @@ export default function ServicesList({
                     {/* MOBILE LAYOUT */}
                     <div className="flex flex-col lg:hidden w-full">
                       {isSpotlightMobile ? (
-                        <SpotlightServiceCard
-                          service={service}
-                          layout="mobile"
-                          onDetailClick={onDetailClick}
-                          onAddToCart={onAddToCart}
-                        />
+                        <SpotlightServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} onAddToCart={onAddToCart} />
                       ) : (
-                        <StandardServiceCard
-                          service={service}
-                          layout="mobile"
-                          onDetailClick={onDetailClick}
-                          onAddToCart={onAddToCart}
-                        />
+                        <StandardServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} onAddToCart={onAddToCart} />
                       )}
                     </div>
 
@@ -86,7 +76,7 @@ export default function ServicesList({
                     </div>
 
                     {index !== categoryServices.length - 1 && (
-                      <div className="mt-4 xs:mt-6 mb-6 xs:mb-8 h-px w-full bg-[#F3EFEB]" />
+                      <div className="mt-10 h-px w-full bg-[#F3EFEB]" />
                     )}
                   </div>
                 );

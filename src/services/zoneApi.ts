@@ -12,3 +12,6 @@ export const getZones = ({
     },
   });
 };
+
+// Zone Id 1 : cms06zru80003b8tsuamdc69w
+// Zone Id 2 : cmsd4slko0000u8tsz4g401mf

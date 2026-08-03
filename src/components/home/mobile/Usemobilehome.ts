@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { SERVICE_SUGGESTIONS } from "@/src/utils/data";
+import { HomeServiceItem } from "@/src/types/serviceTypes";
 
-export function useMobileHome() {
+export function useMobileHome(serviceItems: HomeServiceItem[]) {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
     const [activeTab, setActiveTab] = useState("home");
@@ -110,28 +110,13 @@ export function useMobileHome() {
         }, 700);
     };
 
-    const allSuggestions = [
-        ...SERVICE_SUGGESTIONS.Massage,
-        ...SERVICE_SUGGESTIONS.Wellness,
-        ...SERVICE_SUGGESTIONS.Physiotherapy,
-    ];
-
     const filteredSuggestions = searchQuery
-        ? allSuggestions.filter((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
-        : allSuggestions.slice(0, 8);
+        ? serviceItems.filter((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        : serviceItems.slice(0, 8);
 
-    const handleSuggestionClick = (suggestion: string) => {
-        setSearchQuery(suggestion);
+    const handleSuggestionClick = (suggestion: HomeServiceItem) => {
+        setSearchQuery(suggestion.name);
         setSearchFocused(false);
-
-        let targetId = "";
-        if (SERVICE_SUGGESTIONS.Massage.includes(suggestion)) targetId = "massage";
-        else if (SERVICE_SUGGESTIONS.Wellness.includes(suggestion)) targetId = "wellness";
-        else if (SERVICE_SUGGESTIONS.Physiotherapy.includes(suggestion)) targetId = "physiotherapy";
-
-        if (targetId) {
-            setTimeout(() => scrollToSection(targetId), 0);
-        }
     };
 
     return {

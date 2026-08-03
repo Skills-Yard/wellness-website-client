@@ -6,11 +6,9 @@ import { useCart } from "@/src/context/CartContext";
 import ServiceFaq from "@/src/components/home/faq-accordion";
 import Header from "@/src/components/home/header";
 import Inspotlight from "@/src/components/home/in-spotlight";
-import MassageServices from "@/src/components/home/massage";
-import PhysioServices from "@/src/components/home/physiotherapy";
 import WallPanel from "@/src/components/home/wall-panel";
 import WallPanelTwo from "@/src/components/home/wall-panel-two";
-import WellnessServices from "@/src/components/home/wellness";
+import CategoryServices from "@/src/components/home/category-services";
 import MobileHome from "@/src/components/home/mobile";
 import LocationUnavailableModal from "@/src/components/home/location-unavailable";
 
@@ -172,17 +170,18 @@ export default function Home() {
         <div className="hidden md:block">
           <Header homeDetails={homeDetails} />
 
-          <Inspotlight />
+          <Inspotlight
+            campaigns={homeDetails.promotionalCampaigns}
+            categories={homeDetails.categories}
+          />
 
-          <WellnessServices />
-
-          <WallPanel />
-
-          <MassageServices />
-
-          <WallPanelTwo />
-
-          <PhysioServices />
+          {homeDetails.categories.map((category, index) => (
+            <div key={category.id}>
+              {index === 1 && <WallPanel />}
+              {index === 2 && <WallPanelTwo />}
+              <CategoryServices category={category} zoneId={zoneId} />
+            </div>
+          ))}
 
           <ServiceFaq />
         </div>
@@ -190,7 +189,7 @@ export default function Home() {
         {/* ───────── MOBILE ───────── */}
 
         <div className="block md:hidden">
-          <MobileHome />
+          <MobileHome homeDetails={homeDetails} zoneId={zoneId} />
         </div>
       </main>
 

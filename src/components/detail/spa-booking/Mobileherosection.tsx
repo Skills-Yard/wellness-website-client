@@ -1,5 +1,5 @@
 interface MobileHeroSectionProps {
-  videoSrc: string;
+  videoSrc?: string;
   title?: string;
   subtitle?: string;
 }
@@ -11,13 +11,15 @@ export default function MobileHeroSection({
 }: MobileHeroSectionProps) {
   return (
     <div className="relative block w-full lg:hidden h-60 xs:h-[280px] sm:h-74.25 overflow-hidden bg-linear-to-br from-[#FFC09E] via-[#FFD1BF]/33 to-transparent">
-      <video
-        src={videoSrc}
-        className="w-full absolute inset-0 h-full object-cover"
-        loop
-        autoPlay
-        muted
-      />
+      {videoSrc && (
+        <video
+          src={videoSrc}
+          className="w-full absolute inset-0 h-full object-cover"
+          loop
+          autoPlay
+          muted
+        />
+      )}
       <div className="absolute flex justify-between bottom-0 p-3 xs:p-4 inset-x-0 pt-16 xs:pt-20">
         <div className="pr-2">
           <h1 className="text-base xs:text-lg sm:text-xl font-bold text-[#25180F] mb-1.5 xs:mb-2 tracking-tight leading-tight">

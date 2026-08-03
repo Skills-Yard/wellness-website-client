@@ -1,60 +1,55 @@
 import Image from "next/image";
 import Link from "next/link";
+import { HomeCategory } from "@/src/types/serviceTypes";
 
-const mobileCategories = [
-    {
-        id: "wellness",
-        label: "Spa",
-        image: "/images/spa/spa.webp",
-        target: "wellness",
-        badgeColor: "bg-emerald-500",
-        path: '/detail/wellness',
+interface CategoryGridProps {
+  categories: HomeCategory[];
+}
 
-    },
-    {
-        id: "massage",
-        label: "Massage ",
-        image: "/images/massage/massage.webp",
-        target: "massage",
-        badgeColor: "bg-amber-500",
-        path: '/detail/massage',
-    },
-    {
-        id: "physio",
-        label: "Physiotherapy",
-        image: "/images/physiotherapy/physiotherapy.webp",
-        target: "physiotherapy",
-        badgeColor: "bg-blue-500",
-        path: '/detail/physio',
+export default function CategoryGrid({ categories }: CategoryGridProps) {
+  return (
+    <div className="relative z-20 mt-5 bg-white p-4">
+      {categories.length > 0 ? (
+        <div className="grid grid-cols-3 gap-x-2 gap-y-2 place-items-center">
+          {categories.map((category) => (
+            <Link
+              key={category.id}
+              href={`/detail/${category.slug}?categoryId=${encodeURIComponent(
+                category.id,
+              )}`}
+              className="flex justify-center w-full"
+            >
+              <button className="flex flex-col items-center group cursor-pointer">
+                <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 shadow-sm transition-all duration-300 group-hover:border-amber-200 group-hover:bg-amber-50">
+                  {category.homeBannerKey ? (
+                    <Image
+                      src={category.homeBannerKey}
+                      alt={category.name}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <span className="text-xl font-bold text-amber-500">
+                        {category.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-    },
-];
-
-
-export default function CategoryGrid() {
-    return (
-        <div className="relative p-4 z-20 flex item-center justify-between w-full bg-white mt-5">
-            <div className="grid grid-cols-3  item-center w-full  place-content-center place-items-center mx-auto">
-                {mobileCategories.map((cat) => (
-                    <Link href={cat.path} key={cat.id} className="w-full mx-auto ">
-                        <button
-                            className="flex flex-col  w-full items-center group cursor-pointer"
-                        >
-                            <div className="relative w-20 h-20 sm:w-14 sm:h-14 rounded-xl bg-stone-100 group-hover:bg-amber-50/30 flex items-center justify-center overflow-hidden border border-stone-100/40 shadow-2xs group-hover:border-amber-200 transition-all duration-300">
-                                <Image
-                                    src={cat.image}
-                                    alt={cat.label}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            <span className="text-[10px] font-extrabold text-stone-600 text-center leading-tight mt-1.5 group-hover:text-amber-500 transition-colors line-clamp-2">
-                                {cat.label}
-                            </span>
-                        </button>
-                    </Link>
-                ))}
-            </div>
+                <span className="mt-1 text-center text-[11px] font-semibold leading-tight text-stone-700 transition-colors duration-300 group-hover:text-amber-500 line-clamp-2">
+                  {category.name}
+                </span>
+              </button>
+            </Link>
+          ))}
         </div>
-    );
+      ) : (
+        <p className="w-full py-3 text-center text-xs font-medium text-stone-500">
+          No service categories available.
+        </p>
+      )}
+    </div>
+  );
 }

@@ -22,8 +22,8 @@ export default function SpotlightServiceCard({
 
   if (layout === "mobile") {
     return (
-      <div className="flex flex-col w-full gap-2 xs:gap-3">
-        <div className="relative w-full aspect-16/7 overflow-hidden rounded-lg bg-slate-100 shadow-xs">
+      <div className="flex flex-col w-full">
+        <div className="relative h-[163px] w-full overflow-hidden rounded-lg bg-slate-100">
           <Image
             src={service.media}
             alt={service.title}
@@ -32,67 +32,19 @@ export default function SpotlightServiceCard({
           />
         </div>
 
-        <div className="flex flex-col">
+        <div className="relative mt-3">
           {service.tag && (
-            <span className="mb-1 text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-[#208900]">
+            <span className="mb-2 block h-3 text-[10px] leading-[116%] font-semibold uppercase text-[#208900]">
               {service.tag}
             </span>
           )}
 
-          <div className="flex flex-col xs:flex-row xs:justify-between xs:items-start w-full gap-2 xs:gap-3">
-            <div className="flex flex-col max-w-full xs:max-w-[calc(100%-85px)]">
-              <h3 className="text-sm xs:text-base font-medium text-[#000000] leading-tight line-clamp-2">
-                {service.title}
-              </h3>
-
-              <p className="mt-1 text-xs xs:text-sm text-[#666666] flex items-center gap-0.5 xs:gap-1">
-                <Star className="w-3 xs:w-3.5 h-3 xs:h-3.5 shrink-0 fill-[#FFB818] text-[#FFB818]" />
-                <span className="font-medium">{service.rating}</span>
-                <span className="truncate">({service.reviews})</span>
-              </p>
-
-              <p className="mt-1 text-xs xs:text-sm text-[#000000] font-medium flex items-center gap-1 flex-wrap">
-                <span>{service.price}</span>
-                {hasDiscount && (
-                  <span className="text-[10px] xs:text-xs text-[#666666] line-through font-normal">
-                    {service.originalPrice}
-                  </span>
-                )}
-              </p>
-            </div>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddToCart(service);
-              }}
-              className="w-16 xs:w-[76px] h-8 xs:h-[35px] bg-[#25180F] text-white rounded-lg font-medium text-xs xs:text-sm shrink-0 active:scale-95 transition-transform"
-            >
-              Book
-            </button>
-          </div>
-
-          <div className="mt-2 flex flex-col gap-1">
-            {features.length > 0 && (
-              <ul className="text-xs xs:text-sm text-[#666666] font-medium leading-snug space-y-0.5">
-                {features.slice(0, 3).map((feat, i) => (
-                  <li key={i} className="flex items-start gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-[#666666] shrink-0 mt-1.5" />
-                    <span className="line-clamp-1">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDetailClick(service);
-              }}
-              className="w-fit text-xs xs:text-sm font-medium text-[#D38516] mt-1"
-            >
-              More details
-            </button>
-          </div>
+          <h3 className="max-w-[calc(100%-92px)] truncate text-base leading-[116%] font-medium text-black">{service.title}</h3>
+          <p className="mt-2 flex h-3.5 items-center gap-1.5 text-xs leading-[116%] text-[#666666]"><span className="flex items-center gap-[5px]"><Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB818] text-[#FFB818]" /><span>{service.rating}</span></span><span>({service.reviews})</span></p>
+          <p className="mt-2 flex h-4 items-center gap-1 text-sm leading-[116%] font-medium text-black"><span>Starting at {service.price}</span>{hasDiscount && <span className="text-xs leading-[116%] text-[#666666] line-through">{service.originalPrice}</span>}</p>
+          <button onClick={(e) => { e.stopPropagation(); onAddToCart(service); }} className="absolute right-0 top-[15px] h-[35px] w-[68px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform">Book</button>
+          <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="mt-[18px] h-3.5 text-xs leading-[116%] font-medium text-[#D38516]">View details</button>
+          {features.length > 0 && <ul className="mt-2 space-y-[3px] text-sm leading-[116%] font-medium text-[#666666]">{features.slice(0, 3).map((feat, i) => <li key={i} className="flex items-start gap-[9px]"><span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#666666]" /><span className="line-clamp-1">{feat}</span></li>)}</ul>}
         </div>
       </div>
     );

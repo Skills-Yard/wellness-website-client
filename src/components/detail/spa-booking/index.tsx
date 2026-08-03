@@ -39,6 +39,13 @@ const formatPrice = (price?: string | number | null) => {
   return typeof price === "number" ? `₹${price}` : price;
 };
 
+const toNumericPrice = (price?: string | number): number | undefined => {
+  if (typeof price === "number") return Number.isFinite(price) ? price : undefined;
+
+  const value = Number(price?.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(value) ? value : undefined;
+};
+
 const getOptionLabel = (
   option?: ServiceDuration | ServicePackage | ServiceAddOn,
 ) => option?.label ?? option?.name ?? option?.title ?? option?.duration ?? "";
@@ -191,6 +198,9 @@ export default function SpaBookingLayout() {
   useEffect(() => {
     let isMounted = true;
     if (!categoryId) {
+      setCategoryDetails(null);
+      setSubCategories([]);
+      setServiceItems([]);
       return;
     }
 
@@ -198,6 +208,10 @@ export default function SpaBookingLayout() {
       try {
         setIsDetailsLoading(true);
         setDetailsError(null);
+        // Do not keep services from the previously visited category while this
+        // category's sub-categories are being resolved.
+        setSubCategories([]);
+        setServiceItems([]);
         const [details, subCategoryResponse] = await Promise.all([
           loadCategory(categoryId),
           getSubCategoriesByCategoryId(categoryId),
@@ -230,13 +244,17 @@ export default function SpaBookingLayout() {
 
   useEffect(() => {
     let isMounted = true;
-    if (!zoneId || subCategories.length === 0) return;
+    if (!zoneId || subCategories.length === 0) {
+      setServiceItems([]);
+      setIsServicesLoading(false);
+      return;
+    }
 
     const fetchServices = async () => {
       try {
         setIsServicesLoading(true);
         setServicesError(null);
-        const responses = await Promise.all(
+        const results = await Promise.allSettled(
           subCategories.map((subCategory) =>
             getServiceItems({
               isActive: true,
@@ -247,7 +265,30 @@ export default function SpaBookingLayout() {
         );
 
         if (isMounted) {
+          const responses = results
+            .filter(
+              (result): result is PromiseFulfilledResult<
+                Awaited<ReturnType<typeof getServiceItems>>
+              > => result.status === "fulfilled",
+            )
+            .map((result) => result.value);
+
+          // A service request may fail for one sub-category (for example, when
+          // it has no services in the selected zone). Keep rendering the
+          // successful sub-categories instead of hiding the whole page.
           setServiceItems(responses.flatMap((response) => response.data ?? []));
+
+          if (responses.length === 0) {
+            const failedResult = results.find(
+              (result): result is PromiseRejectedResult =>
+                result.status === "rejected",
+            );
+            setServicesError(
+              failedResult?.reason instanceof Error
+                ? failedResult.reason
+                : new Error("Unable to load services."),
+            );
+          }
         }
       } catch (error) {
         if (isMounted) {
@@ -279,11 +320,20 @@ export default function SpaBookingLayout() {
     const durationById = new Map(
       serviceDurations.map((duration) => [duration.id, duration]),
     );
-    const services = serviceItems.map((service) => ({
+    console.log("services: ", serviceItems);
+    const services = serviceItems.map((service) => {
+      const durationPrices = serviceDurations
+        .filter((duration) => belongsToService(duration, service.id))
+        .map((duration) => toNumericPrice(duration.price))
+        .filter((price): price is number => price !== undefined);
+      const lowestDurationPrice =
+        durationPrices.length > 0 ? Math.min(...durationPrices) : undefined;
+
+      return {
       ...service,
       id: service.id,
       title: service.title ?? service.name ?? "Wellness service",
-      price: formatPrice(service.price),
+      price: formatPrice(lowestDurationPrice ?? service.price),
       originalPrice:
         service.originalPrice === null || service.originalPrice === undefined
           ? null
@@ -316,7 +366,8 @@ export default function SpaBookingLayout() {
           .map((addOn) => `Add-on: ${getOptionLabel(addOn)}`)
           .filter(Boolean),
       ],
-    }));
+      };
+    });
     if (subCategories.length) {
       return { services, serviceCategories: subCategories };
     }
@@ -456,7 +507,7 @@ export default function SpaBookingLayout() {
         onCategoryClick={scrollToCategory}
       />
       <MobileHeroSection
-        videoSrc={categoryDetails.video ?? ""}
+        videoSrc={categoryDetails.video}
         title={title}
         subtitle={subtitle}
       />

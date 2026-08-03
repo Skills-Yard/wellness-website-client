@@ -4,6 +4,17 @@ export type ServiceItemsQuery = {
   zoneId: string;
 };
 
+export type ServiceDuration = {
+  id: string;
+  serviceItemId: string;
+  label?: string;
+  durationMinutes?: number;
+  price?: string | number | null;
+  discountedPrice?: string | number | null;
+  isDefault?: boolean;
+  displayOrder?: number;
+};
+
 /** Raw service item returned by the catalog API. */
 export type ServiceItem = {
   id: string;
@@ -22,4 +33,5 @@ export type ServiceItem = {
   tag?: string;
   isSpotlight?: boolean;
   features?: string[];
+  durations?: ServiceDuration[];
 };
