@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCart } from "@/src/context/CartContext";
 
-import ServiceFaq from "@/src/components/home/faq-accordion";
+import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
 import Header from "@/src/components/home/header";
 import Inspotlight from "@/src/components/home/in-spotlight";
 import WallPanel from "@/src/components/home/wall-panel";
-import WallPanelTwo from "@/src/components/home/wall-panel-two";
 import CategoryServices from "@/src/components/home/category-services";
 import MobileHome from "@/src/components/home/mobile";
 import LocationUnavailableModal from "@/src/components/home/location-unavailable";
@@ -27,6 +26,17 @@ export default function Home() {
 
   const [loading, setLoading] = useState(true);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
+
+  const handleFaqsChange = useCallback(
+    (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
+      setCategoryFaqs((current) => {
+        const withoutCategory = current.filter((group) => group.category.id !== category.id);
+        return faqs.length > 0 ? [...withoutCategory, { category, faqs }] : withoutCategory;
+      });
+    },
+    [],
+  );
 
   /*
    * API 1
@@ -175,15 +185,29 @@ export default function Home() {
             categories={homeDetails.categories}
           />
 
-          {homeDetails.categories.map((category, index) => (
-            <div key={category.id}>
-              {index === 1 && <WallPanel />}
-              {index === 2 && <WallPanelTwo />}
-              <CategoryServices category={category} zoneId={zoneId} />
-            </div>
-          ))}
+          {homeDetails.categories.map((category) => {
+            const highlightBanner = homeDetails.promotionalCampaigns
+              .filter(
+                (campaign) =>
+                  campaign.type === "HIGHLIGHT_BANNER" &&
+                  campaign.categoryId === category.id &&
+                  campaign.isActive !== false,
+              )
+              .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
 
-          <ServiceFaq />
+            return (
+            <div key={category.id}>
+              {highlightBanner && <WallPanel campaign={highlightBanner} category={category} />}
+              <CategoryServices
+                category={category}
+                zoneId={zoneId}
+                onFaqsChange={handleFaqsChange}
+              />
+            </div>
+            );
+          })}
+
+          <ServiceFaq categoryFaqs={categoryFaqs} />
         </div>
 
         {/* ───────── MOBILE ───────── */}

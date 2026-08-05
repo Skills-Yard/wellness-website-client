@@ -3,22 +3,35 @@
 import { useState } from "react";
 import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity } from "lucide-react";
 import { cn } from "@/src/lib/utils";
-import { FAQ_DATA } from "@/src/utils/data";
+import { HomeCategory } from "@/src/types/serviceTypes";
+import { HomeFaq } from "@/src/types/serviceItemTypes";
 
-export default function ServiceFaq() {
-    const [activeTab, setActiveTab] = useState<"massage" | "wellness" | "physiotherapy">("massage");
-    const [openId, setOpenId] = useState<number | null>(1);
+export type CategoryFaqGroup = {
+    category: HomeCategory;
+    faqs: HomeFaq[];
+};
 
-    const handleTabChange = (tab: "massage" | "wellness" | "physiotherapy") => {
+type ServiceFaqProps = {
+    categoryFaqs: CategoryFaqGroup[];
+};
+
+export default function ServiceFaq({ categoryFaqs }: ServiceFaqProps) {
+    const [activeTab, setActiveTab] = useState<string | null>(null);
+    const [openId, setOpenId] = useState<string | null>(null);
+
+    const activeCategoryId = categoryFaqs.some((group) => group.category.id === activeTab)
+        ? activeTab
+        : categoryFaqs[0]?.category.id;
+    const activeGroup = categoryFaqs.find((group) => group.category.id === activeCategoryId);
+
+    const handleTabChange = (tab: string) => {
         setActiveTab(tab);
-        setOpenId(1);
+        setOpenId(null);
     };
 
-    const toggleAccordion = (id: number) => {
+    const toggleAccordion = (id: string) => {
         setOpenId((prev) => (prev === id ? null : id));
     };
-
-    const currentFaqs = FAQ_DATA[activeTab];
 
     const tabConfig = {
         massage: {
@@ -38,6 +51,8 @@ export default function ServiceFaq() {
         }
     };
 
+    if (!activeGroup) return null;
+
     return (
         <section className="py-16 px-4 max-sm:hidden sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
             <div className="max-w-4xl mx-auto w-full">
@@ -54,20 +69,22 @@ export default function ServiceFaq() {
 
                 {/* Category Segment Control Tabs */}
                 <div className="grid grid-cols-3 gap-1.5 p-1 bg-stone-100/80 rounded-2xl mb-8">
-                    {(Object.keys(FAQ_DATA) as Array<keyof typeof FAQ_DATA>).map((tab) => {
-                        const isActive = activeTab === tab;
-                        const Icon = tabConfig[tab].icon;
+                    {categoryFaqs.map((group, index) => {
+                        const tab = group.category.id;
+                        const config = Object.values(tabConfig)[index % 3];
+                        const isActive = activeCategoryId === tab;
+                        const Icon = config.icon;
                         return (
                             <button
                                 key={tab}
                                 onClick={() => handleTabChange(tab)}
                                 className={cn(
                                     "flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all duration-300 cursor-pointer text-gray-500  select-none",
-                                    isActive && tabConfig[tab].activeClass
+                                    isActive && config.activeClass
                                 )}
                             >
                                 <Icon className="w-4.5 h-4.5 shrink-0" />
-                                <span className="truncate">{tab}</span>
+                                <span className="truncate">{group.category.name}</span>
                             </button>
                         );
                     })}
@@ -75,12 +92,14 @@ export default function ServiceFaq() {
 
                 {/* Accordion List container */}
                 <div className="space-y-3.5">
-                    {currentFaqs.map((faq) => {
-                        const isOpen = openId === faq.id;
+                    {activeGroup.faqs.map((faq, index) => {
+                        const faqId = `${activeGroup.category.id}-${faq.id ?? index}`;
+                        const isOpen = openId === faqId;
+                        const config = Object.values(tabConfig)[categoryFaqs.findIndex((group) => group.category.id === activeCategoryId) % 3];
 
                         return (
                             <div
-                                key={faq.id}
+                                key={faqId}
                                 className={cn(
                                     "border border-gray-100 bg-white rounded-2xl overflow-hidden transition-all duration-300 shadow-xs",
                                     isOpen && "border-amber-100 shadow-sm"
@@ -89,13 +108,13 @@ export default function ServiceFaq() {
                                 {/* Accordion Trigger Header Bar */}
                                 <button
                                     type="button"
-                                    onClick={() => toggleAccordion(faq.id)}
+                                    onClick={() => toggleAccordion(faqId)}
                                     className="w-full flex items-center justify-between gap-4 p-4 text-left font-bold text-gray-800 text-sm sm:text-base hover:bg-stone-50/40 active:bg-stone-50/70 transition-colors cursor-pointer select-none"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
                                             "w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 transition-colors",
-                                            isOpen ? tabConfig[activeTab].color : "text-gray-400 bg-gray-50 border-gray-100"
+                                            isOpen ? config.color : "text-gray-400 bg-gray-50 border-gray-100"
                                         )}>
                                             <HelpCircle className="w-4.5 h-4.5" />
                                         </div>

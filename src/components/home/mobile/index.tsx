@@ -1,12 +1,12 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useCart } from "@/src/context/CartContext";
 
-import ServiceFaq from "@/src/components/home/faq-accordion";
+import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
 import Inspotlight from "@/src/components/home/in-spotlight";
 import CategoryServices from "@/src/components/home/category-services";
 import WallPanel from "../wall-panel";
-import WallPanelTwo from "../wall-panel-two";
 import { useMobileHome } from "./Usemobilehome";
 import MobileHeader from "./Mobileheader";
 import CategoryGrid from "./Categorygrid";
@@ -22,6 +22,17 @@ interface MobileHomeProps {
 
 export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
   const { location, setLocation, cartCount, setIsCartOpen } = useCart();
+  const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
+
+  const handleFaqsChange = useCallback(
+    (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
+      setCategoryFaqs((current) => {
+        const withoutCategory = current.filter((group) => group.category.id !== category.id);
+        return faqs.length > 0 ? [...withoutCategory, { category, faqs }] : withoutCategory;
+      });
+    },
+    [],
+  );
 
   const {
     searchQuery,
@@ -65,14 +76,28 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
           campaigns={homeDetails.promotionalCampaigns}
           categories={homeDetails.categories}
         />
-        {homeDetails.categories.map((category, index) => (
+        {homeDetails.categories.map((category) => {
+          const highlightBanner = homeDetails.promotionalCampaigns
+            .filter(
+              (campaign) =>
+                campaign.type === "HIGHLIGHT_BANNER" &&
+                campaign.categoryId === category.id &&
+                campaign.isActive !== false,
+            )
+            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
+
+          return (
           <div key={category.id}>
-            {index === 1 && <WallPanel />}
-            {index === 2 && <WallPanelTwo />}
-            <CategoryServices category={category} zoneId={zoneId} />
+            {highlightBanner && <WallPanel campaign={highlightBanner} category={category} />}
+            <CategoryServices
+              category={category}
+              zoneId={zoneId}
+              onFaqsChange={handleFaqsChange}
+            />
           </div>
-        ))}
-        <ServiceFaq />
+          );
+        })}
+        <ServiceFaq categoryFaqs={categoryFaqs} />
       </div>
       <VelloraPromiseCard />
 

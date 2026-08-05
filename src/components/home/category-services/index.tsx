@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
@@ -9,12 +9,16 @@ import "swiper/css";
 import { getSubCategoriesByCategoryId } from "@/src/services/categoryApi";
 import { getServiceItems } from "@/src/services/serviceItemApi";
 import { HomeCategory } from "@/src/types/serviceTypes";
-import { ServiceItem } from "@/src/types/serviceItemTypes";
+import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
 import { SubCategory } from "@/src/types/categoryTypes";
 
 type CategoryServicesProps = {
   category: HomeCategory;
   zoneId: string;
+  onFaqsChange?: (
+    category: HomeCategory,
+    faqs: HomeFaq[],
+  ) => void;
 };
 
 const cardsForViewport = () => {
@@ -25,7 +29,7 @@ const cardsForViewport = () => {
   return 2;
 };
 
-const formatPrice = (price: ServiceItem["price"]) => {
+const formatPrice = (price: ServiceItem["price"] | null) => {
   if (typeof price === "number") return `₹${price.toLocaleString("en-IN")}`;
   return price ?? "₹0";
 };
@@ -50,6 +54,7 @@ const getLowestDurationPrice = (service: ServiceItem) => {
 export default function CategoryServices({
   category,
   zoneId,
+  onFaqsChange,
 }: CategoryServicesProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const loadingRef = useRef(false);
@@ -152,6 +157,28 @@ export default function CategoryServices({
   }, [loadNextServices, nextSubCategoryIndex, services.length, subCategories.length, visibleCount]);
 
   const visibleServices = services.slice(0, visibleCount);
+  const categoryFaqs = useMemo(() => {
+    const uniqueFaqs = new Map<string, HomeFaq>();
+
+    services.forEach((service) => {
+      service.faqs?.forEach((faq) => {
+        const question = faq.q ?? faq.question;
+        const answer = faq.a ?? faq.answer;
+        if (!question || !answer) return;
+        uniqueFaqs.set(
+          `${question}-${answer}`,
+          { id: faq.id, question, answer },
+        );
+      });
+    });
+
+    return [...uniqueFaqs.values()];
+  }, [services]);
+
+  useEffect(() => {
+    onFaqsChange?.(category, categoryFaqs);
+  }, [category, categoryFaqs, onFaqsChange]);
+
   return (
     <section
       ref={sectionRef}

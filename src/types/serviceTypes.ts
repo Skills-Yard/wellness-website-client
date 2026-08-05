@@ -23,7 +23,11 @@ export type HomeCategory = {
   homeBannerType?: CampaignMediaType | null;
 };
 
-export type CampaignType = "SPOTLIGHT" | "HERO" | "BANNER";
+export type CampaignType =
+  | "SPOTLIGHT"
+  | "HERO"
+  | "BANNER"
+  | "HIGHLIGHT_BANNER";
 export type CampaignTargetType = "CATEGORY" | "SUB_CATEGORY" | "SERVICE_ITEM" | "DEEPLINK";
 export type CampaignMediaType = "IMAGE" | "VIDEO";
 

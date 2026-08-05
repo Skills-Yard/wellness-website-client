@@ -15,6 +15,20 @@ export type ServiceDuration = {
   displayOrder?: number;
 };
 
+export type ServiceFaq = {
+  id?: string | number;
+  q?: string;
+  a?: string;
+  question?: string;
+  answer?: string;
+};
+
+export type HomeFaq = {
+  id?: string | number;
+  question: string;
+  answer: string;
+};
+
 /** Raw service item returned by the catalog API. */
 export type ServiceItem = {
   id: string;
@@ -34,4 +48,5 @@ export type ServiceItem = {
   isSpotlight?: boolean;
   features?: string[];
   durations?: ServiceDuration[];
+  faqs?: ServiceFaq[];
 };
