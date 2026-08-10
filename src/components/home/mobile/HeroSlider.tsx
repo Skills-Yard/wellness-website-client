@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/src/lib/utils";
 import { HomeCampaign, HomeCategory } from "@/src/types/serviceTypes";
+import CampaignVideo from "@/src/components/media/CampaignVideo";
 
 interface HeroSliderProps {
     campaigns: HomeCampaign[];
@@ -17,7 +18,7 @@ const campaignHref = (campaign: HomeCampaign, categories: HomeCategory[]) => {
     if (category) {
         const params = new URLSearchParams({ categoryId: category.id });
         if (campaign.subCategoryId) params.set("subCategoryId", campaign.subCategoryId);
-        if (campaign.targetType === "SERVICE_ITEM" && campaign.serviceItemId) {
+        if (campaign.serviceItemId) {
             params.set("id", campaign.serviceItemId);
         }
         return `/detail/${category.slug}?${params.toString()}`;
@@ -73,12 +74,8 @@ export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
                     )}
                 >
                     {campaign.cdnUrl && campaign.mediaType === "VIDEO" ? (
-                        <video
+                        <CampaignVideo
                             src={campaign.cdnUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
                             className="absolute inset-0 h-full w-full object-cover"
                         />
                     ) : campaign.cdnUrl ? (

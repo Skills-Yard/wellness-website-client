@@ -25,10 +25,10 @@ export type HomeCategory = {
 
 export type CampaignType =
   | "SPOTLIGHT"
-  | "HERO"
-  | "BANNER"
-  | "HIGHLIGHT_BANNER";
-export type CampaignTargetType = "CATEGORY" | "SUB_CATEGORY" | "SERVICE_ITEM" | "DEEPLINK";
+  | "HIGHLIGHT_VIDEO"
+  | "HIGHLIGHT_BANNER"
+  | "CAROUSEL";
+export type CampaignTargetType = "GLOBAL" | "CATEGORY" | "SUBCATEGORY";
 export type CampaignMediaType = "IMAGE" | "VIDEO";
 
 export type HomeCampaign = {

@@ -12,8 +12,10 @@ import {
   getServicePackages,
 } from "@/src/services/serviceDetailApi";
 import { getZones } from "@/src/services/zoneApi";
+import { getPromotionalCampaigns } from "@/src/services/campaignApi";
 import { CategoryDetails, SubCategory } from "@/src/types/categoryTypes";
 import { ServiceItem } from "@/src/types/serviceItemTypes";
+import { HomeCampaign } from "@/src/types/serviceTypes";
 import {
   ServiceAddOn,
   ServiceDuration,
@@ -75,6 +77,7 @@ export default function SpaBookingLayout() {
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
   const [serviceAddOns, setServiceAddOns] = useState<ServiceAddOn[]>([]);
   const [zoneId, setZoneId] = useState<string | null>(null);
+  const [heroCampaign, setHeroCampaign] = useState<HomeCampaign | null>(null);
   const [detailsError, setDetailsError] = useState<Error | null>(null);
   const [zoneError, setZoneError] = useState<Error | null>(null);
   const [servicesError, setServicesError] = useState<Error | null>(null);
@@ -241,6 +244,38 @@ export default function SpaBookingLayout() {
       isMounted = false;
     };
   }, [categoryId, loadCategory]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!categoryId || !zoneId) {
+      setHeroCampaign(null);
+      return;
+    }
+
+    const fetchHeroCampaign = async () => {
+      try {
+        const response = await getPromotionalCampaigns({ categoryId, zoneId });
+        const best = (response.data ?? [])
+          .filter(
+            (campaign) =>
+              campaign.targetType === "CATEGORY" &&
+              campaign.categoryId === categoryId &&
+              (campaign.type === "HIGHLIGHT_VIDEO" || campaign.type === "HIGHLIGHT_BANNER"),
+          )
+          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
+
+        if (isMounted) setHeroCampaign(best ?? null);
+      } catch (error) {
+        console.error(`Unable to load hero campaign for ${categoryId}:`, error);
+        if (isMounted) setHeroCampaign(null);
+      }
+    };
+
+    fetchHeroCampaign();
+    return () => {
+      isMounted = false;
+    };
+  }, [categoryId, zoneId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -496,6 +531,8 @@ export default function SpaBookingLayout() {
   const media = categoryDetails.media ?? "/images/hero-fallback.jpg";
   const rating = categoryDetails.rating ?? "—";
   const reviews = categoryDetails.reviews ?? 0;
+  const heroMedia = heroCampaign?.cdnUrl ?? "/images/hero-fallback.jpg";
+  const heroMediaType = heroCampaign?.cdnUrl ? heroCampaign.mediaType : "IMAGE";
 
   return (
     <div className="relative w-full bg-white pb-20">
@@ -507,7 +544,8 @@ export default function SpaBookingLayout() {
         onCategoryClick={scrollToCategory}
       />
       <MobileHeroSection
-        videoSrc={categoryDetails.video}
+        mediaSrc={heroMedia}
+        mediaType={heroMediaType}
         title={title}
         subtitle={subtitle}
       />
@@ -534,7 +572,8 @@ export default function SpaBookingLayout() {
               subtitle={subtitle}
               rating={rating}
               reviews={reviews}
-              media={media}
+              media={heroMedia}
+              mediaType={heroMediaType}
             />
             <div className="flex flex-col justify-between gap-4 xs:gap-6 md:flex-row">
               <ServicesList

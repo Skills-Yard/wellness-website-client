@@ -2,6 +2,7 @@ import { Button } from "@/src/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeCampaign, HomeCategory } from "@/src/types/serviceTypes";
+import CampaignVideo from "@/src/components/media/CampaignVideo";
 
 type WallPanelProps = {
     campaign: HomeCampaign;
@@ -10,6 +11,7 @@ type WallPanelProps = {
 
 export default function WallPanel({ campaign, category }: WallPanelProps) {
     const image = campaign.cdnUrl ?? campaign.s3Key;
+    const isVideo = campaign.mediaType === "VIDEO";
     const categoryName = `${category.name} ${category.slug}`.toLowerCase();
     const isPhysio = categoryName.includes("physio");
     const isSpa = !isPhysio && (categoryName.includes("spa") || categoryName.includes("wellness") || categoryName.includes("beauty"));
@@ -76,14 +78,18 @@ export default function WallPanel({ campaign, category }: WallPanelProps) {
                     Explore Plans <span className="text-base leading-none">›</span>
                 </Link>
                 <div className={`absolute overflow-hidden ${mobileTheme.imageClass}`}>
-                    <Image
-                        src={image}
-                        alt={campaign.title}
-                        fill
-                        sizes={mobileTheme.imageSize}
-                        className="object-cover"
-                        priority
-                    />
+                    {isVideo ? (
+                        <CampaignVideo src={image} className="h-full w-full object-cover" />
+                    ) : (
+                        <Image
+                            src={image}
+                            alt={campaign.title}
+                            fill
+                            sizes={mobileTheme.imageSize}
+                            className="object-cover"
+                            priority
+                        />
+                    )}
                 </div>
             </div>
 
@@ -107,14 +113,21 @@ export default function WallPanel({ campaign, category }: WallPanelProps) {
 
                 {/* Right Image Container */}
                 <div className="relative w-full md:w-[48%] aspect-[4/3] sm:aspect-[16/10] md:aspect-[1.4] rounded-tr-xl rounded-bl-xl overflow-hidden bg-neutral-100 shrink-0">
-                    <Image
-                        src={image}
-                        alt={campaign.title}
-                        fill
-                        sizes="(max-w-7xl) 50vw, 40vw"
-                        className="object-cover transition-transform duration-500 hover:scale-[1.02]"
-                        priority
-                    />
+                    {isVideo ? (
+                        <CampaignVideo
+                            src={image}
+                            className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
+                        />
+                    ) : (
+                        <Image
+                            src={image}
+                            alt={campaign.title}
+                            fill
+                            sizes="(max-w-7xl) 50vw, 40vw"
+                            className="object-cover transition-transform duration-500 hover:scale-[1.02]"
+                            priority
+                        />
+                    )}
                 </div>
 
             </div>

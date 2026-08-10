@@ -80,7 +80,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
           const highlightBanner = homeDetails.promotionalCampaigns
             .filter(
               (campaign) =>
-                campaign.type === "HIGHLIGHT_BANNER" &&
+                (campaign.type === "HIGHLIGHT_BANNER" || campaign.type === "HIGHLIGHT_VIDEO") &&
                 campaign.categoryId === category.id &&
                 campaign.isActive !== false,
             )

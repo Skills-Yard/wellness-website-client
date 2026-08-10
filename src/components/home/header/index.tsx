@@ -3,6 +3,7 @@
 import { CampaignMediaType, HomeDetails } from "@/src/types/serviceTypes";
 import Image from "next/image";
 import Link from "next/link";
+import CampaignVideo from "@/src/components/media/CampaignVideo";
 
 interface HeaderProps {
   homeDetails: HomeDetails | null;
@@ -33,12 +34,8 @@ function BentoCard({ title, subtitle, img, mediaType, borderRounded }: BentoCard
       } overflow-hidden border border-stone-100 group cursor-pointer h-full w-full shadow-xs hover:shadow-md transition-all duration-300`}
     >
       {img && mediaType === "VIDEO" ? (
-        <video
+        <CampaignVideo
           src={img}
-          autoPlay
-          loop
-          muted
-          playsInline
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : img ? (

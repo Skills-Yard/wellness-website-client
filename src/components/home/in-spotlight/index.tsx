@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { HomeCampaign, HomeCategory } from "@/src/types/serviceTypes";
+import CampaignVideo from "@/src/components/media/CampaignVideo";
 
 import "swiper/css";
 
@@ -20,7 +21,7 @@ const campaignHref = (campaign: HomeCampaign, categories: HomeCategory[]) => {
     const params = new URLSearchParams({ categoryId: category.id });
     if (campaign.subCategoryId)
       params.set("subCategoryId", campaign.subCategoryId);
-    if (campaign.targetType === "SERVICE_ITEM" && campaign.serviceItemId) {
+    if (campaign.serviceItemId) {
       params.set("id", campaign.serviceItemId);
     }
     return `/detail/${category.slug}?${params.toString()}`;
@@ -81,12 +82,8 @@ export default function Inspotlight({
             <SwiperSlide key={campaign.id} className="h-auto">
               <article className="relative flex h-[202px] overflow-hidden rounded-[12px] bg-stone-900 shadow-none sm:h-55">
                 {campaign.cdnUrl && campaign.mediaType === "VIDEO" ? (
-                  <video
+                  <CampaignVideo
                     src={campaign.cdnUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : campaign.cdnUrl ? (
