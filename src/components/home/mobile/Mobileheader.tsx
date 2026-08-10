@@ -11,6 +11,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { cn } from "@/src/lib/utils";
 import { LOCATIONS, UNSUPPORTED_LOCATIONS } from "@/src/utils/data";
+import { HomeServiceItem } from "@/src/types/serviceTypes";
 
 interface MobileHeaderProps {
     location: string;
@@ -23,8 +24,8 @@ interface MobileHeaderProps {
     setSearchQuery: (q: string) => void;
     searchFocused: boolean;
     setSearchFocused: (f: boolean) => void;
-    filteredSuggestions: string[];
-    onSuggestionClick: (suggestion: string) => void;
+    filteredSuggestions: HomeServiceItem[];
+    onSuggestionClick: (suggestion: HomeServiceItem) => void;
 }
 
 export default function MobileHeader({
@@ -169,13 +170,13 @@ export default function MobileHeader({
                         </div>
                         {filteredSuggestions.map((suggestion) => (
                             <button
-                                key={suggestion}
+                                key={suggestion.id}
                                 type="button"
                                 onClick={() => onSuggestionClick(suggestion)}
                                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer"
                             >
                                 <Search className="w-3.5 h-3.5 opacity-40 shrink-0" />
-                                <span className="truncate">{suggestion}</span>
+                                <span className="truncate">{suggestion.name}</span>
                             </button>
                         ))}
                         {searchQuery && filteredSuggestions.length === 0 && (

@@ -20,7 +20,9 @@ export default function ServicesList({
     <div className="space-y-8 xs:space-y-10 md:space-y-12 flex-1">
       {categories.map((category) => {
         const categoryServices = services.filter(
-          (s) => s.category === category.name,
+          (service) =>
+            service.subCategoryId === category.id ||
+            service.category === category.name,
         );
 
         if (categoryServices.length === 0) return null;
@@ -48,19 +50,9 @@ export default function ServicesList({
                     {/* MOBILE LAYOUT */}
                     <div className="flex flex-col lg:hidden w-full">
                       {isSpotlightMobile ? (
-                        <SpotlightServiceCard
-                          service={service}
-                          layout="mobile"
-                          onDetailClick={onDetailClick}
-                          onAddToCart={onAddToCart}
-                        />
+                        <SpotlightServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} onAddToCart={onAddToCart} />
                       ) : (
-                        <StandardServiceCard
-                          service={service}
-                          layout="mobile"
-                          onDetailClick={onDetailClick}
-                          onAddToCart={onAddToCart}
-                        />
+                        <StandardServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} onAddToCart={onAddToCart} />
                       )}
                     </div>
 
@@ -84,7 +76,7 @@ export default function ServicesList({
                     </div>
 
                     {index !== categoryServices.length - 1 && (
-                      <div className="mt-4 xs:mt-6 mb-6 xs:mb-8 h-px w-full bg-[#F3EFEB]" />
+                      <div className="mt-10 h-px w-full bg-[#F3EFEB]" />
                     )}
                   </div>
                 );

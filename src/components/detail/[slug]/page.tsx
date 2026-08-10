@@ -4,14 +4,22 @@ import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import SectionHero from "./SectionHero/SectionHero";
 import RequirementSelector from "./SelectPack/SelectPack";
+import { DynamicService } from "@/src/utils/types/spabooking";
+import { DynamicStep } from "@/src/utils/data/detailPage";
 
 type SubDetailPopUpProps = {
   onClose: () => void;
-  service: unknown;
-  steps: [];
+  service: DynamicService;
+  categoryName: string;
+  steps: DynamicStep[];
 };
 
-export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPopUpProps) {
+export default function SubDetailPopUp({
+  onClose,
+  service,
+  categoryName,
+  steps,
+}: SubDetailPopUpProps) {
   // 1. Animation & Drag States
   const [mounted, setMounted] = useState(false);
   const [translateY, setTranslateY] = useState(0);
@@ -120,6 +128,10 @@ export default function SubDetailPopUp({ onClose, service, steps }: SubDetailPop
           ref={contentRef}
           className="flex-1 mb-20 overflow-y-auto hide-scrollbar overflow-x-hidden overscroll-contain sm:pt-0"
         >
+          <div className="px-5 pt-5 text-xs font-semibold uppercase tracking-wider text-amber-600">
+            {categoryName}
+          </div>
+
           <SectionHero service={service} />
           
           <RequirementSelector steps={steps} />

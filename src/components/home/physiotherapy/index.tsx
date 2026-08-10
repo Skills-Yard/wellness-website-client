@@ -60,7 +60,7 @@ export default function PhysioServices() {
                         return (
                             <SwiperSlide key={item.id} className="h-auto">
                                 <div
-                                    onClick={() => router.push(`/detail?type=physio&id=${item.id}`)}
+                                    onClick={() => router.push(`/detail/physio?id=${item.id}`)}
                                     className="group cursor-pointer select-none flex flex-col justify-between h-full"
                                 >
                                     <div>

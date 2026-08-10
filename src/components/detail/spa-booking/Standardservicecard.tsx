@@ -22,52 +22,58 @@ export default function StandardServiceCard({
 
   if (layout === "mobile") {
     return (
-      <div className="flex gap-3 xs:gap-4 w-full">
-        <div className="group relative shrink-0 w-35 xs:w-[160px] sm:w-48.5 h-25 xs:h-[115px] sm:h-34.75 overflow-hidden rounded-lg bg-slate-100 shadow-xs cursor-pointer">
+      <div className="flex h-[139px] w-full gap-4">
+        <div className="group relative h-[139px] w-[194px] shrink-0 overflow-hidden rounded-lg bg-slate-100">
           <Image
             src={service.media}
             alt={service.title}
             fill
             className="object-cover"
           />
-
-          {/* View More Overlay */}
-          <div className="absolute bottom-0 inset-x-0 bg-black/60 py-1 xs:py-1.5 text-center text-[10px] xs:text-xs font-bold text-[#D38516] transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100">
-            View Details
-          </div>
-        </div>
-
-        <div className="flex flex-col flex-1 justify-between py-0.5">
-          <div className="flex flex-col">
-            <h3 className="text-xs xs:text-sm font-medium text-[#000000] leading-snug line-clamp-2">
-              {service.title}
-            </h3>
-
-            <p className="mt-0.5 xs:mt-1 text-xs text-[#666666] flex items-center gap-0.5">
-              <Star className="w-3 h-3 shrink-0 fill-[#FFB818] text-[#FFB818]" />
-              <span className="font-medium">{service.rating}</span>
-              <span className="truncate text-[10px]">({service.reviews})</span>
-            </p>
-
-            <p className="mt-0.5 xs:mt-1 text-xs xs:text-sm text-[#000000] font-medium flex items-center gap-1 flex-wrap">
-              <span>{service.price}</span>
-              {hasDiscount && (
-                <span className="text-[9px] xs:text-[10px] text-[#666666] line-through font-normal">
-                  {service.originalPrice}
-                </span>
-              )}
-            </p>
-          </div>
-
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onAddToCart(service);
+              onDetailClick(service);
             }}
-            className="mt-2 w-14 xs:w-16 h-7 xs:h-8 bg-[#25180F] text-white rounded-lg font-medium text-xs shrink-0 active:scale-95 transition-transform"
+            className="absolute inset-x-0 bottom-0 h-7 bg-black/60 text-xs leading-[116%] font-medium text-white"
           >
-            Book
+            View details
           </button>
+        </div>
+
+        <div className="flex h-[136px] min-w-0 flex-1 flex-col gap-2 pt-px">
+          <h3 className="line-clamp-1 text-sm leading-[116%] font-medium text-black">
+              {service.title}
+          </h3>
+
+          <p className="flex h-3.5 items-center gap-1.5 text-xs leading-[116%] text-[#666666]">
+            <span className="flex items-center gap-[5px]">
+              <Star className="h-[11.25px] w-[11.25px] shrink-0 fill-[#FFB818] text-[#FFB818]" />
+              <span>{service.rating}</span>
+            </span>
+            <span className="truncate">({service.reviews})</span>
+          </p>
+
+          <p className="flex h-4 items-center gap-1 text-sm leading-[116%] font-medium text-black">
+            <span>Starting at {service.price}</span>
+            {hasDiscount && (
+              <span className="text-xs leading-[116%] text-[#666666] line-through">
+                {service.originalPrice}
+              </span>
+            )}
+          </p>
+
+          <div className="flex flex-col items-start gap-[18px]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart(service);
+              }}
+              className="h-[35px] w-[76px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform"
+            >
+              Book
+            </button>
+          </div>
         </div>
       </div>
     );

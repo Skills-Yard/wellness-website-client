@@ -10,7 +10,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { useCart } from "@/src/context/CartContext";
 import TrackStep from "./Trackstep ";
 import { BookingDetails } from "@/src/utils/types/booking";
 
@@ -27,8 +26,6 @@ export default function TrackBooking({
   onBack,
   onClose,
 }: TrackBookingProps) {
-  const { cartItems } = useCart();
-
   const trackSteps = [
     { label: "Confirmed", done: true, active: false },
     { label: "On the way", done: false, active: true },
@@ -124,7 +121,7 @@ export default function TrackBooking({
               Services Booked
             </p>
             <div className="space-y-2">
-              {cartItems.map((item) => (
+              {booking.items.map((item) => (
                 <div key={item.id} className="flex items-center gap-2.5">
                   <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-gray-100">
                     <Image

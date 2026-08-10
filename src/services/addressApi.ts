@@ -1,0 +1,53 @@
+import { apiClient } from "@/src/lib/api/apiClient";
+import type { ApiSuccess } from "@/src/types/auth";
+
+export type Address = {
+  id: string;
+  userId?: string;
+  label?: string;
+  customLabel?: string;
+  line1?: string;
+  line2?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault?: boolean;
+};
+
+export type CreateAddressBody = {
+  userId: string;
+  label: string;
+  customLabel: string;
+  line1: string;
+  line2: string;
+  landmark: string;
+  city: string;
+  state: string;
+  pincode: string;
+  latitude: number;
+  longitude: number;
+  isDefault: boolean;
+};
+
+export type AddressesResponse = ApiSuccess<
+  Address[] | { addresses?: Address[]; items?: Address[] }
+>;
+export type CreateAddressResponse = ApiSuccess<Address>;
+
+export const addressApi = {
+  get(accessToken: string) {
+    return apiClient.get<AddressesResponse>("/users/addresses", {
+      accessToken,
+    });
+  },
+  create(body: CreateAddressBody, accessToken: string) {
+    return apiClient.post<CreateAddressBody, CreateAddressResponse>(
+      "/users/addresses",
+      body,
+      { accessToken },
+    );
+  },
+};
