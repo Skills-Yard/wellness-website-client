@@ -7,8 +7,8 @@ export const getZones = ({
 }: ZonesQuery): Promise<ApiResponse<ZoneDetails>> => {
   return apiClient.get<ApiResponse<ZoneDetails>>("/zones", {
     params: {
-      latitude: 28.6311026,
-      longitude: 77.2183546,
+      latitude: lat,
+      longitude: long,
     },
   });
 };

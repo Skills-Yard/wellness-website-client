@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "skillsyard.d-suyal.dev",
+      },
+      {
+        protocol: "https",
         hostname: "loremflickr.com",
       },
       {
