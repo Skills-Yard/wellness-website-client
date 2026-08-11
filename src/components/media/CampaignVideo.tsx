@@ -49,8 +49,17 @@ export default function CampaignVideo({
     const canPlayNativeHls =
       video.canPlayType("application/vnd.apple.mpegurl") !== "";
 
+    // Belt-and-suspenders: the `autoPlay` HTML attribute is supposed to kick in
+    // once a source is set on an already-mounted <video> too, but that's not
+    // reliable enough in practice (especially inside carousels) to trust alone
+    // — explicitly request playback once the source is actually attached.
+    const tryPlay = () => {
+      if (autoPlay) video.play().catch(() => {});
+    };
+
     if (!isHls || canPlayNativeHls) {
       video.src = src;
+      tryPlay();
       return;
     }
 
@@ -63,19 +72,21 @@ export default function CampaignVideo({
       if (!HlsCtor.isSupported()) {
         // No MSE support and no native HLS — nothing more we can do.
         video.src = src;
+        tryPlay();
         return;
       }
 
       hls = new HlsCtor();
       hls.loadSource(src);
       hls.attachMedia(video);
+      hls.on(HlsCtor.Events.MANIFEST_PARSED, tryPlay);
     });
 
     return () => {
       cancelled = true;
       hls?.destroy();
     };
-  }, [src]);
+  }, [src, autoPlay]);
 
   return (
     <video

@@ -12,6 +12,10 @@ interface HeroSliderProps {
     categories: HomeCategory[];
 }
 
+// Always returns a usable href — a global campaign (no categoryId) with no
+// ctaDeeplink set previously made this return null, which hid the CTA button
+// entirely even though ctaText was present. Falls back to "/" instead so the
+// button never silently disappears.
 const campaignHref = (campaign: HomeCampaign, categories: HomeCategory[]) => {
     const category = categories.find((item) => item.id === campaign.categoryId);
 
@@ -24,14 +28,18 @@ const campaignHref = (campaign: HomeCampaign, categories: HomeCategory[]) => {
         return `/detail/${category.slug}?${params.toString()}`;
     }
 
-    return campaign.ctaDeeplink?.startsWith("/") ? campaign.ctaDeeplink : null;
+    return campaign.ctaDeeplink?.startsWith("/") ? campaign.ctaDeeplink : "/";
 };
 
 export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
     const [currentSlide, setCurrentSlide] = useState(0);
     const orderedCampaigns = useMemo(
         () => [...campaigns]
-            .filter((campaign) => campaign.isActive !== false)
+            .filter(
+                (campaign) =>
+                    (campaign.type === "CAROUSEL_VIDEO" || campaign.type === "CAROUSEL_BANNER") &&
+                    campaign.isActive !== false,
+            )
             .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
         [campaigns],
     );
@@ -99,14 +107,12 @@ export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
                         <p className="text-white/80 text-[11px] sm:text-xs font-semibold drop-shadow-sm max-w-[85%]">
                             {campaign.subtitle}
                         </p>
-                        {href && campaign.ctaText && (
-                            <Link
-                                href={href}
-                                className="mt-3 inline-flex rounded-lg bg-white px-3 py-1.5 text-[11px] font-bold text-stone-900 shadow-sm"
-                            >
-                                {campaign.ctaText}
-                            </Link>
-                        )}
+                        <Link
+                            href={href}
+                            className="mt-3 inline-flex max-w-full truncate rounded-lg bg-white px-3 py-1.5 text-[11px] font-bold text-stone-900 shadow-sm"
+                        >
+                            {campaign.ctaText ?? "Explore Plans"}
+                        </Link>
                     </div>
                 </div>
                 );

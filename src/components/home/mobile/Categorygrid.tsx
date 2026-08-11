@@ -21,9 +21,9 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
             >
               <button className="flex flex-col items-center group cursor-pointer">
                 <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 shadow-sm transition-all duration-300 group-hover:border-amber-200 group-hover:bg-amber-50">
-                  {category.homeBannerKey ? (
+                  {category.iconKey ? (
                     <Image
-                      src={category.homeBannerKey}
+                      src={category.iconKey}
                       alt={category.name}
                       fill
                       sizes="96px"

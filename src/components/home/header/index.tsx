@@ -125,7 +125,11 @@ export default function Header({ homeDetails }: HeaderProps) {
   const categories = homeDetails?.categories ?? [];
 
   const campaigns = [...(homeDetails?.promotionalCampaigns ?? [])]
-    .filter((campaign) => campaign.isActive !== false)
+    .filter(
+      (campaign) =>
+        (campaign.type === "CAROUSEL_VIDEO" || campaign.type === "CAROUSEL_BANNER") &&
+        campaign.isActive !== false,
+    )
     .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
   return (
@@ -175,7 +179,7 @@ export default function Header({ homeDetails }: HeaderProps) {
                     <ServiceCard
                       key={category.id}
                       label={category.name}
-                      image={category.homeBannerKey ?? ""}
+                      image={category.iconKey ?? ""}
                       badge={index === 0 ? "Popular" : undefined}
                       badgeColor="bg-amber-500"
                       bg="bg-stone-50"

@@ -15,6 +15,10 @@ interface InspotlightProps {
   categories: HomeCategory[];
 }
 
+// Always returns a usable href — a global campaign (no categoryId) with no
+// ctaDeeplink set previously made this return null, which hid the CTA button
+// entirely even though ctaText was present. Falls back to "/" instead so the
+// button never silently disappears.
 const campaignHref = (campaign: HomeCampaign, categories: HomeCategory[]) => {
   const category = categories.find((item) => item.id === campaign.categoryId);
   if (category) {
@@ -27,7 +31,57 @@ const campaignHref = (campaign: HomeCampaign, categories: HomeCategory[]) => {
     return `/detail/${category.slug}?${params.toString()}`;
   }
 
-  return campaign.ctaDeeplink?.startsWith("/") ? campaign.ctaDeeplink : null;
+  return campaign.ctaDeeplink?.startsWith("/") ? campaign.ctaDeeplink : "/";
+};
+
+// Static per-category color treatment, matching the Figma spec's 3 example
+// cards. Card content (image/video, title, subtitle, CTA) stays fully
+// dynamic — only this styling is fixed. "spa" also serves as the fallback
+// for global (no-category) campaigns and any future category.
+type SpotlightVariant = {
+  gradient: string;
+  mirrored: boolean;
+  eyebrowColor: string;
+  titleColor: string;
+  buttonBg: string;
+};
+
+const SPOTLIGHT_VARIANTS: Record<"physio" | "massage" | "spa", SpotlightVariant> = {
+  physio: {
+    gradient:
+      "linear-gradient(84.48deg, #8AA7DF -0.65%, rgba(139, 158, 197, 0.54) 50.88%, rgba(140, 141, 142, 0) 75.67%)",
+    mirrored: false,
+    eyebrowColor: "rgba(0, 0, 0, 0.74)",
+    titleColor: "#204390",
+    buttonBg: "#000000",
+  },
+  massage: {
+    gradient:
+      "linear-gradient(81.09deg, rgba(165, 116, 55, 0) 41.02%, rgba(250, 164, 143, 0.48) 70.43%, rgba(250, 164, 143, 0.305652) 86.76%, #FFC558 108.97%)",
+    mirrored: true,
+    eyebrowColor: "#FFFFFF",
+    titleColor: "#FFC558",
+    buttonBg: "#25180F",
+  },
+  spa: {
+    gradient:
+      "linear-gradient(78.26deg, rgba(165, 116, 55, 0) 0.09%, rgba(147, 104, 49, 0.109289) 15.93%, rgba(144, 102, 48, 0.129159) 18.81%, rgba(132, 93, 44, 0.202018) 29.37%, rgba(120, 85, 40, 0.278189) 40.4%, rgba(115, 81, 38, 0.305652) 44.38%, rgba(100, 71, 33, 0.401144) 50.48%, rgba(76, 54, 25, 0.549933) 59.98%, rgba(74, 52, 24, 0.565801) 59.99%, rgba(65, 46, 21, 0.617293) 63.82%, rgba(60, 42, 19, 0.650889) 66.32%, rgba(52, 37, 17, 0.699956) 69.96%, rgba(38, 27, 12, 0.783968) 79.94%, rgba(22, 15, 7, 0.885983) 89.92%, #040201 99.91%)",
+    mirrored: true,
+    eyebrowColor: "#FFFFFF",
+    titleColor: "#FFC558",
+    buttonBg: "#25180F",
+  },
+};
+
+const getSpotlightVariant = (
+  campaign: HomeCampaign,
+  categories: HomeCategory[],
+): SpotlightVariant => {
+  const category = categories.find((item) => item.id === campaign.categoryId);
+  const key = `${category?.name ?? ""} ${category?.slug ?? ""}`.toLowerCase();
+  if (key.includes("physio")) return SPOTLIGHT_VARIANTS.physio;
+  if (key.includes("massage")) return SPOTLIGHT_VARIANTS.massage;
+  return SPOTLIGHT_VARIANTS.spa;
 };
 
 export default function Inspotlight({
@@ -63,7 +117,10 @@ export default function Inspotlight({
 
       <Swiper
         modules={[Navigation]}
-        loop={spotlightCampaigns.length > 1}
+        // Swiper's loop mode clones slide DOM nodes outside React's control,
+        // which breaks CampaignVideo's ref-based setup (the clone the user
+        // ends up looking at never gets a src/HLS attach — see CampaignVideo).
+        loop={false}
         breakpoints={{
           // CenteredSlides natively handles the left/right peek seen in the image
           0: { slidesPerView: 1.08, spaceBetween: 14, centeredSlides: false },
@@ -77,10 +134,11 @@ export default function Inspotlight({
       >
         {spotlightCampaigns.map((campaign) => {
           const href = campaignHref(campaign, categories);
+          const variant = getSpotlightVariant(campaign, categories);
 
           return (
             <SwiperSlide key={campaign.id} className="h-auto">
-              <article className="relative flex h-[202px] overflow-hidden rounded-[12px] bg-stone-900 shadow-none sm:h-55">
+              <article className="relative flex h-[145px] overflow-hidden rounded-[8px] bg-stone-900 shadow-none sm:h-55">
                 {campaign.cdnUrl && campaign.mediaType === "VIDEO" ? (
                   <CampaignVideo
                     src={campaign.cdnUrl}
@@ -89,30 +147,43 @@ export default function Inspotlight({
                 ) : campaign.cdnUrl ? (
                   <Image
                     src={campaign.cdnUrl}
-                    alt={campaign.title}
+                    alt={campaign.title ?? "Promotional campaign"}
                     fill
                     sizes="(max-width: 768px) 100vw, 33vw"
                     className="object-cover"
                   />
                 ) : null}
-                <div className="absolute inset-0 bg-linear-to-r from-stone-950/90 via-stone-950/55 to-transparent" />
-                <div className="relative z-10 flex w-full flex-col justify-center p-7 text-white sm:p-6">
+                {/* Gradient tint overlay, matching the Figma variant for this campaign's category */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: variant.gradient,
+                    transform: variant.mirrored ? "scaleX(-1)" : undefined,
+                  }}
+                />
+                <div className="relative z-10 flex h-full w-full flex-col p-6">
                   {campaign.subtitle && (
-                    <p className="mb-1 line-clamp-2 text-[15px] font-medium leading-snug text-white sm:text-xs">
+                    <p
+                      className="truncate text-xs font-medium leading-[15px]"
+                      style={{ color: variant.eyebrowColor }}
+                    >
                       {campaign.subtitle}
                     </p>
                   )}
-                  <h3 className="line-clamp-2 font-serif text-[25px] font-medium leading-tight tracking-wide text-amber-300 sm:text-[17px]">
+                  <h3
+                    className="mt-4 truncate font-serif text-xl font-normal leading-[22px]"
+                    style={{ color: variant.titleColor }}
+                  >
                     {campaign.title}
                   </h3>
-                  {href && campaign.ctaText && (
-                    <Link
-                      href={href}
-                      className="mt-3 w-fit rounded-xl bg-[#241914] px-4 py-2 text-[14px] font-medium text-white transition-colors hover:bg-[#35241c] sm:text-[11px]"
-                    >
-                      {campaign.ctaText}
-                    </Link>
-                  )}
+                  <Link
+                    href={href}
+                    className="mt-auto flex h-[31px] w-[108px] items-center justify-center gap-1 truncate rounded-lg text-xs font-medium text-white"
+                    style={{ backgroundColor: variant.buttonBg }}
+                  >
+                    <span className="truncate">{campaign.ctaText ?? "Explore Plans"}</span>
+                    <span className="shrink-0 text-base leading-none">›</span>
+                  </Link>
                 </div>
               </article>
             </SwiperSlide>

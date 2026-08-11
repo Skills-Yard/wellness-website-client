@@ -19,6 +19,7 @@ export type HomeCategory = {
   slug: string;
   title?: string;
   subtitle?: string;
+  iconKey?: string | null;
   homeBannerKey?: string | null;
   homeBannerType?: CampaignMediaType | null;
 };

@@ -185,7 +185,7 @@ export default function RequirementSelector({
       durationId: selectedDurationId,
       packageId: selectedPackageId,
       addOnIds: selectedAddonIds,
-      title: service.label,
+      title: service.title,
       price: totalPrice,
       image: service.media,
       duration:

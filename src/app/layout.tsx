@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Abyssinica_SIL } from "next/font/google";
 import "./globals.css";
 import Footer from "@/src/components/home/footer";
 import { CartProvider } from "@/src/context/CartContext";
@@ -13,6 +13,15 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// Backs the existing `font-serif` utility (see globals.css's --font-serif
+// override) — matches the decorative headline font used in the Figma specs
+// for WallPanel and Inspotlight card titles.
+const abyssinicaSIL = Abyssinica_SIL({
+  weight: "400",
+  variable: "--font-abyssinica-sil",
   subsets: ["latin"],
 });
 
@@ -34,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${abyssinicaSIL.variable} h-full antialiased`}
     >
       <body
         className="min-h-full flex flex-col"

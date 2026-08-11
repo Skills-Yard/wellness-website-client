@@ -113,6 +113,9 @@ export default function AuthModal({
 
   const handleComplete = async () => {
     if (!isFormValid || !signupToken || isSubmitting) return;
+    // isFormValid already requires a non-empty gender; this re-check exists purely to
+    // narrow the type from `CreateUserBody["gender"] | ""` for the request body below.
+    if (!gender) return;
     setIsSubmitting(true);
     try {
       const response = await userApi.create(

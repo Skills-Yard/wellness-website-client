@@ -46,7 +46,9 @@ export default function MobileHeroSection({
       {slides.length > 0 && (
         <Swiper
           className="absolute inset-0 h-full w-full"
-          loop={slides.length > 1}
+          // Swiper's loop mode clones slide DOM nodes outside React's control,
+          // which breaks CampaignVideo's ref-based setup (see CampaignVideo).
+          loop={false}
           onSlideChange={(swiper: SwiperInstance) => setActiveIndex(swiper.realIndex)}
         >
           {slides.map((slide) => (
