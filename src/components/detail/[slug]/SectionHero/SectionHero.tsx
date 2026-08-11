@@ -13,7 +13,8 @@ export default function SectionHero({ service }: SectionHeroProps) {
 
   if (!service) return null;
 
-  const rating = parseFloat(service.rating || "4.8");
+  const hasRating = typeof service.rating === "number" && service.rating > 0;
+  const reviewCount = typeof service.reviews === "number" ? service.reviews : 0;
   const startingPrice = service.price;
 
   return (
@@ -44,31 +45,34 @@ export default function SectionHero({ service }: SectionHeroProps) {
             {service.title}
           </h1>
 
-          <div className="flex pt-[5px] items-center">
-            <svg width="0" height="0">
-              <defs>
-                <linearGradient
-                  id="starGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="0%"
-                >
-                  <stop offset="0%" stopColor="#FF6F47" />
-                  <stop offset="100%" stopColor="#FFCD0F" />
-                </linearGradient>
-              </defs>
-            </svg>
+          {hasRating && (
+            <div className="flex pt-[5px] items-center">
+              <svg width="0" height="0">
+                <defs>
+                  <linearGradient
+                    id="starGradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stopColor="#FF6F47" />
+                    <stop offset="100%" stopColor="#FFCD0F" />
+                  </linearGradient>
+                </defs>
+              </svg>
 
-            <Star
-              className="w-4 h-4 mr-[5px]"
-              fill="url(#starGradient)"
-              stroke="url(#starGradient)"
-            />
-            <span className=" text-[12px] text-[#666666]">
-              {rating} (12K+ bookings)
-            </span>
-          </div>
+              <Star
+                className="w-4 h-4 mr-[5px]"
+                fill="url(#starGradient)"
+                stroke="url(#starGradient)"
+              />
+              <span className=" text-[12px] text-[#666666]">
+                {(service.rating as number).toFixed(1)}
+                {reviewCount > 0 && ` (${reviewCount.toLocaleString("en-IN")} bookings)`}
+              </span>
+            </div>
+          )}
 
           {/* Price */}
           <div className="pt-[8px] font-semibold">

@@ -6,11 +6,6 @@ import { useCart } from "@/src/context/CartContext";
 import { useCategories } from "@/src/context/CategoryContext";
 import { getSubCategoriesByCategoryId } from "@/src/services/categoryApi";
 import { getServiceItems } from "@/src/services/serviceItemApi";
-import {
-  getServiceAddOns,
-  getServiceDurations,
-  getServicePackages,
-} from "@/src/services/serviceDetailApi";
 import { getZones } from "@/src/services/zoneApi";
 import { getPromotionalCampaigns } from "@/src/services/campaignApi";
 import { CategoryDetails, SubCategory } from "@/src/types/categoryTypes";
@@ -71,24 +66,15 @@ export default function SpaBookingLayout() {
     useState<CategoryDetails | null>(null);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
-  const [serviceDurations, setServiceDurations] = useState<ServiceDuration[]>(
-    [],
-  );
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
-  const [serviceAddOns, setServiceAddOns] = useState<ServiceAddOn[]>([]);
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [heroCampaign, setHeroCampaign] = useState<HomeCampaign | null>(null);
   const [carouselCampaigns, setCarouselCampaigns] = useState<HomeCampaign[]>([]);
   const [detailsError, setDetailsError] = useState<Error | null>(null);
   const [zoneError, setZoneError] = useState<Error | null>(null);
   const [servicesError, setServicesError] = useState<Error | null>(null);
-  const [configurationError, setConfigurationError] = useState<Error | null>(
-    null,
-  );
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [isZoneLoading, setIsZoneLoading] = useState(true);
   const [isServicesLoading, setIsServicesLoading] = useState(false);
-  const [isConfigurationLoading, setIsConfigurationLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState("");
@@ -156,44 +142,6 @@ export default function SpaBookingLayout() {
       },
     );
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchServiceConfiguration = async () => {
-      try {
-        setIsConfigurationLoading(true);
-        setConfigurationError(null);
-        const [durationResponse, packageResponse, addOnResponse] =
-          await Promise.all([
-            getServiceDurations(),
-            getServicePackages(),
-            getServiceAddOns(),
-          ]);
-
-        if (isMounted) {
-          setServiceDurations(durationResponse.data ?? []);
-          setServicePackages(packageResponse.data ?? []);
-          setServiceAddOns(addOnResponse.data ?? []);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setConfigurationError(
-            error instanceof Error
-              ? error
-              : new Error("Unable to load service options."),
-          );
-        }
-      } finally {
-        if (isMounted) setIsConfigurationLoading(false);
-      }
-    };
-
-    fetchServiceConfiguration();
     return () => {
       isMounted = false;
     };
@@ -365,6 +313,21 @@ export default function SpaBookingLayout() {
     };
   }, [subCategories, zoneId]);
 
+  // The catalog API already embeds each service item's own durations/packages/addOns
+  // (see GET /catalog/service-items) — no need for separate, catalog-wide fetches.
+  const serviceDurations = useMemo(
+    () => serviceItems.flatMap((item) => item.durations ?? []),
+    [serviceItems],
+  );
+  const servicePackages = useMemo(
+    () => serviceItems.flatMap((item) => item.packages ?? []),
+    [serviceItems],
+  );
+  const serviceAddOns = useMemo(
+    () => serviceItems.flatMap((item) => item.addOns ?? []),
+    [serviceItems],
+  );
+
   const { services, serviceCategories } = useMemo<{
     services: DynamicService[];
     serviceCategories: Category[];
@@ -375,7 +338,6 @@ export default function SpaBookingLayout() {
     const durationById = new Map(
       serviceDurations.map((duration) => [duration.id, duration]),
     );
-    console.log("services: ", serviceItems);
     const services = serviceItems.map((service) => {
       const durationPrices = serviceDurations
         .filter((duration) => belongsToService(duration, service.id))
@@ -387,7 +349,7 @@ export default function SpaBookingLayout() {
       return {
       ...service,
       id: service.id,
-      title: service.title ?? service.name ?? "Wellness service",
+      title: service.cardTitle ?? service.title ?? service.name ?? "Wellness service",
       price: formatPrice(lowestDurationPrice ?? service.price),
       originalPrice:
         service.originalPrice === null || service.originalPrice === undefined
@@ -402,25 +364,15 @@ export default function SpaBookingLayout() {
         ),
       media:
         service.media ?? service.thumbnailKey ?? "/images/hero-fallback.jpg",
-      rating: service.rating ?? "—",
-      reviews: service.reviews ?? 0,
+      rating: service.averageRating ?? service.rating ?? "—",
+      reviews: service.totalReviews ?? service.reviews ?? 0,
       category: subCategoryNames.get(service.subCategoryId) ?? "Services",
       subCategoryId: service.subCategoryId,
       tag: service.tag,
       isSpotlight: service.isSpotlight,
-      features: [
-        ...(service.features ?? []),
-        ...servicePackages
-          .filter((servicePackage) =>
-            belongsToService(servicePackage, service.id),
-          )
-          .map((servicePackage) => `Package: ${getOptionLabel(servicePackage)}`)
-          .filter(Boolean),
-        ...serviceAddOns
-          .filter((addOn) => belongsToService(addOn, service.id))
-          .map((addOn) => `Add-on: ${getOptionLabel(addOn)}`)
-          .filter(Boolean),
-      ],
+      // Real content only — packages/add-ons already get their own dedicated
+      // sections in SelectPack, they don't belong mixed into "features" too.
+      features: service.features ?? [],
       };
     });
     if (subCategories.length) {
@@ -441,6 +393,27 @@ export default function SpaBookingLayout() {
     servicePackages,
     subCategories,
   ]);
+
+  // ServiceCategory has no rating/review fields of its own in the schema — this
+  // rolls up a real category-level figure from its service items' actual
+  // averageRating/totalReviews instead of showing a permanently-fake placeholder.
+  const { categoryRating, categoryReviewCount } = useMemo(() => {
+    const reviewed = serviceItems.filter((item) => (item.totalReviews ?? 0) > 0);
+    const categoryReviewCount = reviewed.reduce(
+      (sum, item) => sum + (item.totalReviews ?? 0),
+      0,
+    );
+    if (categoryReviewCount === 0) return { categoryRating: null, categoryReviewCount: 0 };
+
+    const weightedSum = reviewed.reduce(
+      (sum, item) => sum + (item.averageRating ?? 0) * (item.totalReviews ?? 0),
+      0,
+    );
+    return {
+      categoryRating: weightedSum / categoryReviewCount,
+      categoryReviewCount,
+    };
+  }, [serviceItems]);
 
   useEffect(() => {
     const updatePageState = () => {
@@ -511,28 +484,16 @@ export default function SpaBookingLayout() {
     categoriesLoading ||
     isZoneLoading ||
     isDetailsLoading ||
-    isServicesLoading ||
-    isConfigurationLoading
+    isServicesLoading
   )
     return <LoadingState />;
-  if (
-    categoriesError ||
-    zoneError ||
-    detailsError ||
-    servicesError ||
-    configurationError
-  )
+  if (categoriesError || zoneError || detailsError || servicesError)
     return (
       <MessageState
         title="Service details unavailable"
         message={
-          (
-            categoriesError ??
-            zoneError ??
-            detailsError ??
-            servicesError ??
-            configurationError
-          )?.message ?? "Please try again shortly."
+          (categoriesError ?? zoneError ?? detailsError ?? servicesError)
+            ?.message ?? "Please try again shortly."
         }
       />
     );
@@ -549,8 +510,8 @@ export default function SpaBookingLayout() {
     categoryDetails.subtitle ??
     "Handpicked wellness experiences curated for you.";
   const media = categoryDetails.media ?? "/images/hero-fallback.jpg";
-  const rating = categoryDetails.rating ?? "—";
-  const reviews = categoryDetails.reviews ?? 0;
+  const rating = categoryRating !== null ? categoryRating.toFixed(1) : "—";
+  const reviews = categoryReviewCount;
   const heroMedia = heroCampaign?.cdnUrl ?? "/images/hero-fallback.jpg";
   const heroMediaType = heroCampaign?.cdnUrl ? heroCampaign.mediaType : "IMAGE";
 
@@ -572,6 +533,7 @@ export default function SpaBookingLayout() {
       />
       <MobileCategoriesGrid
         title={title}
+        subtitle={subtitle}
         rating={rating}
         reviews={reviews}
         media={media}
@@ -625,7 +587,6 @@ export default function SpaBookingLayout() {
           service={activeModalService}
           serviceDetails={selectedServiceDetails}
           categoryName={activeModalService.category}
-          steps={categoryDetails.steps ?? []}
           onClose={() => setSelectedService(null)}
         />
       )}

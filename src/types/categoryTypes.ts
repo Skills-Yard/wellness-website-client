@@ -27,4 +27,5 @@ export type CategoryDetails = {
 export type SubCategory = Category & {
   slug?: string;
   categoryId?: string;
+  iconKey?: string | null;
 };

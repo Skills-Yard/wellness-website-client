@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { DynamicStep } from "@/src/utils/data/detailPage";
 import { DynamicService } from "@/src/utils/types/spabooking";
 import SectionHero from "./SectionHero/SectionHero";
 import RequirementSelector from "./SelectPack/SelectPack";
@@ -22,7 +21,6 @@ type SubDetailPopUpProps = {
   onClose: () => void;
   service: DynamicService;
   categoryName: string;
-  steps: DynamicStep[];
 
   // NEW
   serviceDetails: ServiceDetails;
@@ -32,7 +30,6 @@ export default function SubDetailPopUp({
   onClose,
   service,
   categoryName,
-  steps,
   serviceDetails,
 }: SubDetailPopUpProps) {
   const [mounted, setMounted] = useState(false);
@@ -49,14 +46,6 @@ export default function SubDetailPopUp({
     setMounted(false);
     window.setTimeout(onClose, 300);
   };
-
-  console.log("SERVICE:", service);
-
-  console.log("DURATIONS:", serviceDetails.durations);
-
-  console.log("PACKAGES:", serviceDetails.packages);
-
-  console.log("ADD ONS:", serviceDetails.addOns);
 
   return (
     <div
@@ -85,7 +74,6 @@ export default function SubDetailPopUp({
           <RequirementSelector
             service={service}
             serviceDetails={serviceDetails}
-            steps={steps}
             onAddedToCart={close}
           />
         </div>

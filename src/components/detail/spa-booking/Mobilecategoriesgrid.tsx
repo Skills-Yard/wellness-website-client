@@ -4,6 +4,7 @@ import { Category } from "@/src/utils/types/spabooking";
 
 interface MobileCategoriesGridProps {
   title: string;
+  subtitle?: string;
   rating: string | number;
   reviews: string | number;
   media: string;
@@ -14,6 +15,7 @@ interface MobileCategoriesGridProps {
 
 export default function MobileCategoriesGrid({
   title,
+  subtitle,
   rating,
   reviews,
   media,
@@ -34,7 +36,7 @@ export default function MobileCategoriesGrid({
             <span className="truncate">({reviews} bookings)</span>
           </div>
           <p className="text-xs xs:text-sm text-[#666666] mt-1.5">
-            Find balance, relax your mind & body.
+            {subtitle || "Handpicked wellness experiences curated for you."}
           </p>
 
           {/* Responsive grid: 3 cols */}
@@ -48,7 +50,7 @@ export default function MobileCategoriesGrid({
                 <div className="relative h-20 xs:h-24 w-20 xs:w-24 overflow-hidden rounded-xl xs:rounded-[25px] bg-[#FEF3F1] border border-[#FDF6F4] shadow-xs transition-transform group-active:scale-95 flex items-center justify-center shrink-0">
                   <div className="relative w-full h-full">
                     <Image
-                      src={media}
+                      src={cat.iconKey ?? media}
                       alt={cat.name}
                       fill
                       sizes="96px"

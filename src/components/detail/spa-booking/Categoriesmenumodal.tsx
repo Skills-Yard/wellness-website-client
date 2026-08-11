@@ -48,7 +48,7 @@ export default function CategoriesMenuModal({
             >
               <div className="relative h-20 xs:h-24 sm:h-25 w-20 xs:w-24 sm:w-25 overflow-hidden rounded-xl xs:rounded-2xl bg-slate-100 shadow-sm shrink-0">
                 <Image
-                  src={media}
+                  src={cat.iconKey ?? media}
                   alt={cat.name}
                   fill
                   sizes="100px"

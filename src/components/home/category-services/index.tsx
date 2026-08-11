@@ -34,12 +34,12 @@ const formatPrice = (price: ServiceItem["price"] | null) => {
   return price ?? "₹0";
 };
 
-const formatRating = (rating: ServiceItem["rating"]) => {
+const formatRating = (rating: ServiceItem["averageRating"] | ServiceItem["rating"]) => {
   if (typeof rating === "number") return rating.toFixed(1);
   return rating ?? "0";
 };
 
-const formatReviews = (reviews: ServiceItem["reviews"]) => reviews ?? "0";
+const formatReviews = (reviews: ServiceItem["totalReviews"] | ServiceItem["reviews"]) => reviews ?? "0";
 
 const getLowestDurationPrice = (service: ServiceItem) => {
   const prices = (service.durations ?? [])
@@ -245,26 +245,26 @@ export default function CategoryServices({
                     {image ? (
                       <Image
                         src={image}
-                        alt={service.title ?? service.name ?? category.name}
+                        alt={service.cardTitle ?? service.title ?? service.name ?? category.name}
                         fill
                         sizes="(max-width: 639px) 45vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 23vw, 19vw"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <span className="flex h-full items-center justify-center text-2xl font-bold text-amber-500">
-                        {(service.title ?? service.name ?? category.name).charAt(0)}
+                        {(service.cardTitle ?? service.title ?? service.name ?? category.name).charAt(0)}
                       </span>
                     )}
                   </div>
                   <h3 className="line-clamp-2 min-h-[32px] text-[14px] font-medium leading-[116%] text-black transition-colors group-hover:text-amber-600">
-                    {service.title ?? service.name ?? "Wellness service"}
+                    {service.cardTitle ?? service.title ?? service.name ?? "Wellness service"}
                   </h3>
                   <div className="mt-[6px] flex h-4 items-center gap-[5px] text-[12px] leading-[116%] text-[#666]">
                     <span className="flex items-center gap-1">
                       <Star className="h-3 w-3 fill-[#ffb318] text-[#ff9d00]" />
-                      {formatRating(service.rating)}
+                      {formatRating(service.averageRating ?? service.rating)}
                     </span>
-                    <span>({formatReviews(service.reviews)})</span>
+                    <span>({formatReviews(service.totalReviews ?? service.reviews)})</span>
                   </div>
                   <div className="mt-[6px] flex items-center gap-1 text-[14px] font-medium leading-[116%] text-black">
                     <span>Starts at {formatPrice(lowestDurationPrice)}</span>

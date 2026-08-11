@@ -35,7 +35,7 @@ export default function DesktopCategoriesSidebar({
                 }`}
               >
                 <Image
-                  src={media}
+                  src={cat.iconKey ?? media}
                   alt={cat.name}
                   fill
                   sizes="56px"

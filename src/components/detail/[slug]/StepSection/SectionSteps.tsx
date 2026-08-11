@@ -11,37 +11,8 @@ interface StepsSectionProps {
 }
 
 export default function StepsSection({ steps }: StepsSectionProps) {
-  // Dummy data fallback matching the provided screenshot context
-  const activeSteps = steps || [
-    {
-      id: "1",
-      title: "Skin cleansing",
-      description: "Light warm-up & breathing exercises to prepare the body.",
-      image:
-        "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "2",
-      title: "Gentle exfoliation",
-      description: "Buff away dead skin for a smoother, brighter look.",
-      image:
-        "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "3",
-      title: "Glow restoration",
-      description: "Nourishing care to hydrate and revive natural radiance.",
-      image:
-        "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "4",
-      title: "Moisture lock",
-      description: "Finish with calming hydration for soft, glowing skin.",
-      image:
-        "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=400&q=80",
-    },
-  ];
+  const activeSteps = steps ?? [];
+  if (activeSteps.length === 0) return null;
 
   return (
     <section className="w-full max-w-[359px] md:max-w-[700px] lg:max-w-[1000px] md:mx-auto bg-white font-sans">

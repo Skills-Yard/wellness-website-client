@@ -8,6 +8,7 @@ export type ServiceDetailOption = {
   durationMinutes?: number;
   sessions?: number;
   price?: string | number;
+  discountedPrice?: string | number | null;
   pricePerSession?: string | number;
   originalPrice?: string | number;
   savings?: string | number;
@@ -28,3 +29,21 @@ export type ServiceDetailOption = {
 export type ServiceDuration = ServiceDetailOption;
 export type ServicePackage = ServiceDetailOption;
 export type ServiceAddOn = ServiceDetailOption;
+
+/** Matches the admin panel's shape for the ServiceItem JSON content columns
+ *  (procedureSteps, itemsUsed, whatsIncluded — see catalog.prisma). */
+export type ImageCardItem = {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  image: string;
+};
+
+/** Matches the admin panel's shape for ServiceItem.customReviews. */
+export type ReviewItem = {
+  id?: string;
+  name: string;
+  content: string;
+  displayOrder?: number;
+  image?: string;
+};
