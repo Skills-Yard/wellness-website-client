@@ -11,6 +11,15 @@ type CampaignVideoProps = {
   muted?: boolean;
   playsInline?: boolean;
   className?: string;
+  /**
+   * "auto" tells the browser to start buffering ahead of the playhead as
+   * soon as the element mounts, instead of waiting for an explicit play()
+   * (some mobile browsers default to "none" without this, which stalls
+   * autoplay entirely). Progressive MP4 playback (start before the whole
+   * file downloads) additionally requires the source file itself to be
+   * "faststart"-encoded — see CampaignVideo's usage notes.
+   */
+  preload?: "auto" | "metadata" | "none";
 };
 
 /**
@@ -28,6 +37,7 @@ export default function CampaignVideo({
   muted = true,
   playsInline = true,
   className,
+  preload = "auto",
 }: CampaignVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -75,6 +85,7 @@ export default function CampaignVideo({
       loop={loop}
       muted={muted}
       playsInline={playsInline}
+      preload={preload}
       className={className}
     />
   );

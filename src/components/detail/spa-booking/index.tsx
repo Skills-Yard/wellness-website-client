@@ -24,6 +24,7 @@ import {
 import { Category, DynamicService } from "@/src/utils/types/spabooking";
 import MobileStickyNavbar from "./Mobilestickynavbar";
 import MobileHeroSection from "./Mobileherosection";
+import MobileCampaignCarousel from "./MobileCampaignCarousel";
 import MobileCategoriesGrid from "./Mobilecategoriesgrid";
 import DesktopCategoriesSidebar from "./Desktopcategoriessidebar";
 import DesktopHero from "./Desktophero";
@@ -78,6 +79,7 @@ export default function SpaBookingLayout() {
   const [serviceAddOns, setServiceAddOns] = useState<ServiceAddOn[]>([]);
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [heroCampaign, setHeroCampaign] = useState<HomeCampaign | null>(null);
+  const [carouselCampaigns, setCarouselCampaigns] = useState<HomeCampaign[]>([]);
   const [detailsError, setDetailsError] = useState<Error | null>(null);
   const [zoneError, setZoneError] = useState<Error | null>(null);
   const [servicesError, setServicesError] = useState<Error | null>(null);
@@ -249,25 +251,44 @@ export default function SpaBookingLayout() {
     let isMounted = true;
     if (!categoryId || !zoneId) {
       setHeroCampaign(null);
+      setCarouselCampaigns([]);
       return;
     }
 
     const fetchHeroCampaign = async () => {
       try {
+        // One fetch for every campaign targeting this category, split by type below —
+        // avoids a second round-trip just to also populate the mobile carousel.
         const response = await getPromotionalCampaigns({ categoryId, zoneId });
-        const best = (response.data ?? [])
+        const categoryCampaigns = (response.data ?? []).filter(
+          (campaign) =>
+            campaign.targetType === "CATEGORY" && campaign.categoryId === categoryId,
+        );
+
+        const best = categoryCampaigns
           .filter(
             (campaign) =>
-              campaign.targetType === "CATEGORY" &&
-              campaign.categoryId === categoryId &&
-              (campaign.type === "HIGHLIGHT_VIDEO" || campaign.type === "HIGHLIGHT_BANNER"),
+              campaign.type === "HIGHLIGHT_VIDEO" || campaign.type === "HIGHLIGHT_BANNER",
           )
           .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
 
-        if (isMounted) setHeroCampaign(best ?? null);
+        const carousel = categoryCampaigns
+          .filter(
+            (campaign) =>
+              campaign.type === "CAROUSEL_VIDEO" || campaign.type === "CAROUSEL_BANNER",
+          )
+          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+        if (isMounted) {
+          setHeroCampaign(best ?? null);
+          setCarouselCampaigns(carousel);
+        }
       } catch (error) {
         console.error(`Unable to load hero campaign for ${categoryId}:`, error);
-        if (isMounted) setHeroCampaign(null);
+        if (isMounted) {
+          setHeroCampaign(null);
+          setCarouselCampaigns([]);
+        }
       }
     };
 
@@ -549,6 +570,7 @@ export default function SpaBookingLayout() {
         title={title}
         subtitle={subtitle}
       />
+      <MobileCampaignCarousel campaigns={carouselCampaigns} />
       <MobileCategoriesGrid
         title={title}
         rating={rating}

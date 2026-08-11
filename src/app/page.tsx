@@ -6,6 +6,7 @@ import { useCart } from "@/src/context/CartContext";
 import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
 import Header from "@/src/components/home/header";
 import Inspotlight from "@/src/components/home/in-spotlight";
+import PromoCarousel from "@/src/components/home/promo-carousel";
 import WallPanel from "@/src/components/home/wall-panel";
 import CategoryServices from "@/src/components/home/category-services";
 import MobileHome from "@/src/components/home/mobile";
@@ -181,6 +182,11 @@ export default function Home() {
           <Header homeDetails={homeDetails} />
 
           <Inspotlight
+            campaigns={homeDetails.promotionalCampaigns}
+            categories={homeDetails.categories}
+          />
+
+          <PromoCarousel
             campaigns={homeDetails.promotionalCampaigns}
             categories={homeDetails.categories}
           />

@@ -27,7 +27,8 @@ export type CampaignType =
   | "SPOTLIGHT"
   | "HIGHLIGHT_VIDEO"
   | "HIGHLIGHT_BANNER"
-  | "CAROUSEL";
+  | "CAROUSEL_VIDEO"
+  | "CAROUSEL_BANNER";
 export type CampaignTargetType = "GLOBAL" | "CATEGORY" | "SUBCATEGORY";
 export type CampaignMediaType = "IMAGE" | "VIDEO";
 

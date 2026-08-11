@@ -5,6 +5,7 @@ import { useCart } from "@/src/context/CartContext";
 
 import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
 import Inspotlight from "@/src/components/home/in-spotlight";
+import PromoCarousel from "@/src/components/home/promo-carousel";
 import CategoryServices from "@/src/components/home/category-services";
 import WallPanel from "../wall-panel";
 import { useMobileHome } from "./Usemobilehome";
@@ -73,6 +74,10 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
 
       <div className="space-y-2 mt-4">
         <Inspotlight
+          campaigns={homeDetails.promotionalCampaigns}
+          categories={homeDetails.categories}
+        />
+        <PromoCarousel
           campaigns={homeDetails.promotionalCampaigns}
           categories={homeDetails.categories}
         />
