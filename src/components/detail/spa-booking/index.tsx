@@ -24,7 +24,6 @@ import {
 import { Category, DynamicService } from "@/src/utils/types/spabooking";
 import MobileStickyNavbar from "./Mobilestickynavbar";
 import MobileHeroSection from "./Mobileherosection";
-import MobileCampaignCarousel from "./MobileCampaignCarousel";
 import MobileCategoriesGrid from "./Mobilecategoriesgrid";
 import DesktopCategoriesSidebar from "./Desktopcategoriessidebar";
 import DesktopHero from "./Desktophero";
@@ -565,12 +564,12 @@ export default function SpaBookingLayout() {
         onCategoryClick={scrollToCategory}
       />
       <MobileHeroSection
-        mediaSrc={heroMedia}
-        mediaType={heroMediaType}
+        campaigns={carouselCampaigns}
+        fallbackMediaSrc={heroMedia}
+        fallbackMediaType={heroMediaType}
         title={title}
         subtitle={subtitle}
       />
-      <MobileCampaignCarousel campaigns={carouselCampaigns} />
       <MobileCategoriesGrid
         title={title}
         rating={rating}
