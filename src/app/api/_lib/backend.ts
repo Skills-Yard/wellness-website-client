@@ -5,7 +5,7 @@ const API_BASE_URL = (
 export async function forwardToBackend(request: Request, path: string) {
   if (!API_BASE_URL) {
     return Response.json(
-      { message: "API_BASE_URL is not configured on the server." },
+      { message: "API_BASE_URL or NEXT_PUBLIC_API_BASE_URL is not configured on the server." },
       { status: 500 },
     );
   }
