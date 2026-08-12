@@ -72,6 +72,6 @@ export const cartApi = {
     return apiClient.delete<CartResponse>(`/cart/items/${itemId}`, { accessToken });
   },
   clearItems(accessToken: string) {
-    return apiClient.delete<CartResponse>("/cart/items", { accessToken });
+    return apiClient.delete<CartResponse>("/cart", { accessToken });
   },
 };
