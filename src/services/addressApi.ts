@@ -32,10 +32,13 @@ export type CreateAddressBody = {
   isDefault: boolean;
 };
 
+export type UpdateAddressBody = Omit<CreateAddressBody, "userId">;
+
 export type AddressesResponse = ApiSuccess<
   Address[] | { addresses?: Address[]; items?: Address[] }
 >;
 export type CreateAddressResponse = ApiSuccess<Address>;
+export type UpdateAddressResponse = ApiSuccess<Address>;
 
 export const addressApi = {
   get(accessToken: string) {
@@ -46,6 +49,15 @@ export const addressApi = {
   create(body: CreateAddressBody, accessToken: string) {
     return apiClient.post<CreateAddressBody, CreateAddressResponse>(
       "/users/addresses",
+      body,
+      { accessToken },
+    );
+  },
+  // Verb assumed as PATCH to match the sibling /cart/items/{id} update
+  // endpoint's convention — flag it if the backend actually expects PUT.
+  update(addressId: string, body: UpdateAddressBody, accessToken: string) {
+    return apiClient.patch<UpdateAddressBody, UpdateAddressResponse>(
+      `/users/addresses/${addressId}`,
       body,
       { accessToken },
     );

@@ -11,6 +11,8 @@ import { getServiceItems } from "@/src/services/serviceItemApi";
 import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
 import { SubCategory } from "@/src/types/categoryTypes";
+import { DynamicService } from "@/src/utils/types/spabooking";
+import SubDetailPopUp from "@/src/components/detail/[slug]/mainfile";
 
 type CategoryServicesProps = {
   category: HomeCategory;
@@ -51,6 +53,38 @@ const getLowestDurationPrice = (service: ServiceItem) => {
   return prices.length > 0 ? Math.min(...prices) : service.price;
 };
 
+// The catalog API already embeds each service item's own durations/packages/
+// addOns (see getServiceItems) — no extra fetch needed to open the detail
+// popup right here, just reshape the one ServiceItem SubDetailPopUp expects.
+const toDynamicService = (service: ServiceItem, categoryName: string): DynamicService => ({
+  id: service.id,
+  title: service.cardTitle ?? service.title ?? service.name ?? "Wellness service",
+  price: formatPrice(getLowestDurationPrice(service)),
+  originalPrice:
+    service.originalPrice === null || service.originalPrice === undefined
+      ? null
+      : formatPrice(service.originalPrice),
+  duration: service.duration ?? "",
+  media: service.media ?? service.thumbnailKey ?? "/images/hero-fallback.jpg",
+  rating: service.averageRating ?? service.rating ?? "—",
+  reviews: service.totalReviews ?? service.reviews ?? 0,
+  category: categoryName,
+  subCategoryId: service.subCategoryId,
+  tag: service.tag,
+  isSpotlight: service.isSpotlight,
+  features: service.features ?? [],
+  overview: service.overview,
+  procedureSteps: service.procedureSteps,
+  itemsUsed: service.itemsUsed,
+  skilledPros: service.skilledPros,
+  prePostCare: service.prePostCare,
+  disclaimer: service.disclaimer,
+  whatsIncluded: service.whatsIncluded,
+  faqs: service.faqs,
+  trustedLoved: service.trustedLoved,
+  customReviews: service.customReviews,
+});
+
 export default function CategoryServices({
   category,
   zoneId,
@@ -67,6 +101,11 @@ export default function CategoryServices({
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(false);
+  // Clicking a card opens the same detail popup the category page uses,
+  // instead of navigating there — see the card's onClick below.
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(
+    null,
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -235,12 +274,17 @@ export default function CategoryServices({
         >
           {visibleServices.map((service) => {
             const image = service.media ?? service.thumbnailKey;
-            const href = `/detail/${category.slug}?categoryId=${encodeURIComponent(category.id)}&subCategoryId=${encodeURIComponent(service.subCategoryId)}&id=${encodeURIComponent(service.id)}`;
             const lowestDurationPrice = getLowestDurationPrice(service);
 
             return (
               <SwiperSlide key={service.id} className="h-auto">
-                <Link href={href} className="group block h-full cursor-pointer">
+                {/* Opens the detail popup in place — same as the category
+                    page's own service cards (see Serviceslist.tsx) — rather
+                    than navigating there, so no href/Link here. */}
+                <div
+                  onClick={() => setSelectedService(service)}
+                  className="group block h-full cursor-pointer"
+                >
                   <div className="relative mb-[7px] aspect-[168/97] w-full overflow-hidden rounded-[7px] bg-stone-100">
                     {image ? (
                       <Image
@@ -259,12 +303,17 @@ export default function CategoryServices({
                   <h3 className="line-clamp-2 min-h-[32px] text-[14px] font-medium leading-[116%] text-black transition-colors group-hover:text-amber-600">
                     {service.cardTitle ?? service.title ?? service.name ?? "Wellness service"}
                   </h3>
-                  <div className="mt-[6px] flex h-4 items-center gap-[5px] text-[12px] leading-[116%] text-[#666]">
+                  <div className="mt-[6px] flex flex-col gap-[2px] text-[12px] leading-[116%] text-[#666]">
+                    {/* "bookings" — same label/count SectionHero.tsx uses for
+                        this exact service once its popup is open, no
+                        separate bookings field exists in the API response.
+                        Always rendered, no reviews>0 gate — 0 shows as
+                        "0 bookings" rather than the line disappearing. */}
+                    <span>{formatReviews(service.totalReviews ?? service.reviews)} bookings</span>
                     <span className="flex items-center gap-1">
                       <Star className="h-3 w-3 fill-[#ffb318] text-[#ff9d00]" />
                       {formatRating(service.averageRating ?? service.rating)}
                     </span>
-                    <span>({formatReviews(service.totalReviews ?? service.reviews)})</span>
                   </div>
                   <div className="mt-[6px] flex items-center gap-1 text-[14px] font-medium leading-[116%] text-black">
                     <span>Starts at {formatPrice(lowestDurationPrice)}</span>
@@ -272,13 +321,25 @@ export default function CategoryServices({
                       {formatPrice(service.originalPrice)}
                     </span>
                   </div>
-                </Link>
+                </div>
               </SwiperSlide>
             );
           })}
         </Swiper>
       )}
 
+      {selectedService && (
+        <SubDetailPopUp
+          service={toDynamicService(selectedService, category.title ?? category.name)}
+          serviceDetails={{
+            durations: selectedService.durations ?? [],
+            packages: selectedService.packages ?? [],
+            addOns: selectedService.addOns ?? [],
+          }}
+          categoryName={category.title ?? category.name}
+          onClose={() => setSelectedService(null)}
+        />
+      )}
     </section>
   );
 }

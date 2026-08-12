@@ -6,8 +6,8 @@ import {
   ServicePackage,
 } from "@/src/types/serviceDetailTypes";
 import { DynamicService } from "@/src/utils/types/spabooking";
-import { ChevronRight, Check } from "lucide-react";
-import { useState } from "react";
+import { ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import StepsSection from "../StepSection/SectionSteps";
 import { useCart } from "@/src/context/CartContext";
 
@@ -15,6 +15,62 @@ type ServiceDetails = {
   durations: ServiceDuration[];
   packages: ServicePackage[];
   addOns: ServiceAddOn[];
+};
+
+// Pack cards don't trust price/originalPrice/discount straight off the API
+// — "original" is defined relative to whichever duration is currently
+// selected (sessions × that duration's price), with savingsPercent applied
+// on top, so a "4 Session" pack's numbers stay correct (and stay in sync
+// with the duration picker above it) no matter which duration is active.
+const getPackPricing = (pack: ServicePackage, durationPrice: number) => {
+  const sessionCount = Number(pack.sessions ?? 1) || 1;
+  const originalTotal = sessionCount * durationPrice;
+  const savingsPercent = Number(pack.savingsPercent ?? 0) || 0;
+  const discountedTotal =
+    savingsPercent > 0
+      ? originalTotal * (1 - savingsPercent / 100)
+      : originalTotal;
+
+  return {
+    sessionCount,
+    originalTotal,
+    discountedTotal,
+    perSessionPrice: discountedTotal / sessionCount,
+    savingsPercent,
+  };
+};
+
+// discountedPrice, when present and actually lower, is what the duration
+// really costs today — displayPrice is what to show as the main price
+// (and what pack math below should treat as "the duration's price"), price
+// is what to strike through next to it.
+const getDurationPricing = (duration: ServiceDuration) => {
+  const price = Number(duration.price ?? 0);
+  const raw = duration.discountedPrice;
+  const discountedPrice =
+    raw === null || raw === undefined || raw === "" ? null : Number(raw);
+  const hasDiscount =
+    discountedPrice !== null && !Number.isNaN(discountedPrice) && discountedPrice < price;
+
+  return {
+    price,
+    displayPrice: hasDiscount ? (discountedPrice as number) : price,
+    hasDiscount,
+  };
+};
+
+// Sort key for "low to high" duration ordering. durationMinutes is the
+// clean source when the admin panel sets it; otherwise fall back to
+// whatever number is embedded in the label text (e.g. "60 mins" → 60), and
+// finally to price as a last resort — longer sessions are reliably pricier
+// even when neither of the above is populated.
+const getDurationMinutes = (duration: ServiceDuration): number => {
+  if (typeof duration.durationMinutes === "number") {
+    return duration.durationMinutes;
+  }
+  const text = String(duration.duration ?? duration.label ?? duration.title ?? "");
+  const parsed = parseInt(text.replace(/[^0-9]/g, ""), 10);
+  return Number.isNaN(parsed) ? Number(duration.price ?? 0) : parsed;
 };
 
 interface RequirementSelectorProps {
@@ -31,7 +87,24 @@ export default function RequirementSelector({
   onAddedToCart,
 }: RequirementSelectorProps) {
   const { addToCart } = useCart();
-  const { durations, packages, addOns } = serviceDetails;
+  const { addOns } = serviceDetails;
+  // Low to high — duration by length, packs by session count. Sorted here
+  // (not trusted from the API order) so default selection (durations[0]/
+  // packages[0] below) and every render downstream see the same order.
+  const durations = useMemo(
+    () =>
+      [...serviceDetails.durations].sort(
+        (a, b) => getDurationMinutes(a) - getDurationMinutes(b),
+      ),
+    [serviceDetails.durations],
+  );
+  const packages = useMemo(
+    () =>
+      [...serviceDetails.packages].sort(
+        (a, b) => Number(a.sessions ?? 0) - Number(b.sessions ?? 0),
+      ),
+    [serviceDetails.packages],
+  );
   // State for selections based on the image's layout
   const [selectedDurationId, setSelectedDurationId] = useState<string | null>(
     durations[0]?.id ?? null,
@@ -43,6 +116,39 @@ export default function RequirementSelector({
 
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Since the scrollbar itself is hidden on the duration row, this is the
+  // only signal that there's more to scroll to — an edge fade (rendered
+  // below) that shows on whichever side still has hidden content and
+  // disappears once you've scrolled that direction as far as it goes.
+  const durationScrollRef = useRef<HTMLDivElement | null>(null);
+  const [durationScrollEdges, setDurationScrollEdges] = useState({
+    atStart: true,
+    atEnd: true,
+  });
+
+  useEffect(() => {
+    const el = durationScrollRef.current;
+    if (!el) return;
+
+    const updateEdges = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = el;
+      setDurationScrollEdges({
+        atStart: scrollLeft <= 1,
+        // -1 for rounding — sub-pixel widths can leave scrollLeft a hair
+        // short of the true max, which would otherwise never read as "end".
+        atEnd: scrollLeft + clientWidth >= scrollWidth - 1,
+      });
+    };
+
+    updateEdges();
+    el.addEventListener("scroll", updateEdges, { passive: true });
+    window.addEventListener("resize", updateEdges);
+    return () => {
+      el.removeEventListener("scroll", updateEdges);
+      window.removeEventListener("resize", updateEdges);
+    };
+  }, [durations.length]);
 
   // Real content from the service item — see ServiceItem in serviceItemTypes.ts
   // for where each of these comes from and what the admin panel actually edits.
@@ -71,25 +177,38 @@ export default function RequirementSelector({
   };
 
   // Calculate Total Dynamic Price (Selected Pack + Selected Addons)
-  const selectedPackage = packages.find(
-    (pack) => pack.id === selectedPackageId,
-  );
   const selectedDuration = durations.find(
     (duration) => duration.id === selectedDurationId,
   );
+  // displayPrice, not the flat price field — if the duration itself is
+  // discounted, that's what a single session actually costs today, so
+  // that's what pack totals below should be built from.
+  const durationPrice = selectedDuration
+    ? getDurationPricing(selectedDuration).displayPrice
+    : 0;
+
+  const selectedPackage = packages.find(
+    (pack) => pack.id === selectedPackageId,
+  );
+  // Same formula the pack cards render with (see getPackPricing) — keeps
+  // what's charged in sync with what's shown, instead of pulling a
+  // possibly-stale price straight off the package record.
+  const packagePrice = selectedPackage
+    ? getPackPricing(selectedPackage, durationPrice).discountedTotal
+    : 0;
 
   const selectedAddons = addOns.filter((addon) =>
     selectedAddonIds.includes(addon.id),
   );
-
-  const packagePrice = Number(selectedPackage?.price ?? 0);
 
   const addonsPrice = selectedAddons.reduce(
     (total, addon) => total + Number(addon.price ?? 0),
     0,
   );
 
-  const totalPrice = packagePrice + addonsPrice;
+  // Rounded once here — packagePrice can be fractional (e.g. a 10% cut off
+  // an odd-numbered total), and this is the number charged/displayed.
+  const totalPrice = Math.round(packagePrice + addonsPrice);
 
   const handleAddToCart = () => {
     if (!selectedDurationId || !selectedPackageId) return;
@@ -134,35 +253,70 @@ export default function RequirementSelector({
                   <h3 className="mb-3 text-base sm:text-lg md:text-lg lg:text-xl font-semibold text-black">
                     Select duration
                   </h3>
-                  <div className="flex gap-3 sm:gap-3">
-                    {durations.map((duration) => {
-                      const isSelected = selectedDurationId === duration.id;
+                  {/* shrink-0 + a fixed width keeps every duration button
+                      readable — flex-1 used to squeeze them all to fit the
+                      row, so more than 3-4 durations turned into unreadable
+                      slivers. hide-scrollbar (globals.css) keeps the native
+                      scrollbar off while the row itself still scrolls. */}
+                  <div className="relative">
+                    <div
+                      ref={durationScrollRef}
+                      className="flex gap-3 overflow-x-auto pb-1 hide-scrollbar"
+                    >
+                      {durations.map((duration) => {
+                        const isSelected = selectedDurationId === duration.id;
+                        const pricing = getDurationPricing(duration);
 
-                      return (
-                        <button
-                          key={duration.id}
-                          type="button"
-                          onClick={() => setSelectedDurationId(duration.id)}
-                          className={`flex flex-col flex-1 sm:flex-none h-16 sm:h-20 md:h-20 sm:w-28 md:w-32 rounded-lg items-start border p-3 text-left transition-colors ${
-                            isSelected
-                              ? "border-[#D38516] bg-[#FDFBF8]"
-                              : "border-black/25 bg-[#FDFBF8] hover:border-slate-400"
-                          }`}
-                        >
-                          <span className="text-xs sm:text-sm font-medium text-black">
-                            {duration.label ?? duration.title ?? duration.duration}
-                          </span>
-
-                          <span
-                            className={`text-sm md:text-base font-semibold mt-auto ${
-                              isSelected ? "text-[#D38516]" : "text-[#666666]"
+                        return (
+                          <button
+                            key={duration.id}
+                            type="button"
+                            onClick={() => setSelectedDurationId(duration.id)}
+                            className={`flex shrink-0 flex-col h-16 sm:h-20 md:h-20 w-[86px] sm:w-28 md:w-32 rounded-lg items-start border p-3 text-left transition-colors ${
+                              isSelected
+                                ? "border-[#D38516] bg-[#FDFBF8]"
+                                : "border-black/25 bg-transparent hover:border-slate-400"
                             }`}
                           >
-                            ₹{Number(duration.price ?? 0).toLocaleString("en-IN")}
-                          </span>
-                        </button>
-                      );
-                    })}
+                            <span className="text-xs sm:text-sm font-medium text-black">
+                              {duration.label ?? duration.title ?? duration.duration}
+                            </span>
+
+                            <div className="mt-auto flex flex-col items-start">
+                              {pricing.hasDiscount && (
+                                <span className="text-[10px] leading-tight text-[#808080] line-through">
+                                  ₹{Math.round(pricing.price).toLocaleString("en-IN")}
+                                </span>
+                              )}
+                              <span
+                                className={`text-sm md:text-base font-semibold leading-tight ${
+                                  isSelected ? "text-[#D38516]" : "text-[#666666]"
+                                }`}
+                              >
+                                ₹{Math.round(pricing.displayPrice).toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* With the scrollbar hidden, these edge fades are the
+                        only cue that there's more to scroll — each one only
+                        shows on the side that still has hidden content, and
+                        clears once you've scrolled that direction as far as
+                        it goes. pointer-events-none so they never block a
+                        tap on the button underneath. */}
+                    {!durationScrollEdges.atStart && (
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex w-8 items-center bg-gradient-to-r from-white via-white/80 to-transparent">
+                        <ChevronLeft className="h-4 w-4 text-black/40" strokeWidth={2.5} />
+                      </div>
+                    )}
+                    {!durationScrollEdges.atEnd && (
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-white via-white/80 to-transparent">
+                        <ChevronRight className="h-4 w-4 text-black/40" strokeWidth={2.5} />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -184,6 +338,8 @@ export default function RequirementSelector({
                   <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
                     {packages.map((pack) => {
                       const isSelected = selectedPackageId === pack.id;
+                      const pricing = getPackPricing(pack, durationPrice);
+                      const hasDiscount = pricing.savingsPercent > 0;
 
                       return (
                         <button
@@ -201,21 +357,24 @@ export default function RequirementSelector({
                           </span>
 
                           <span className="text-sm sm:text-base font-medium text-black">
-                            ₹{Number(pack.price ?? 0).toLocaleString("en-IN")}
+                            ₹{Math.round(pricing.discountedTotal).toLocaleString("en-IN")}
                           </span>
 
-                          {pack.originalPrice && (
+                          {hasDiscount && (
                             <span className="text-xs text-[#808080] line-through">
-                              ₹
-                              {Number(pack.originalPrice).toLocaleString("en-IN")}
+                              ₹{Math.round(pricing.originalTotal).toLocaleString("en-IN")}
                             </span>
                           )}
 
-                          {(pack.discount ?? pack.savingsPercent ?? pack.savings) && (
+                          {hasDiscount && (
                             <span className="text-xs text-[#1E9E13]">
-                              {pack.discount ?? (pack.savingsPercent ? `Save ${pack.savingsPercent}%` : `Save ₹${Number(pack.savings).toLocaleString("en-IN")}`)}
+                              {pricing.savingsPercent}% off
                             </span>
                           )}
+
+                          <span className="text-xs text-[#666666]">
+                            (₹{Math.round(pricing.perSessionPrice).toLocaleString("en-IN")}/session)
+                          </span>
                         </button>
                       );
                     })}
@@ -501,28 +660,28 @@ export default function RequirementSelector({
               <div className="w-full bg-white font-sans">
                 {whatsIncluded.length > 0 && (
                   <>
-                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-black mb-4 sm:mb-5 tracking-tight">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-semibold leading-tight text-black mb-4 sm:mb-5">
                       What&apos;s Included
                     </h2>
 
-                    <div className="flex flex-col gap-4 sm:gap-5 w-full mb-6 sm:mb-8">
+                    <div className="flex flex-col gap-5 sm:gap-6 w-full mb-6 sm:mb-8">
                       {whatsIncluded.map((item, index) => (
                         <div
                           key={item.id ?? index}
-                          className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4"
+                          className="flex flex-row justify-between items-center gap-4 sm:gap-6"
                         >
                           <div className="flex flex-col flex-1 min-w-0">
-                            <h3 className="text-xs sm:text-sm font-bold text-black mb-1">
+                            <h3 className="text-base sm:text-lg font-medium text-black mb-1">
                               {item.title}
                             </h3>
                             {item.subtitle && (
-                              <p className="text-xs font-medium text-[#666666] leading-relaxed">
+                              <p className="text-sm font-medium text-[#666666] leading-[1.38]">
                                 {item.subtitle}
                               </p>
                             )}
                           </div>
 
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-[#FEF4F4] rounded-lg sm:rounded-xl flex items-center justify-center p-1">
+                          <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-gradient-to-b from-[#FFDBDB]/43 via-[#FFECEC]/43 to-white/43 rounded-lg flex items-center justify-center p-2">
                             <img
                               src={item.image}
                               alt={item.title}

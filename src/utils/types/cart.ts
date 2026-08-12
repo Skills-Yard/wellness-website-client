@@ -9,6 +9,11 @@ export interface CartItem {
   durationId?: string;
   packageId?: string;
   addOnIds?: string[];
+  /** Per-item booking slot — independent of the cart-wide scheduledDate/
+   *  scheduledTime below, since each service can be booked for a different
+   *  time. Set via updateItemSlot / the slot-picker popup. */
+  slotDate?: string;
+  slotStartTime?: string;
 }
 
 export interface CartContextType {
@@ -34,4 +39,5 @@ export interface CartContextType {
   isOnDemand: boolean;
   couponCode: string;
   updateCartSchedule: (details: { scheduledDate?: string; scheduledTime?: string; isOnDemand?: boolean; couponCode?: string }) => void;
+  updateItemSlot: (id: string, slotDate: string, slotStartTime: string) => void;
 }

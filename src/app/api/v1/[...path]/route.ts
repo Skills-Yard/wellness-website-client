@@ -26,3 +26,21 @@ export async function PATCH(
   const backendPath = `/api/v1/${path.map(encodeURIComponent).join("/")}`;
   return forwardToBackend(request, backendPath);
 }
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const { path } = await params;
+  const backendPath = `/api/v1/${path.map(encodeURIComponent).join("/")}`;
+  return forwardToBackend(request, backendPath);
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const { path } = await params;
+  const backendPath = `/api/v1/${path.map(encodeURIComponent).join("/")}`;
+  return forwardToBackend(request, backendPath);
+}

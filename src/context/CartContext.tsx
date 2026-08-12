@@ -7,10 +7,27 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// A freshly-added item gets this client-generated composite id optimistically
+// (see addToCart), before the server has assigned — and syncCart's PATCH
+// /cart response has returned — a real one. Real backend ids are plain
+// CUIDs with no dashes, so this also doubles as a way to detect "this item
+// hasn't synced yet" (see isPendingSync below).
+const buildLocalCartItemId = (item: {
+    serviceItemId?: string;
+    durationId?: string;
+    packageId?: string;
+    addOnIds?: string[];
+}) =>
+    `${item.serviceItemId}-${item.durationId}-${item.packageId}-${(item.addOnIds ?? []).join("-")}`;
+
+/** True until the cart has synced with the server and this item has a real
+ *  id. Per-item actions that target one item by id — delete, slot update —
+ *  should stay disabled until then: calling them earlier sends this
+ *  composite placeholder as the id, which the backend won't recognize. */
+export const isPendingSync = (item: CartItem) => item.id === buildLocalCartItemId(item);
+
 const toCartItem = (item: CartApiItem): CartItem => ({
-    id:
-        item.id ??
-        `${item.serviceItemId}-${item.durationId}-${item.packageId}-${(item.addOnIds ?? []).join("-")}`,
+    id: item.id ?? buildLocalCartItemId(item),
     serviceItemId: item.serviceItemId,
     durationId: item.durationId,
     packageId: item.packageId,
@@ -28,6 +45,8 @@ const toCartItem = (item: CartApiItem): CartItem => ({
         item.duration?.duration ??
         "Selected duration",
     price: Number(item.package?.price ?? item.serviceItem?.price ?? 0),
+    slotDate: item.slotDate,
+    slotStartTime: item.slotStartTime,
 });
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -170,7 +189,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         if (!accessToken) return;
         try {
-            await cartApi.update({
+            const response = await cartApi.update({
                 items: apiItems,
                 ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
                 scheduledDate: details.scheduledDate ?? scheduledDate,
@@ -178,8 +197,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 isOnDemand: details.isOnDemand ?? isOnDemand,
                 couponCode: details.couponCode ?? couponCode,
             }, accessToken);
-        } catch {
+            // Reconcile with the server's real item ids. addToCart etc. set a
+            // client-generated composite id optimistically (see toCartItem) —
+            // deleteItem/updateItem target a real backend id, so without this
+            // a freshly-added item's id would never match and removing it
+            // (or picking a slot for it) would silently fail against the API.
+            if (response?.data?.items) {
+                setCartItems(response.data.items.map(toCartItem));
+            } else {
+                // If this fires, PATCH /cart's response doesn't actually
+                // carry data.items the way CartResponse assumes — item ids
+                // never get reconciled with the server's real ones, and
+                // every later delete/slot-update call will 404 against a
+                // client-generated id that was never real to begin with.
+                console.warn(
+                    "cartApi.update response had no data.items — cart item ids will not be reconciled with the server.",
+                    response,
+                );
+            }
+        } catch (error) {
             // The cart remains available locally if the server update fails.
+            console.error("Failed to sync cart with the server", error);
         }
     };
 
@@ -198,10 +236,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     const removeFromCart = (id: string) => {
-        setCartItems((prev) => {
-            const next = prev.filter((item) => item.id !== id);
-            void syncCart(next);
-            return next;
+        const item = cartItems.find((i) => i.id === id);
+        setCartItems((prev) => prev.filter((i) => i.id !== id));
+
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) return;
+        if (item && isPendingSync(item)) {
+            // Nothing to delete server-side yet — the add hasn't synced (or
+            // is still in flight), so there's no real id for DELETE
+            // /cart/items/{id} to target. Local removal above covers it.
+            console.warn(
+                "Skipped cart item delete — item hasn't synced with the server yet",
+                id,
+            );
+            return;
+        }
+        // Real delete, not the bulk PATCH /cart other mutations use here —
+        // that only ever sent the trimmed items array along for the ride,
+        // which silently did nothing to remove anything server-side.
+        void cartApi.deleteItem(id, accessToken).catch((error) => {
+            // Local removal stands either way, but log this — a failed
+            // delete here means the item comes back on the next cart load.
+            console.error("Failed to delete cart item", id, error);
         });
     };
 
@@ -229,7 +285,63 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const clearCart = () => {
         setCartItems([]);
-        void syncCart([]);
+
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) return;
+        void cartApi.clearItems(accessToken).catch((error) => {
+            // Local clear stands either way, but log this — a failed clear
+            // here means the items come back on the next cart load.
+            console.error("Failed to clear cart items", error);
+        });
+    };
+
+    const updateItemSlot = (id: string, slotDate: string, slotStartTime: string) => {
+        setCartItems((prev) =>
+            prev.map((item) =>
+                item.id === id ? { ...item, slotDate, slotStartTime } : item,
+            ),
+        );
+
+        const item = cartItems.find((i) => i.id === id);
+        const accessToken = localStorage.getItem("accessToken");
+        if (!item || !item.serviceItemId || !item.durationId || !item.packageId || !accessToken)
+            return;
+        if (isPendingSync(item)) {
+            // The UI (CartView's "Select time slot" button) is supposed to
+            // stay disabled until this item has a real id — this is a
+            // belt-and-suspenders check in case it's called some other way.
+            // Sending the composite placeholder as {itemId} would 404.
+            console.warn(
+                "Skipped slot update — item hasn't synced with the server yet",
+                id,
+            );
+            return;
+        }
+
+        cartApi
+            .updateItem(
+                id,
+                {
+                    serviceItemId: item.serviceItemId,
+                    durationId: item.durationId,
+                    packageId: item.packageId,
+                    addOnIds: item.addOnIds ?? [],
+                    quantity: item.quantity,
+                    slotDate,
+                    slotStartTime,
+                },
+                accessToken,
+            )
+            .then((response) => {
+                if (response?.data?.items) {
+                    setCartItems(response.data.items.map(toCartItem));
+                }
+            })
+            .catch((error) => {
+                // Local slot selection stands either way, but log this — a
+                // failed update here means the slot isn't actually saved.
+                console.error("Failed to update cart item slot", id, error);
+            });
     };
 
     const updateCartAddress = (nextAddressId: string) => {
@@ -289,6 +401,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 isOnDemand,
                 couponCode,
                 updateCartSchedule,
+                updateItemSlot,
             }}
         >
             {children}

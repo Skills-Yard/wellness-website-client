@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
+  CalendarClock,
   ChevronRight,
   Clock,
   MapPin,
@@ -12,8 +14,9 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { useCart } from "@/src/context/CartContext";
+import { useCart, isPendingSync } from "@/src/context/CartContext";
 import type { Address, CreateAddressBody } from "@/src/services/addressApi";
+import SlotPickerModal from "./SlotPickerModal";
 
 type AddressInput = Omit<CreateAddressBody, "userId">;
 type Props = {
@@ -27,12 +30,21 @@ type Props = {
   onToggleAddressForm: () => void;
   onSelectAddress: (address: Address) => void;
   onCreateAddress: (address: AddressInput) => void;
+  onUpdateAddress: (addressId: string, address: AddressInput) => void;
   onContinue: () => void;
 };
 const formatAddress = (a: Address) =>
   [a.line1, a.line2, a.landmark, a.city, a.state, a.pincode]
     .filter(Boolean)
     .join(", ");
+
+const formatSlotDisplay = (slotDate: string, slotStartTime: string) => {
+  const parsed = new Date(`${slotDate}T00:00:00`);
+  const dateLabel = Number.isNaN(parsed.getTime())
+    ? slotDate
+    : parsed.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return `${dateLabel}, ${slotStartTime}`;
+};
 
 export default function CartView({
   address,
@@ -45,6 +57,7 @@ export default function CartView({
   onToggleAddressForm,
   onSelectAddress,
   onCreateAddress,
+  onUpdateAddress,
   onContinue,
 }: Props) {
   const {
@@ -59,7 +72,13 @@ export default function CartView({
     isOnDemand,
     couponCode,
     updateCartSchedule,
+    zoneId,
+    updateItemSlot,
   } = useCart();
+  // Which cart item's slot picker is open — one popup at a time, each item
+  // picks its own date/time independently (see SlotPickerModal).
+  const [slotPickerItemId, setSlotPickerItemId] = useState<string | null>(null);
+  const slotPickerItem = cartItems.find((item) => item.id === slotPickerItemId) ?? null;
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
@@ -145,6 +164,20 @@ export default function CartView({
                   </button>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setSlotPickerItemId(item.id)}
+                disabled={isPendingSync(item)}
+                className="mt-1.5 flex w-full items-center gap-1 text-[11px] font-semibold text-amber-600 disabled:text-gray-400"
+              >
+                <CalendarClock className="h-3 w-3 shrink-0" />
+                {isPendingSync(item)
+                  ? "Saving item…"
+                  : item.slotDate && item.slotStartTime
+                    ? formatSlotDisplay(item.slotDate, item.slotStartTime)
+                    : "Select time slot"}
+                <ChevronRight className="h-3 w-3 shrink-0" />
+              </button>
             </div>
           </div>
         ))}
@@ -179,6 +212,7 @@ export default function CartView({
               isSaving={isSavingAddress}
               onSelect={onSelectAddress}
               onCreate={onCreateAddress}
+              onUpdate={onUpdateAddress}
             />
           )}
           {addressError && (
@@ -283,6 +317,17 @@ export default function CartView({
               : "Add an address to checkout"}
         </Button>
       </div>
+
+      {slotPickerItem && (
+        <SlotPickerModal
+          item={slotPickerItem}
+          zoneId={zoneId}
+          onClose={() => setSlotPickerItemId(null)}
+          onConfirm={(slotDate, slotStartTime) =>
+            updateItemSlot(slotPickerItem.id, slotDate, slotStartTime)
+          }
+        />
+      )}
     </div>
   );
 }
@@ -293,19 +338,78 @@ function AddressPicker({
   isSaving,
   onSelect,
   onCreate,
+  onUpdate,
 }: {
   addresses: Address[];
   selectedAddressId?: string;
   isSaving: boolean;
   onSelect: (address: Address) => void;
   onCreate: (address: AddressInput) => void;
+  onUpdate: (addressId: string, address: AddressInput) => void;
 }) {
-  const testLatitude = 28.6311026;
-  const testLongitude = 77.2183546;
+  // Which saved address the form is editing, or null for "add a new one".
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+
+  // Picked up automatically from the browser instead of a fixed test point
+  // — mirrors the same getCurrentPosition pattern used for zone lookup on
+  // the home page (src/app/page.tsx) and category page (spa-booking/index.tsx).
+  // Only used for brand-new addresses — editing an existing one keeps its
+  // saved coordinates rather than silently overwriting them with wherever
+  // the user happens to be standing while they fix a typo in the pincode.
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!navigator.geolocation) {
+      // Deferred (not called straight from the effect body) — same pattern
+      // spa-booking/index.tsx uses for this exact branch.
+      queueMicrotask(() => {
+        if (isMounted) {
+          setLocationStatus("error");
+          setLocationError(
+            "Location isn't supported by this browser — you can still save the address, but its map position may be off.",
+          );
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!isMounted) return;
+        setCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLocationStatus("ready");
+      },
+      (error) => {
+        if (!isMounted) return;
+        setLocationStatus("error");
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied — you can still save the address, but its map position may be off."
+            : "Couldn't detect your location — you can still save the address, but its map position may be off.",
+        );
+      },
+    );
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const field =
     "h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs outline-none focus:border-amber-400";
-  const submit = (formData: FormData) =>
-    onCreate({
+  const submit = (formData: FormData) => {
+    const values: AddressInput = {
       label: String(formData.get("label") ?? "HOME"),
       customLabel: String(formData.get("customLabel") ?? "").trim(),
       line1: String(formData.get("line1") ?? "").trim(),
@@ -314,37 +418,85 @@ function AddressPicker({
       city: String(formData.get("city") ?? "").trim(),
       state: String(formData.get("state") ?? "").trim(),
       pincode: String(formData.get("pincode") ?? "").trim(),
-      latitude: testLatitude,
-      longitude: testLongitude,
+      // Editing keeps the address's existing coordinates. Creating falls
+      // back to 0/0 only when geolocation genuinely failed/was denied — the
+      // address itself (line1/city/etc.) is still worth saving even then,
+      // so this doesn't block submission, just degrades the map position.
+      latitude: editingAddress ? (editingAddress.latitude ?? 0) : (coords?.latitude ?? 0),
+      longitude: editingAddress ? (editingAddress.longitude ?? 0) : (coords?.longitude ?? 0),
       isDefault: formData.get("isDefault") === "on",
-    });
+    };
+
+    if (editingAddress) {
+      onUpdate(editingAddress.id, values);
+    } else {
+      onCreate(values);
+    }
+  };
+
   return (
     <div className="space-y-2 border-t border-[#F0EDEA] p-3">
       {addresses.map((item) => (
-        <button
+        <div
           key={item.id}
-          type="button"
-          onClick={() => onSelect(item)}
-          className={`w-full rounded-xl border p-3 text-left text-xs ${selectedAddressId === item.id ? "border-amber-400 bg-amber-50" : "border-gray-100 hover:bg-gray-50"}`}
+          className={`flex items-start gap-2 rounded-xl border p-3 text-xs ${selectedAddressId === item.id ? "border-amber-400 bg-amber-50" : "border-gray-100 hover:bg-gray-50"}`}
         >
-          <span className="font-bold text-gray-800">
-            {item.customLabel || item.label || "Address"}
-          </span>
-          <span className="mt-0.5 block text-gray-500">
-            {formatAddress(item)}
-          </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onSelect(item)}
+            className="min-w-0 flex-1 text-left"
+          >
+            <span className="font-bold text-gray-800">
+              {item.customLabel || item.label || "Address"}
+            </span>
+            <span className="mt-0.5 block text-gray-500">
+              {formatAddress(item)}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditingAddress(item)}
+            className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-amber-600 hover:bg-amber-100"
+          >
+            Edit
+          </button>
+        </div>
       ))}
-      <form action={submit} className="space-y-2 rounded-xl bg-gray-50 p-3">
-        <p className="text-xs font-bold text-gray-700">Add a new address</p>
+      {/* Keyed on which address (if any) is being edited so the uncontrolled
+          defaultValue inputs below remount with fresh values instead of
+          keeping whatever was typed for a previously-edited address. */}
+      <form
+        key={editingAddress?.id ?? "new"}
+        action={submit}
+        className="space-y-2 rounded-xl bg-gray-50 p-3"
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-700">
+            {editingAddress ? "Edit address" : "Add a new address"}
+          </p>
+          {editingAddress && (
+            <button
+              type="button"
+              onClick={() => setEditingAddress(null)}
+              className="text-[11px] font-semibold text-gray-400 hover:text-gray-600"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-2">
-          <select name="label" defaultValue="HOME" className={field}>
+          <select
+            name="label"
+            defaultValue={editingAddress?.label ?? "HOME"}
+            className={field}
+          >
             <option value="HOME">Home</option>
             <option value="WORK">Work</option>
             <option value="OTHER">Other</option>
           </select>
           <input
             name="customLabel"
+            defaultValue={editingAddress?.customLabel ?? ""}
             placeholder="Custom label"
             className={field}
           />
@@ -352,33 +504,81 @@ function AddressPicker({
         <input
           name="line1"
           required
+          defaultValue={editingAddress?.line1 ?? ""}
           placeholder="Address line 1"
           className={field}
         />
-        <input name="line2" placeholder="Address line 2" className={field} />
-        <input name="landmark" placeholder="Landmark" className={field} />
+        <input
+          name="line2"
+          defaultValue={editingAddress?.line2 ?? ""}
+          placeholder="Address line 2"
+          className={field}
+        />
+        <input
+          name="landmark"
+          defaultValue={editingAddress?.landmark ?? ""}
+          placeholder="Landmark"
+          className={field}
+        />
         <div className="grid grid-cols-2 gap-2">
-          <input name="city" required placeholder="City" className={field} />
-          <input name="state" required placeholder="State" className={field} />
+          <input
+            name="city"
+            required
+            defaultValue={editingAddress?.city ?? ""}
+            placeholder="City"
+            className={field}
+          />
+          <input
+            name="state"
+            required
+            defaultValue={editingAddress?.state ?? ""}
+            placeholder="State"
+            className={field}
+          />
         </div>
         <input
           name="pincode"
           required
+          defaultValue={editingAddress?.pincode ?? ""}
           placeholder="Pincode"
           className={field}
         />
-        <p className="text-[11px] text-gray-500">
-          Test coordinates: {testLatitude}, {testLongitude}
-        </p>
+        {/* Geolocation status is only meaningful for a brand-new address —
+            editing keeps the existing coordinates (see submit above). */}
+        {!editingAddress && locationStatus === "loading" && (
+          <p className="text-[11px] text-gray-500">
+            Detecting your location…
+          </p>
+        )}
+        {!editingAddress && locationStatus === "ready" && coords && (
+          <p className="text-[11px] text-green-600">
+            Using your current location ({coords.latitude.toFixed(4)},{" "}
+            {coords.longitude.toFixed(4)}) for this address.
+          </p>
+        )}
+        {!editingAddress && locationStatus === "error" && locationError && (
+          <p className="text-[11px] text-amber-600">{locationError}</p>
+        )}
         <label className="flex items-center gap-2 text-xs text-gray-600">
-          <input name="isDefault" type="checkbox" /> Set as default address
+          <input
+            name="isDefault"
+            type="checkbox"
+            defaultChecked={editingAddress?.isDefault ?? false}
+          />{" "}
+          Set as default address
         </label>
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={isSaving || (!editingAddress && locationStatus === "loading")}
           className="rounded-lg bg-[#25180F] px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
         >
-          {isSaving ? "Saving…" : "Save address"}
+          {isSaving
+            ? "Saving…"
+            : !editingAddress && locationStatus === "loading"
+              ? "Detecting location…"
+              : editingAddress
+                ? "Save changes"
+                : "Save address"}
         </button>
       </form>
     </div>

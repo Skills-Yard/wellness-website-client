@@ -23,11 +23,19 @@ export async function forwardToBackend(request: Request, path: string) {
   const isBodyRequest = request.method !== "GET" && request.method !== "HEAD";
   let body: string | undefined;
   if (isBodyRequest) {
-    try {
-      body = JSON.stringify(await request.json());
-      headers.set("Content-Type", "application/json");
-    } catch {
-      return Response.json({ message: "A valid JSON body is required." }, { status: 400 });
+    // DELETE (and sometimes PUT/PATCH) legitimately send no body at all —
+    // e.g. DELETE /cart/items/{id} deletes by path, nothing to parse. Only
+    // treat it as an error when something was actually sent but isn't valid
+    // JSON; an empty body just forwards through with none.
+    const rawBody = await request.text();
+    if (rawBody) {
+      try {
+        JSON.parse(rawBody);
+        body = rawBody;
+        headers.set("Content-Type", "application/json");
+      } catch {
+        return Response.json({ message: "A valid JSON body is required." }, { status: 400 });
+      }
     }
   }
 

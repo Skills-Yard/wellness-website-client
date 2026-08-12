@@ -13,7 +13,11 @@ export default function SectionHero({ service }: SectionHeroProps) {
 
   if (!service) return null;
 
-  const hasRating = typeof service.rating === "number" && service.rating > 0;
+  // Always shown, defaulting to 0 — both when the service genuinely has no
+  // rating/bookings yet and when the field is simply missing/non-numeric
+  // (services.tsx's DynamicService mapping falls back to the string "—"
+  // when neither averageRating nor rating exist).
+  const rating = typeof service.rating === "number" ? service.rating : 0;
   const reviewCount = typeof service.reviews === "number" ? service.reviews : 0;
   const startingPrice = service.price;
 
@@ -45,34 +49,37 @@ export default function SectionHero({ service }: SectionHeroProps) {
             {service.title}
           </h1>
 
-          {hasRating && (
-            <div className="flex pt-[5px] items-center">
-              <svg width="0" height="0">
-                <defs>
-                  <linearGradient
-                    id="starGradient"
-                    x1="0%"
-                    y1="0%"
-                    x2="100%"
-                    y2="0%"
-                  >
-                    <stop offset="0%" stopColor="#FF6F47" />
-                    <stop offset="100%" stopColor="#FFCD0F" />
-                  </linearGradient>
-                </defs>
-              </svg>
+          <div className="pt-[5px]">
+            <svg width="0" height="0">
+              <defs>
+                <linearGradient
+                  id="starGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="#FF6F47" />
+                  <stop offset="100%" stopColor="#FFCD0F" />
+                </linearGradient>
+              </defs>
+            </svg>
 
+            <span className="block text-[12px] text-[#666666]">
+              {reviewCount.toLocaleString("en-IN")} bookings
+            </span>
+
+            <div className="mt-1 flex items-center">
               <Star
                 className="w-4 h-4 mr-[5px]"
                 fill="url(#starGradient)"
                 stroke="url(#starGradient)"
               />
-              <span className=" text-[12px] text-[#666666]">
-                {(service.rating as number).toFixed(1)}
-                {reviewCount > 0 && ` (${reviewCount.toLocaleString("en-IN")} bookings)`}
+              <span className="text-[12px] text-[#666666]">
+                {rating.toFixed(1)}
               </span>
             </div>
-          )}
+          </div>
 
           {/* Price */}
           <div className="pt-[8px] font-semibold">

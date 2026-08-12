@@ -28,6 +28,19 @@ export default function Home() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
 
+  // Hides the browser's page scrollbar while on the home route only — added
+  // here (not globals.css/layout.tsx) so other routes, like the detail
+  // pages, keep their normal scrollbar. .hide-scrollbar (globals.css) only
+  // hides the indicator; the page still scrolls via wheel/touch/keyboard.
+  useEffect(() => {
+    document.documentElement.classList.add("hide-scrollbar");
+    document.body.classList.add("hide-scrollbar");
+    return () => {
+      document.documentElement.classList.remove("hide-scrollbar");
+      document.body.classList.remove("hide-scrollbar");
+    };
+  }, []);
+
   const handleFaqsChange = useCallback(
     (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
       setCategoryFaqs((current) => {
