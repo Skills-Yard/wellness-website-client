@@ -52,6 +52,7 @@ export default function StandardServiceCard({
               <span>{service.rating}</span>
             </span>
             <span className="truncate">({service.reviews})</span>
+            <span className="truncate">• {service.totalBookingsCount ?? 0} bookings</span>
           </p>
 
           <p className="flex h-4 items-center gap-1 text-sm leading-[116%] font-medium text-black">
@@ -117,6 +118,7 @@ export default function StandardServiceCard({
               {service.rating}
             </span>
             • <span>{service.reviews}</span>
+            • <span>{service.totalBookingsCount ?? 0} bookings</span>
           </p>
           <p className="mt-0 text-[13px] text-[#000000] font-medium">
             <span className="font-extrabold text-[#D38516] text-[13px]">

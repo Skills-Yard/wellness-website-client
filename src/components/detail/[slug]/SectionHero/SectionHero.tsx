@@ -18,7 +18,10 @@ export default function SectionHero({ service }: SectionHeroProps) {
   // (services.tsx's DynamicService mapping falls back to the string "—"
   // when neither averageRating nor rating exist).
   const rating = typeof service.rating === "number" ? service.rating : 0;
-  const reviewCount = typeof service.reviews === "number" ? service.reviews : 0;
+  // totalBookingsCount — the real bookings field (see ServiceItem in
+  // serviceItemTypes.ts), not reviews (that's the rating count).
+  const bookingsCount =
+    typeof service.totalBookingsCount === "number" ? service.totalBookingsCount : 0;
   const startingPrice = service.price;
 
   return (
@@ -66,7 +69,7 @@ export default function SectionHero({ service }: SectionHeroProps) {
             </svg>
 
             <span className="block text-[12px] text-[#666666]">
-              {reviewCount.toLocaleString("en-IN")} bookings
+              {bookingsCount.toLocaleString("en-IN")} bookings
             </span>
 
             <div className="mt-1 flex items-center">

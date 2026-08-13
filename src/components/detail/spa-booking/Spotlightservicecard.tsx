@@ -40,7 +40,7 @@ export default function SpotlightServiceCard({
           )}
 
           <h3 className="max-w-[calc(100%-92px)] truncate text-base leading-[116%] font-medium text-black">{service.title}</h3>
-          <p className="mt-2 flex h-3.5 items-center gap-1.5 text-xs leading-[116%] text-[#666666]"><span className="flex items-center gap-[5px]"><Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB818] text-[#FFB818]" /><span>{service.rating}</span></span><span>({service.reviews})</span></p>
+          <p className="mt-2 flex h-3.5 items-center gap-1.5 text-xs leading-[116%] text-[#666666]"><span className="flex items-center gap-[5px]"><Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB818] text-[#FFB818]" /><span>{service.rating}</span></span><span>({service.reviews})</span><span className="truncate">• {service.totalBookingsCount ?? 0} bookings</span></p>
           <p className="mt-2 flex h-4 items-center gap-1 text-sm leading-[116%] font-medium text-black"><span>Starting at {service.price}</span>{hasDiscount && <span className="text-xs leading-[116%] text-[#666666] line-through">{service.originalPrice}</span>}</p>
           <button onClick={(e) => { e.stopPropagation(); onAddToCart(service); }} className="absolute right-0 top-[15px] h-[35px] w-[68px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform">Book</button>
           <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="mt-[18px] h-3.5 text-xs leading-[116%] font-medium text-[#D38516]">View details</button>
@@ -77,6 +77,7 @@ export default function SpotlightServiceCard({
               {service.rating}
             </span>
             • <span>{service.reviews}</span>
+            • <span>{service.totalBookingsCount ?? 0} bookings</span>
           </p>
           <p className="mt-2 text-sm text-[#000000] font-medium">
             <span className="font-extrabold text-[#D38516] text-base">

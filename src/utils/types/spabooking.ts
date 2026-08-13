@@ -10,6 +10,9 @@ export interface DynamicService {
   media: string;
   rating: string | number;
   reviews: string | number;
+  /** Real bookings count — distinct from reviews (the rating count). See
+   *  ServiceItem.totalBookingsCount in serviceItemTypes.ts. */
+  totalBookingsCount?: number;
   category: string;
   subCategoryId?: string;
   tag?: string;

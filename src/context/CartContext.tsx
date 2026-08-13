@@ -188,14 +188,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
 
         if (!accessToken) return;
+
+        // Empty string (the initial state, and what's on-screen before the
+        // user has picked anything) is not a valid ISO 8601 date — the
+        // backend 400s the whole request on scheduledDate: "" rather than
+        // treating it as "not set", which used to silently break every
+        // sync (nothing ever got past this to reconcile item ids). Omit
+        // these fields entirely instead of sending them empty.
+        const resolvedScheduledDate = details.scheduledDate ?? scheduledDate;
+        const resolvedScheduledTime = details.scheduledTime ?? scheduledTime;
+        const resolvedCouponCode = details.couponCode ?? couponCode;
+
         try {
             const response = await cartApi.update({
                 items: apiItems,
                 ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
-                scheduledDate: details.scheduledDate ?? scheduledDate,
-                scheduledTime: details.scheduledTime ?? scheduledTime,
+                ...(resolvedScheduledDate ? { scheduledDate: resolvedScheduledDate } : {}),
+                ...(resolvedScheduledTime ? { scheduledTime: resolvedScheduledTime } : {}),
                 isOnDemand: details.isOnDemand ?? isOnDemand,
-                couponCode: details.couponCode ?? couponCode,
+                ...(resolvedCouponCode ? { couponCode: resolvedCouponCode } : {}),
             }, accessToken);
             // Reconcile with the server's real item ids. addToCart etc. set a
             // client-generated composite id optimistically (see toCartItem) —

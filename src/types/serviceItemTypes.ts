@@ -48,6 +48,8 @@ export type ServiceItem = {
   totalReviews?: number;
   rating?: string | number;
   reviews?: string | number;
+  /** Real bookings count — distinct from totalReviews (the rating count). */
+  totalBookingsCount?: number;
   tag?: string;
   isSpotlight?: boolean;
   features?: string[];

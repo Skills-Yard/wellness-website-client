@@ -10,7 +10,6 @@ import { getSubCategoriesByCategoryId } from "@/src/services/categoryApi";
 import { getServiceItems } from "@/src/services/serviceItemApi";
 import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
-import { SubCategory } from "@/src/types/categoryTypes";
 import { DynamicService } from "@/src/utils/types/spabooking";
 import SubDetailPopUp from "@/src/components/detail/[slug]/mainfile";
 
@@ -23,14 +22,6 @@ type CategoryServicesProps = {
   ) => void;
 };
 
-const cardsForViewport = () => {
-  if (typeof window === "undefined") return 2;
-  if (window.innerWidth >= 1280) return 5;
-  if (window.innerWidth >= 1024) return 4;
-  if (window.innerWidth >= 768) return 3;
-  return 2;
-};
-
 const formatPrice = (price: ServiceItem["price"] | null) => {
   if (typeof price === "number") return `₹${price.toLocaleString("en-IN")}`;
   return price ?? "₹0";
@@ -41,7 +32,9 @@ const formatRating = (rating: ServiceItem["averageRating"] | ServiceItem["rating
   return rating ?? "0";
 };
 
-const formatReviews = (reviews: ServiceItem["totalReviews"] | ServiceItem["reviews"]) => reviews ?? "0";
+// Real bookings count (distinct from totalReviews, the rating count) —
+// always shown, defaulting to 0 whether it's genuinely 0 or just missing.
+const formatBookings = (bookings: ServiceItem["totalBookingsCount"]) => bookings ?? 0;
 
 const getLowestDurationPrice = (service: ServiceItem) => {
   const prices = (service.durations ?? [])
@@ -68,6 +61,7 @@ const toDynamicService = (service: ServiceItem, categoryName: string): DynamicSe
   media: service.media ?? service.thumbnailKey ?? "/images/hero-fallback.jpg",
   rating: service.averageRating ?? service.rating ?? "—",
   reviews: service.totalReviews ?? service.reviews ?? 0,
+  totalBookingsCount: service.totalBookingsCount ?? 0,
   category: categoryName,
   subCategoryId: service.subCategoryId,
   tag: service.tag,
@@ -94,10 +88,7 @@ export default function CategoryServices({
   const loadingRef = useRef(false);
   const mountedRef = useRef(false);
   const [isActive, setIsActive] = useState(false);
-  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [nextSubCategoryIndex, setNextSubCategoryIndex] = useState(0);
-  const [visibleCount, setVisibleCount] = useState(2);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -132,14 +123,13 @@ export default function CategoryServices({
     return () => observer.disconnect();
   }, [isActive]);
 
-  useEffect(() => {
-    const updateVisibleCount = () => setVisibleCount(cardsForViewport());
-    updateVisibleCount();
-    window.addEventListener("resize", updateVisibleCount);
-    return () => window.removeEventListener("resize", updateVisibleCount);
-  }, []);
-
-  const loadNextServices = useCallback(async () => {
+  // Fetches every sub-category's services in parallel (same pattern as the
+  // full category page — see spa-booking/index.tsx's fetchServices) rather
+  // than one sub-category at a time, gated behind scrolling far enough to
+  // trigger the next fetch. That incremental version meant "all services"
+  // actually only meant "all services from whichever sub-category loaded
+  // first" until the user scrolled further — this loads the lot up front.
+  const loadAllServices = useCallback(async () => {
     if (!isActive || loadingRef.current) return;
 
     loadingRef.current = true;
@@ -147,26 +137,32 @@ export default function CategoryServices({
     setError(false);
 
     try {
-      let availableSubCategories = subCategories;
-      if (availableSubCategories.length === 0) {
-        const response = await getSubCategoriesByCategoryId(category.id);
-        availableSubCategories = response.data ?? [];
-        if (!mountedRef.current) return;
-        setSubCategories(availableSubCategories);
-      }
+      const subCategoryResponse = await getSubCategoriesByCategoryId(category.id);
+      const availableSubCategories = subCategoryResponse.data ?? [];
+      if (!mountedRef.current) return;
 
-      const subCategory = availableSubCategories[nextSubCategoryIndex];
-      if (!subCategory) return;
-
-      const response = await getServiceItems({
-        isActive: true,
-        subCategoryId: subCategory.id,
-        zoneId,
-      });
+      const results = await Promise.allSettled(
+        availableSubCategories.map((subCategory) =>
+          getServiceItems({ isActive: true, subCategoryId: subCategory.id, zoneId }),
+        ),
+      );
 
       if (!mountedRef.current) return;
-      setServices((current) => [...current, ...(response.data ?? [])]);
-      setNextSubCategoryIndex((index) => index + 1);
+
+      const responses = results
+        .filter(
+          (result): result is PromiseFulfilledResult<
+            Awaited<ReturnType<typeof getServiceItems>>
+          > => result.status === "fulfilled",
+        )
+        .map((result) => result.value);
+
+      // A single sub-category failing to load (e.g. no services in this
+      // zone) shouldn't hide every sub-category that did load successfully.
+      setServices(responses.flatMap((response) => response.data ?? []));
+      if (responses.length === 0 && availableSubCategories.length > 0) {
+        setError(true);
+      }
       setHasLoaded(true);
     } catch (requestError) {
       if (!mountedRef.current) return;
@@ -177,25 +173,15 @@ export default function CategoryServices({
       loadingRef.current = false;
       if (mountedRef.current) setIsLoading(false);
     }
-  }, [category.id, category.name, isActive, nextSubCategoryIndex, subCategories, zoneId]);
+  }, [category.id, category.name, isActive, zoneId]);
 
   useEffect(() => {
     if (!isActive || hasLoaded) return;
 
-    const loadTimer = window.setTimeout(() => void loadNextServices(), 0);
+    const loadTimer = window.setTimeout(() => void loadAllServices(), 0);
     return () => window.clearTimeout(loadTimer);
-  }, [hasLoaded, isActive, loadNextServices]);
+  }, [hasLoaded, isActive, loadAllServices]);
 
-  const revealMore = useCallback(() => {
-    if (visibleCount < services.length) {
-      setVisibleCount((count) => count + cardsForViewport());
-      return;
-    }
-
-    if (nextSubCategoryIndex < subCategories.length) void loadNextServices();
-  }, [loadNextServices, nextSubCategoryIndex, services.length, subCategories.length, visibleCount]);
-
-  const visibleServices = services.slice(0, visibleCount);
   const categoryFaqs = useMemo(() => {
     const uniqueFaqs = new Map<string, HomeFaq>();
 
@@ -243,7 +229,7 @@ export default function CategoryServices({
 
       {!isActive || (isLoading && services.length === 0) ? (
         <div className="flex gap-2 overflow-hidden">
-          {Array.from({ length: visibleCount }).map((_, index) => (
+          {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="w-[168px] shrink-0 animate-pulse sm:w-[calc((100%-16px)/3)] lg:w-[calc((100%-32px)/5)]">
               <div className="aspect-[168/97] rounded-[7px] bg-stone-100" />
               <div className="mt-2 h-4 w-3/4 rounded bg-stone-100" />
@@ -255,24 +241,26 @@ export default function CategoryServices({
         <p className="py-4 text-sm font-medium text-stone-500">
           Services for this category are unavailable right now.
         </p>
-      ) : visibleServices.length === 0 ? (
+      ) : services.length === 0 ? (
         <p className="py-4 text-sm font-medium text-stone-500">
           No services are available in this category yet.
         </p>
       ) : (
         <Swiper
           spaceBetween={8}
+          // Fractional slidesPerView at every breakpoint, not just mobile —
+          // always leaves a sliver of the next card peeking in as the only
+          // signal (no scrollbar, no arrows) that there's more to scroll.
           slidesPerView={2.12}
           breakpoints={{
             640: { slidesPerView: 2.15, spaceBetween: 12 },
-            768: { slidesPerView: 3, spaceBetween: 12 },
-            1024: { slidesPerView: 4, spaceBetween: 14 },
-            1280: { slidesPerView: 5, spaceBetween: 16 },
+            768: { slidesPerView: 3.15, spaceBetween: 12 },
+            1024: { slidesPerView: 4.15, spaceBetween: 14 },
+            1280: { slidesPerView: 5.15, spaceBetween: 16 },
           }}
-          onReachEnd={revealMore}
           className="w-full"
         >
-          {visibleServices.map((service) => {
+          {services.map((service) => {
             const image = service.media ?? service.thumbnailKey;
             const lowestDurationPrice = getLowestDurationPrice(service);
 
@@ -304,12 +292,12 @@ export default function CategoryServices({
                     {service.cardTitle ?? service.title ?? service.name ?? "Wellness service"}
                   </h3>
                   <div className="mt-[6px] flex flex-col gap-[2px] text-[12px] leading-[116%] text-[#666]">
-                    {/* "bookings" — same label/count SectionHero.tsx uses for
-                        this exact service once its popup is open, no
-                        separate bookings field exists in the API response.
-                        Always rendered, no reviews>0 gate — 0 shows as
+                    {/* totalBookingsCount — the real bookings field, same
+                        one SectionHero.tsx reads once this service's popup
+                        is open (distinct from totalReviews, the rating
+                        count). Always rendered, no >0 gate — 0 shows as
                         "0 bookings" rather than the line disappearing. */}
-                    <span>{formatReviews(service.totalReviews ?? service.reviews)} bookings</span>
+                    <span>{formatBookings(service.totalBookingsCount)} bookings</span>
                     <span className="flex items-center gap-1">
                       <Star className="h-3 w-3 fill-[#ffb318] text-[#ff9d00]" />
                       {formatRating(service.averageRating ?? service.rating)}

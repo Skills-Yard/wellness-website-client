@@ -109,6 +109,12 @@ export default function RequirementSelector({
   const [selectedDurationId, setSelectedDurationId] = useState<string | null>(
     durations[0]?.id ?? null,
   );
+  // Guards against a rapid double click/tap firing addToCart (and its
+  // PATCH /cart sync) twice in quick succession — addToCart itself is
+  // fire-and-forget (CartContext doesn't expose completion), so this just
+  // latches on first click rather than trying to track when the request
+  // actually finishes; the popup closes shortly after anyway (onAddedToCart).
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
     packages[0]?.id ?? null,
@@ -211,7 +217,8 @@ export default function RequirementSelector({
   const totalPrice = Math.round(packagePrice + addonsPrice);
 
   const handleAddToCart = () => {
-    if (!selectedDurationId || !selectedPackageId) return;
+    if (!selectedDurationId || !selectedPackageId || isAddingToCart) return;
+    setIsAddingToCart(true);
 
     addToCart({
       id: `${service.id}-${selectedDurationId}-${selectedPackageId}-${selectedAddonIds.join("-")}`,
@@ -831,11 +838,11 @@ export default function RequirementSelector({
               <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={!selectedDurationId || !selectedPackageId}
+                disabled={!selectedDurationId || !selectedPackageId || isAddingToCart}
                 className="flex w-full sm:w-auto h-11 sm:h-12 items-center justify-center gap-2 rounded-lg bg-[#0F0F0E] px-6 sm:px-8 py-3 transition-transform active:scale-95 hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="text-sm sm:text-base font-medium text-white whitespace-nowrap">
-                  Add to cart
+                  {isAddingToCart ? "Adding…" : "Add to cart"}
                 </span>
               </button>
             </div>
