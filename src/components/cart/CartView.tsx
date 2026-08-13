@@ -73,8 +73,15 @@ export default function CartView({
     couponCode,
     updateCartSchedule,
     zoneId,
+    cartZoneId,
     updateItemSlot,
   } = useCart();
+  // Slot discovery must be scoped to the same zone reservation will check
+  // capacity against — that's the server-side cart's zone (cartZoneId),
+  // which can differ from the ambient browsing zone once a delivery address
+  // is selected. Fall back to the browsing zone only before the cart has
+  // synced a zone of its own.
+  const slotPickerZoneId = cartZoneId ?? zoneId;
   // Which cart item's slot picker is open — one popup at a time, each item
   // picks its own date/time independently (see SlotPickerModal).
   const [slotPickerItemId, setSlotPickerItemId] = useState<string | null>(null);
@@ -321,7 +328,7 @@ export default function CartView({
       {slotPickerItem && (
         <SlotPickerModal
           item={slotPickerItem}
-          zoneId={zoneId}
+          zoneId={slotPickerZoneId}
           onClose={() => setSlotPickerItemId(null)}
           onConfirm={(slotDate, slotStartTime) =>
             updateItemSlot(slotPickerItem.id, slotDate, slotStartTime)

@@ -44,6 +44,13 @@ export type CartData = {
   id?: string;
   cartId?: string;
   addressId?: string;
+  // The zone the cart is actually pinned to server-side — follows the
+  // selected address's zone once one is picked (see updateCart on the
+  // backend), which can differ from the ambient browsing zoneId in
+  // CartContext. Slot reservation checks partner capacity against this
+  // zone, so slot discovery must use it too (see cartZoneId in
+  // CartContext) rather than the browsing zoneId.
+  zoneId?: string | null;
   scheduledDate?: string;
   scheduledTime?: string;
   isOnDemand?: boolean;

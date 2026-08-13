@@ -57,6 +57,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [isLocationDetected, setIsLocationDetected] = useState<boolean | null>(null);
     const [isManuallySelected, setIsManuallySelected] = useState(false);
     const [zoneId, setZoneIdState] = useState<string | null>(null);
+    // The zone the server-side cart is actually pinned to — see
+    // CartContextType.cartZoneId for why this is kept separate from `zoneId`.
+    const [cartZoneId, setCartZoneId] = useState<string | null>(null);
     const [cartId, setCartId] = useState<string | null>(null);
     const [addressId, setAddressId] = useState<string | null>(null);
     const [scheduledDate, setScheduledDate] = useState("");
@@ -131,6 +134,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 setCartItems(response.data.items.map(toCartItem));
                 setCartId(response.data.id ?? response.data.cartId ?? null);
                 setAddressId(response.data.addressId ?? null);
+                setCartZoneId(response.data.zoneId ?? null);
                 setScheduledDate(response.data.scheduledDate ?? "");
                 setScheduledTime(response.data.scheduledTime ?? "");
                 setIsOnDemand(response.data.isOnDemand ?? true);
@@ -215,6 +219,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             // (or picking a slot for it) would silently fail against the API.
             if (response?.data?.items) {
                 setCartItems(response.data.items.map(toCartItem));
+                // Keep in sync every time — this is the source of truth for
+                // which zone slot reservation will check capacity against,
+                // and it can change out from under us (e.g. updateCartAddress
+                // switching to an address in a different zone).
+                setCartZoneId(response.data.zoneId ?? null);
             } else {
                 // If this fires, PATCH /cart's response doesn't actually
                 // carry data.items the way CartResponse assumes — item ids
@@ -313,6 +322,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ),
         );
 
+        // Booking creation reads the cart-level scheduledDate/scheduledTime,
+        // not this item's slotDate/slotStartTime — checkout never sends its
+        // own scheduledDate, so the backend falls back to cart.scheduledDate
+        // (see BookingService.create) and 400s "scheduledDate is required"
+        // if that's still empty. Keep it in sync with whichever slot was
+        // picked most recently so picking a slot here actually unblocks
+        // checkout, instead of also requiring the separate on-demand
+        // date/time fields to be filled in.
+        updateCartSchedule({
+            scheduledDate: slotDate,
+            scheduledTime: slotStartTime,
+            isOnDemand: false,
+        });
+
         const item = cartItems.find((i) => i.id === id);
         const accessToken = localStorage.getItem("accessToken");
         if (!item || !item.serviceItemId || !item.durationId || !item.packageId || !accessToken)
@@ -404,6 +427,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 isLocationSupported,
                 zoneId,
                 setZoneId,
+                cartZoneId,
                 cartId,
                 addressId,
                 updateCartAddress,

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { useCart } from "@/src/context/CartContext";
 import { addressApi, type Address, type CreateAddressBody } from "@/src/services/addressApi";
+import { cartApi } from "@/src/services/cartApi";
 import { paymentApi } from "@/src/services/paymentApi";
 import EmptyCart from "./Emptycart";
 import CartView from "./CartView";
@@ -45,7 +46,7 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
 });
 
 export default function CartSheet() {
-  const { isCartOpen, setIsCartOpen, cartItems, clearCart, zoneId, addressId, updateCartAddress } = useCart();
+  const { isCartOpen, setIsCartOpen, cartItems, clearCart, addressId, updateCartAddress } = useCart();
   const [step, setStep] = useState<BookingStep>("cart");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -115,12 +116,28 @@ export default function CartSheet() {
     if (!selectedAddress) { setIsAddressFormOpen(true); setAddressError("Add or select an address before checkout."); return; }
     const token = localStorage.getItem("accessToken");
     if (!token) { setAddressError("Please log in before checkout."); return; }
-    if (!zoneId) { setPaymentError("Your service zone is unavailable. Refresh your location and try again."); return; }
     try {
       setIsCheckingOut(true);
       setPaymentError(null);
+      // Ask the server what zone the cart is *actually* pinned to right now,
+      // instead of trusting CartContext's cached cartZoneId. A just-picked
+      // address or slot can still have its PATCH /cart in flight when the
+      // user hits Checkout, and sending that stale zone here is exactly
+      // what trips the backend's "Cart zone does not match the selected
+      // address zone" check — that check compares the cart row against
+      // whatever zone this request claims, so the two must come from the
+      // same read.
+      const freshCart = await cartApi.get(token);
+      const resolvedZoneId = freshCart.data.zoneId;
+      if (!resolvedZoneId) {
+        // Thrown, not returned directly — this is inside the try block, so
+        // an early return here would skip the catch below's
+        // setIsCheckingOut(false) and leave the button stuck on "Opening
+        // payment…".
+        throw new Error("Your cart isn't linked to a service zone yet. Reselect your address and try again.");
+      }
       const idempotencyKey = crypto.randomUUID();
-      const checkout = await paymentApi.checkout({ gateway: "razorpay", idempotencyKey }, token, zoneId);
+      const checkout = await paymentApi.checkout({ gateway: "razorpay", idempotencyKey }, token, resolvedZoneId);
       const orderId = checkout.data.gatewayOrderId ?? checkout.data.orderId;
       const key = checkout.data.keyId ?? checkout.data.key ?? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       if (!orderId || !key || !checkout.data.amount) throw new Error("Payment configuration is incomplete. Please try again shortly.");
