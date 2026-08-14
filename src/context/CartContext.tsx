@@ -130,7 +130,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const loadCart = async () => {
             try {
-                const response = await cartApi.get(accessToken);
+                // Read straight from storage, not the zoneId state variable —
+                // this effect only ever runs once on mount, so it closes over
+                // zoneId's initial (null) value regardless of what the
+                // sibling "load from localStorage" effect sets moments later;
+                // state updates from that effect aren't visible here until
+                // the next render, but the raw value is already on disk.
+                const response = await cartApi.get(
+                    accessToken,
+                    localStorage.getItem("vellora_zone_id"),
+                );
                 setCartItems(response.data.items.map(toCartItem));
                 setCartId(response.data.id ?? response.data.cartId ?? null);
                 setAddressId(response.data.addressId ?? null);
@@ -187,6 +196,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     packageId: item.packageId,
                     addOnIds: item.addOnIds ?? [],
                     quantity: item.quantity,
+                    // Without these, any bulk sync (add to cart, quantity
+                    // change, address/schedule change) rebuilds this item
+                    // without its already-picked slot — if the backend
+                    // treats the items array as the item's full state
+                    // rather than a merge, that silently clears a slot a
+                    // separate updateItem call had just set, racing
+                    // whichever response lands last.
+                    ...(item.slotDate ? { slotDate: item.slotDate } : {}),
+                    ...(item.slotStartTime ? { slotStartTime: item.slotStartTime } : {}),
                 }]
                 : [],
         );
@@ -211,7 +229,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 ...(resolvedScheduledTime ? { scheduledTime: resolvedScheduledTime } : {}),
                 isOnDemand: details.isOnDemand ?? isOnDemand,
                 ...(resolvedCouponCode ? { couponCode: resolvedCouponCode } : {}),
-            }, accessToken);
+            }, accessToken, cartZoneId ?? zoneId);
             // Reconcile with the server's real item ids. addToCart etc. set a
             // client-generated composite id optimistically (see toCartItem) —
             // deleteItem/updateItem target a real backend id, so without this
@@ -274,33 +292,79 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Real delete, not the bulk PATCH /cart other mutations use here —
         // that only ever sent the trimmed items array along for the ride,
         // which silently did nothing to remove anything server-side.
-        void cartApi.deleteItem(id, accessToken).catch((error) => {
+        void cartApi.deleteItem(id, accessToken, cartZoneId ?? zoneId).catch((error) => {
             // Local removal stands either way, but log this — a failed
             // delete here means the item comes back on the next cart load.
             console.error("Failed to delete cart item", id, error);
         });
     };
 
+    // Shared by increase/decreaseQuantity below. Targets this one item via
+    // PATCH /cart/items/{itemId} (cartApi.updateItem) instead of the bulk
+    // PATCH /cart syncCart uses — a quantity bump doesn't need to touch
+    // every other item in the cart. Reads cartItems directly (not a
+    // functional setCartItems update) for the same reason updateItemSlot
+    // does: this needs the current item's slotDate/slotStartTime to carry
+    // along, and a functional updater's callback can't see that.
+    const updateQuantity = (id: string, nextQuantity: number) => {
+        const updatedItems = cartItems.map((item) =>
+            item.id === id ? { ...item, quantity: nextQuantity } : item,
+        );
+        setCartItems(updatedItems);
+
+        const item = updatedItems.find((i) => i.id === id);
+        const accessToken = localStorage.getItem("accessToken");
+        if (!item || !accessToken) return;
+
+        if (isPendingSync(item) || !item.serviceItemId || !item.durationId || !item.packageId) {
+            // No real backend id yet for /cart/items/{id} to target — falls
+            // back to the bulk sync (same call addToCart makes) so this
+            // quantity still reaches the server once the item itself syncs.
+            void syncCart(updatedItems);
+            return;
+        }
+
+        cartApi
+            .updateItem(
+                id,
+                {
+                    serviceItemId: item.serviceItemId,
+                    durationId: item.durationId,
+                    packageId: item.packageId,
+                    addOnIds: item.addOnIds ?? [],
+                    quantity: nextQuantity,
+                    // PATCH /cart/items/{id} takes a full item
+                    // representation, not a partial patch — omitting these
+                    // would clear a slot updateItemSlot had already set for
+                    // this item.
+                    ...(item.slotDate ? { slotDate: item.slotDate } : {}),
+                    ...(item.slotStartTime ? { slotStartTime: item.slotStartTime } : {}),
+                },
+                accessToken,
+                cartZoneId ?? zoneId,
+            )
+            .then((response) => {
+                if (response?.data?.items) {
+                    setCartItems(response.data.items.map(toCartItem));
+                }
+            })
+            .catch((error) => {
+                // Local quantity change stands either way, but log this — a
+                // failed update here means it isn't actually saved.
+                console.error("Failed to update cart item quantity", id, error);
+            });
+    };
+
     const increaseQuantity = (id: string) => {
-        setCartItems((prev) => {
-            const next = prev.map((item) =>
-                item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-            );
-            void syncCart(next);
-            return next;
-        });
+        const item = cartItems.find((i) => i.id === id);
+        if (!item) return;
+        updateQuantity(id, item.quantity + 1);
     };
 
     const decreaseQuantity = (id: string) => {
-        setCartItems((prev) => {
-            const next = prev.map((item) =>
-                item.id === id && item.quantity > 1
-                    ? { ...item, quantity: item.quantity - 1 }
-                    : item
-            );
-            void syncCart(next);
-            return next;
-        });
+        const item = cartItems.find((i) => i.id === id);
+        if (!item || item.quantity <= 1) return;
+        updateQuantity(id, item.quantity - 1);
     };
 
     const clearCart = () => {
@@ -308,7 +372,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) return;
-        void cartApi.clearItems(accessToken).catch((error) => {
+        void cartApi.clearItems(accessToken, cartZoneId ?? zoneId).catch((error) => {
             // Local clear stands either way, but log this — a failed clear
             // here means the items come back on the next cart load.
             console.error("Failed to clear cart items", error);
@@ -316,11 +380,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateItemSlot = (id: string, slotDate: string, slotStartTime: string) => {
-        setCartItems((prev) =>
-            prev.map((item) =>
-                item.id === id ? { ...item, slotDate, slotStartTime } : item,
-            ),
+        // Computed explicitly, not read back from the cartItems state
+        // variable — this function calls syncCart (via the cart-wide
+        // schedule sync below) in the same tick as the setCartItems call
+        // right after this, and state updates aren't visible in this
+        // closure until the next render. Using the stale list here would
+        // send this bulk sync without the slot just picked for this item,
+        // and (in a race with the per-item updateItem call below) could
+        // have it come back and overwrite the slot that call just set.
+        const updatedItems = cartItems.map((item) =>
+            item.id === id ? { ...item, slotDate, slotStartTime } : item,
         );
+        setCartItems(updatedItems);
 
         // Booking creation reads the cart-level scheduledDate/scheduledTime,
         // not this item's slotDate/slotStartTime — checkout never sends its
@@ -329,22 +400,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // if that's still empty. Keep it in sync with whichever slot was
         // picked most recently so picking a slot here actually unblocks
         // checkout, instead of also requiring the separate on-demand
-        // date/time fields to be filled in.
-        updateCartSchedule({
+        // date/time fields to be filled in. Calls syncCart directly (not
+        // updateCartSchedule, which would use the stale cartItems above)
+        // with updatedItems so this bulk sync carries the just-picked slot.
+        setScheduledDate(slotDate);
+        setScheduledTime(slotStartTime);
+        setIsOnDemand(false);
+        void syncCart(updatedItems, addressId, {
             scheduledDate: slotDate,
             scheduledTime: slotStartTime,
             isOnDemand: false,
         });
 
-        const item = cartItems.find((i) => i.id === id);
+        const item = updatedItems.find((i) => i.id === id);
         const accessToken = localStorage.getItem("accessToken");
         if (!item || !item.serviceItemId || !item.durationId || !item.packageId || !accessToken)
             return;
         if (isPendingSync(item)) {
-            // The UI (CartView's "Select time slot" button) is supposed to
-            // stay disabled until this item has a real id — this is a
-            // belt-and-suspenders check in case it's called some other way.
-            // Sending the composite placeholder as {itemId} would 404.
+            // The "Select time slot" button in CartView is always clickable
+            // (no isPendingSync gate there anymore) — this check is what
+            // actually stops a not-yet-synced item's composite placeholder
+            // id from being sent as {itemId}, which would 404. The slot
+            // stays picked locally either way; it just doesn't reach the
+            // server until this item's own add-to-cart sync reconciles a
+            // real id (see the reconcile step in syncCart above).
             console.warn(
                 "Skipped slot update — item hasn't synced with the server yet",
                 id,
@@ -365,6 +444,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     slotStartTime,
                 },
                 accessToken,
+                cartZoneId ?? zoneId,
             )
             .then((response) => {
                 if (response?.data?.items) {

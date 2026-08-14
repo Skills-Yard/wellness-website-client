@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { useCart, isPendingSync } from "@/src/context/CartContext";
+import { useCart } from "@/src/context/CartContext";
 import type { Address, CreateAddressBody } from "@/src/services/addressApi";
 import SlotPickerModal from "./SlotPickerModal";
 
@@ -174,15 +174,12 @@ export default function CartView({
               <button
                 type="button"
                 onClick={() => setSlotPickerItemId(item.id)}
-                disabled={isPendingSync(item)}
-                className="mt-1.5 flex w-full items-center gap-1 text-[11px] font-semibold text-amber-600 disabled:text-gray-400"
+                className="mt-1.5 flex w-full items-center gap-1 text-[11px] font-semibold text-amber-600"
               >
                 <CalendarClock className="h-3 w-3 shrink-0" />
-                {isPendingSync(item)
-                  ? "Saving item…"
-                  : item.slotDate && item.slotStartTime
-                    ? formatSlotDisplay(item.slotDate, item.slotStartTime)
-                    : "Select time slot"}
+                {item.slotDate && item.slotStartTime
+                  ? formatSlotDisplay(item.slotDate, item.slotStartTime)
+                  : "Select time slot"}
                 <ChevronRight className="h-3 w-3 shrink-0" />
               </button>
             </div>
