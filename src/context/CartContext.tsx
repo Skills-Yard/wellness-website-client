@@ -1,6 +1,6 @@
 "use client";
 
-import { LOCATIONS } from "@/src/utils/data";
+import { LOCATIONS, LOCATION_COORDINATES } from "@/src/utils/data";
 import { CartItem, CartContextType } from "@/src/utils/types";
 import { cartApi, type CartApiItem } from "@/src/services/cartApi";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
@@ -56,6 +56,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [location, setLocationState] = useState("");
     const [isLocationDetected, setIsLocationDetected] = useState<boolean | null>(null);
     const [isManuallySelected, setIsManuallySelected] = useState(false);
+    // Hardcoded lat/lon for whichever location is currently selected (see
+    // LOCATION_COORDINATES) — lets a dropdown pick stand in for the
+    // device's GPS position when feeding getZones().
+    const [locationCoords, setLocationCoords] = useState<{ lat: number; lon: number } | null>(null);
     const [zoneId, setZoneIdState] = useState<string | null>(null);
     // The zone the server-side cart is actually pinned to — see
     // CartContextType.cartZoneId for why this is kept separate from `zoneId`.
@@ -115,9 +119,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (storedLoc) {
             setLocationState(storedLoc);
             setIsManuallySelected(storedManual === "true");
+            setLocationCoords(LOCATION_COORDINATES[storedLoc] ?? null);
         } else {
             setLocationState(LOCATIONS[0]);
             setIsManuallySelected(false);
+            setLocationCoords(LOCATION_COORDINATES[LOCATIONS[0]] ?? null);
         }
 
         setZoneIdState(storedZoneId);
@@ -158,6 +164,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.log("Location selected:", loc);
         setLocationState(loc);
         setIsManuallySelected(true);
+        // Picking a location from the dropdown has no GPS fix of its own —
+        // fall back to its hardcoded coordinates so the catalog can still
+        // be loaded for that region (see the locationCoords effect in
+        // page.tsx). Unrecognized location strings (e.g. Coming Soon areas)
+        // simply clear it.
+        setLocationCoords(LOCATION_COORDINATES[loc] ?? null);
         if (typeof window !== "undefined") {
             localStorage.setItem("vellora_location", loc);
             localStorage.setItem("vellora_manual_location", "true");
@@ -425,6 +437,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 location,
                 setLocation,
                 isLocationSupported,
+                locationCoords,
+                isLocationManuallySelected: isManuallySelected,
+                isHydrated,
                 zoneId,
                 setZoneId,
                 cartZoneId,

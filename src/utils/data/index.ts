@@ -6,3 +6,4 @@ export * from "./header";
 export * from "./navbar";
 export * from "./faq";
 export * from "./location";
+export * from "./coordinates";

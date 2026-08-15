@@ -7,6 +7,7 @@ export const LOCATIONS = [
     "Connaught Place, New Delhi",
     "Lajpat Nagar, New Delhi",
     "Vasant Kunj, New Delhi",
+    "Burari, Delhi",
 ];
 
 export const UNSUPPORTED_LOCATIONS = [

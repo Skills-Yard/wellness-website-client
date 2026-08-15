@@ -26,6 +26,7 @@ import ServicesList from "./Serviceslist";
 import VelloraPPromiseBox from "./Vellorappromisebox";
 import FloatingMenuButton from "./Floatingmenubutton";
 import CategoriesMenuModal from "./Categoriesmenumodal";
+import DetailSkeleton from "./DetailSkeleton";
 import SubDetailPopUp from "../[slug]/mainfile";
 
 const toCategoryId = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
@@ -55,7 +56,14 @@ const belongsToService = (
 export default function SpaBookingLayout() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
-  const { isCartOpen, addToCart, setZoneId: setCartZoneId } = useCart();
+  const {
+    isCartOpen,
+    addToCart,
+    setZoneId: setCartZoneId,
+    locationCoords,
+    isLocationManuallySelected,
+    isHydrated: isLocationHydrated,
+  } = useCart();
   const {
     isLoading: categoriesLoading,
     error: categoriesError,
@@ -86,8 +94,61 @@ export default function SpaBookingLayout() {
   const categoryId =
     searchParams.get("categoryId") ?? findCategoryBySlug(slug)?.id;
 
+  // Resolves the service zone for a set of coordinates — shared by the
+  // browser-geolocation effect below and the manual-location effect that
+  // follows it, which feeds in a picked location's hardcoded coordinates
+  // (see utils/data/coordinates.ts) instead of a GPS fix.
+  const fetchZone = useCallback(
+    async (latitude: number, longitude: number, isMounted: () => boolean) => {
+      try {
+        const response = await getZones({ lat: latitude, long: longitude });
+        const zone = response.data;
+
+        if (!zone.exists || !zone.zoneId) {
+          throw new Error("Services are not available in your location yet.");
+        }
+
+        if (isMounted()) {
+          setZoneId(zone.zoneId);
+          setCartZoneId(zone.zoneId);
+          setZoneError(null);
+        }
+      } catch (error) {
+        if (isMounted()) {
+          setZoneId(null);
+          setCartZoneId(null);
+          setZoneError(
+            error instanceof Error
+              ? error
+              : new Error("Unable to determine your service zone."),
+          );
+        }
+      } finally {
+        if (isMounted()) setIsZoneLoading(false);
+      }
+    },
+    [setCartZoneId],
+  );
+
+  // Resolves the zone the same way page.tsx does: check CartContext's
+  // persisted location first (localStorage, read by CartContext on mount)
+  // and use its hardcoded coordinates directly when one was saved — only
+  // falling back to a browser geolocation prompt when nothing was saved,
+  // and only erroring out when that also fails. Waits on isLocationHydrated
+  // so it isn't fooled by isLocationManuallySelected/locationCoords still
+  // sitting at their pre-hydration defaults (see page.tsx's version of this
+  // effect for the full explanation).
   useEffect(() => {
+    if (!isLocationHydrated) return;
     let isMounted = true;
+
+    if (isLocationManuallySelected && locationCoords) {
+      setIsZoneLoading(true);
+      void fetchZone(locationCoords.lat, locationCoords.lon, () => isMounted);
+      return () => {
+        isMounted = false;
+      };
+    }
 
     if (!navigator.geolocation) {
       queueMicrotask(() => {
@@ -103,34 +164,11 @@ export default function SpaBookingLayout() {
       };
     }
 
+    setIsZoneLoading(true);
+
     navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const response = await getZones({
-            lat: coords.latitude,
-            long: coords.longitude,
-          });
-          const zone = response.data;
-
-          if (!zone.exists || !zone.zoneId) {
-            throw new Error("Services are not available in your location yet.");
-          }
-
-          if (isMounted) {
-            setZoneId(zone.zoneId);
-            setCartZoneId(zone.zoneId);
-          }
-        } catch (error) {
-          if (isMounted) {
-            setZoneError(
-              error instanceof Error
-                ? error
-                : new Error("Unable to determine your service zone."),
-            );
-          }
-        } finally {
-          if (isMounted) setIsZoneLoading(false);
-        }
+      ({ coords }) => {
+        void fetchZone(coords.latitude, coords.longitude, () => isMounted);
       },
       (error) => {
         if (isMounted) {
@@ -145,7 +183,7 @@ export default function SpaBookingLayout() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isLocationHydrated, isLocationManuallySelected, locationCoords, fetchZone]);
 
   useEffect(() => {
     let isMounted = true;
@@ -486,7 +524,7 @@ export default function SpaBookingLayout() {
     isDetailsLoading ||
     isServicesLoading
   )
-    return <LoadingState />;
+    return <DetailSkeleton />;
   if (categoriesError || zoneError || detailsError || servicesError)
     return (
       <MessageState
@@ -591,14 +629,6 @@ export default function SpaBookingLayout() {
         />
       )}
     </div>
-  );
-}
-
-function LoadingState() {
-  return (
-    <main className="flex min-h-[70vh] items-center justify-center px-4">
-      <p className="font-medium text-gray-600">Loading wellness services...</p>
-    </main>
   );
 }
 
