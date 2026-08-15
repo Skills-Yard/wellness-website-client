@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useCart } from "@/src/context/CartContext";
 import { useCategories } from "@/src/context/CategoryContext";
-import { getSubCategoriesByCategoryId } from "@/src/services/categoryApi";
-import { getServiceItems } from "@/src/services/serviceItemApi";
-import { getZones } from "@/src/services/zoneApi";
-import { getPromotionalCampaigns } from "@/src/services/campaignApi";
-import { CategoryDetails, SubCategory } from "@/src/types/categoryTypes";
-import { ServiceItem } from "@/src/types/serviceItemTypes";
+import { useCategory } from "@/src/hooks/queries/useCategory";
+import { useSubCategories } from "@/src/hooks/queries/useSubCategories";
+import { useServiceItemsForSubCategories } from "@/src/hooks/queries/useServiceItems";
+import { usePromotionalCampaigns } from "@/src/hooks/queries/usePromotionalCampaigns";
+import { SubCategory } from "@/src/types/categoryTypes";
 import { HomeCampaign } from "@/src/types/serviceTypes";
 import {
   ServiceAddOn,
@@ -25,9 +25,15 @@ import DesktopHero from "./Desktophero";
 import ServicesList from "./Serviceslist";
 import VelloraPPromiseBox from "./Vellorappromisebox";
 import FloatingMenuButton from "./Floatingmenubutton";
-import CategoriesMenuModal from "./Categoriesmenumodal";
 import DetailSkeleton from "./DetailSkeleton";
-import SubDetailPopUp from "../[slug]/mainfile";
+import SubDetailPopUp from "../[slug]/LazySubDetailPopUp";
+
+// Both only ever render after a click (floating menu button / a service
+// card) — no reason to ship them in this page's initial bundle.
+const CategoriesMenuModal = dynamic(() => import("./Categoriesmenumodal"), {
+  ssr: false,
+  loading: () => null,
+});
 
 const toCategoryId = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
@@ -53,36 +59,22 @@ const belongsToService = (
   serviceId: string,
 ) => option.serviceItemId === serviceId || option.serviceId === serviceId;
 
+// Module-level, not `subCategoriesData ?? []` inline — the latter builds a
+// new array every render while data is still loading, which would
+// destabilize every useMemo below keyed on `subCategories` for that whole
+// window (see useServiceItemsForSubCategories' `combine` comment for why
+// that class of bug is worth avoiding outright).
+const EMPTY_SUB_CATEGORIES: SubCategory[] = [];
+
 export default function SpaBookingLayout() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
-  const {
-    isCartOpen,
-    addToCart,
-    setZoneId: setCartZoneId,
-    locationCoords,
-    isLocationManuallySelected,
-    isHydrated: isLocationHydrated,
-  } = useCart();
+  const { isCartOpen, addToCart, zoneId, zoneExists, isZoneLoading, zoneError } = useCart();
   const {
     isLoading: categoriesLoading,
     error: categoriesError,
     findCategoryBySlug,
-    loadCategory,
   } = useCategories();
-  const [categoryDetails, setCategoryDetails] =
-    useState<CategoryDetails | null>(null);
-  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
-  const [zoneId, setZoneId] = useState<string | null>(null);
-  const [heroCampaign, setHeroCampaign] = useState<HomeCampaign | null>(null);
-  const [carouselCampaigns, setCarouselCampaigns] = useState<HomeCampaign[]>([]);
-  const [detailsError, setDetailsError] = useState<Error | null>(null);
-  const [zoneError, setZoneError] = useState<Error | null>(null);
-  const [servicesError, setServicesError] = useState<Error | null>(null);
-  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
-  const [isZoneLoading, setIsZoneLoading] = useState(true);
-  const [isServicesLoading, setIsServicesLoading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState("");
@@ -94,262 +86,76 @@ export default function SpaBookingLayout() {
   const categoryId =
     searchParams.get("categoryId") ?? findCategoryBySlug(slug)?.id;
 
-  // Resolves the service zone for a set of coordinates — shared by the
-  // browser-geolocation effect below and the manual-location effect that
-  // follows it, which feeds in a picked location's hardcoded coordinates
-  // (see utils/data/coordinates.ts) instead of a GPS fix.
-  const fetchZone = useCallback(
-    async (latitude: number, longitude: number, isMounted: () => boolean) => {
-      try {
-        const response = await getZones({ lat: latitude, long: longitude });
-        const zone = response.data;
+  // Zone resolution (geolocation/manual location → getZones) is centralized
+  // in CartContext and runs once, app-wide — this page just reads the
+  // result instead of resolving it independently (see page.tsx's version
+  // of the same read for the other half of the app).
+  const zoneNotFoundError =
+    !isZoneLoading && !zoneExists
+      ? (zoneError ?? new Error("Services are not available in your location yet."))
+      : null;
 
-        if (!zone.exists || !zone.zoneId) {
-          throw new Error("Services are not available in your location yet.");
-        }
+  const {
+    data: categoryDetails,
+    isLoading: isDetailsLoading,
+    error: detailsErrorObj,
+  } = useCategory(categoryId, { enabled: !!categoryId });
+  const detailsError = detailsErrorObj as Error | null;
 
-        if (isMounted()) {
-          setZoneId(zone.zoneId);
-          setCartZoneId(zone.zoneId);
-          setZoneError(null);
-        }
-      } catch (error) {
-        if (isMounted()) {
-          setZoneId(null);
-          setCartZoneId(null);
-          setZoneError(
-            error instanceof Error
-              ? error
-              : new Error("Unable to determine your service zone."),
-          );
-        }
-      } finally {
-        if (isMounted()) setIsZoneLoading(false);
-      }
-    },
-    [setCartZoneId],
+  const {
+    data: subCategoriesData,
+    isLoading: isSubCategoriesLoading,
+    error: subCategoriesErrorObj,
+  } = useSubCategories(categoryId, { enabled: !!categoryId });
+  const subCategories: SubCategory[] = subCategoriesData ?? EMPTY_SUB_CATEGORIES;
+
+  const { data: campaignsData } = usePromotionalCampaigns(
+    { categoryId, zoneId },
+    { enabled: !!categoryId && !!zoneId },
   );
 
-  // Resolves the zone the same way page.tsx does: check CartContext's
-  // persisted location first (localStorage, read by CartContext on mount)
-  // and use its hardcoded coordinates directly when one was saved — only
-  // falling back to a browser geolocation prompt when nothing was saved,
-  // and only erroring out when that also fails. Waits on isLocationHydrated
-  // so it isn't fooled by isLocationManuallySelected/locationCoords still
-  // sitting at their pre-hydration defaults (see page.tsx's version of this
-  // effect for the full explanation).
-  useEffect(() => {
-    if (!isLocationHydrated) return;
-    let isMounted = true;
-
-    if (isLocationManuallySelected && locationCoords) {
-      setIsZoneLoading(true);
-      void fetchZone(locationCoords.lat, locationCoords.lon, () => isMounted);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    if (!navigator.geolocation) {
-      queueMicrotask(() => {
-        if (isMounted) {
-          setZoneError(
-            new Error("Geolocation is not supported by this browser."),
-          );
-          setIsZoneLoading(false);
-        }
-      });
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    setIsZoneLoading(true);
-
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        void fetchZone(coords.latitude, coords.longitude, () => isMounted);
-      },
-      (error) => {
-        if (isMounted) {
-          setZoneError(
-            new Error(error.message || "Location permission is required."),
-          );
-          setIsZoneLoading(false);
-        }
-      },
+  const { heroCampaign, carouselCampaigns } = useMemo<{
+    heroCampaign: HomeCampaign | null;
+    carouselCampaigns: HomeCampaign[];
+  }>(() => {
+    const categoryCampaigns = (campaignsData ?? []).filter(
+      (campaign) =>
+        campaign.targetType === "CATEGORY" && campaign.categoryId === categoryId,
     );
 
-    return () => {
-      isMounted = false;
-    };
-  }, [isLocationHydrated, isLocationManuallySelected, locationCoords, fetchZone]);
+    const best = categoryCampaigns
+      .filter(
+        (campaign) =>
+          campaign.type === "HIGHLIGHT_VIDEO" || campaign.type === "HIGHLIGHT_BANNER",
+      )
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
 
-  useEffect(() => {
-    let isMounted = true;
-    if (!categoryId) {
-      setCategoryDetails(null);
-      setSubCategories([]);
-      setServiceItems([]);
-      return;
-    }
+    const carousel = categoryCampaigns
+      .filter(
+        (campaign) =>
+          campaign.type === "CAROUSEL_VIDEO" || campaign.type === "CAROUSEL_BANNER",
+      )
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
-    const fetchCategory = async () => {
-      try {
-        setIsDetailsLoading(true);
-        setDetailsError(null);
-        // Do not keep services from the previously visited category while this
-        // category's sub-categories are being resolved.
-        setSubCategories([]);
-        setServiceItems([]);
-        const [details, subCategoryResponse] = await Promise.all([
-          loadCategory(categoryId),
-          getSubCategoriesByCategoryId(categoryId),
-        ]);
+    return { heroCampaign: best ?? null, carouselCampaigns: carousel };
+  }, [campaignsData, categoryId]);
 
-        if (isMounted) {
-          setCategoryDetails(details);
-          setSubCategories(subCategoryResponse.data ?? []);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setCategoryDetails(null);
-          setSubCategories([]);
-          setDetailsError(
-            error instanceof Error
-              ? error
-              : new Error("Unable to load category details."),
-          );
-        }
-      } finally {
-        if (isMounted) setIsDetailsLoading(false);
-      }
-    };
-
-    fetchCategory();
-    return () => {
-      isMounted = false;
-    };
-  }, [categoryId, loadCategory]);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (!categoryId || !zoneId) {
-      setHeroCampaign(null);
-      setCarouselCampaigns([]);
-      return;
-    }
-
-    const fetchHeroCampaign = async () => {
-      try {
-        // One fetch for every campaign targeting this category, split by type below —
-        // avoids a second round-trip just to also populate the mobile carousel.
-        const response = await getPromotionalCampaigns({ categoryId, zoneId });
-        const categoryCampaigns = (response.data ?? []).filter(
-          (campaign) =>
-            campaign.targetType === "CATEGORY" && campaign.categoryId === categoryId,
-        );
-
-        const best = categoryCampaigns
-          .filter(
-            (campaign) =>
-              campaign.type === "HIGHLIGHT_VIDEO" || campaign.type === "HIGHLIGHT_BANNER",
-          )
-          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
-
-        const carousel = categoryCampaigns
-          .filter(
-            (campaign) =>
-              campaign.type === "CAROUSEL_VIDEO" || campaign.type === "CAROUSEL_BANNER",
-          )
-          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-
-        if (isMounted) {
-          setHeroCampaign(best ?? null);
-          setCarouselCampaigns(carousel);
-        }
-      } catch (error) {
-        console.error(`Unable to load hero campaign for ${categoryId}:`, error);
-        if (isMounted) {
-          setHeroCampaign(null);
-          setCarouselCampaigns([]);
-        }
-      }
-    };
-
-    fetchHeroCampaign();
-    return () => {
-      isMounted = false;
-    };
-  }, [categoryId, zoneId]);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (!zoneId || subCategories.length === 0) {
-      setServiceItems([]);
-      setIsServicesLoading(false);
-      return;
-    }
-
-    const fetchServices = async () => {
-      try {
-        setIsServicesLoading(true);
-        setServicesError(null);
-        const results = await Promise.allSettled(
-          subCategories.map((subCategory) =>
-            getServiceItems({
-              isActive: true,
-              subCategoryId: subCategory.id,
-              zoneId,
-            }),
-          ),
-        );
-
-        if (isMounted) {
-          const responses = results
-            .filter(
-              (result): result is PromiseFulfilledResult<
-                Awaited<ReturnType<typeof getServiceItems>>
-              > => result.status === "fulfilled",
-            )
-            .map((result) => result.value);
-
-          // A service request may fail for one sub-category (for example, when
-          // it has no services in the selected zone). Keep rendering the
-          // successful sub-categories instead of hiding the whole page.
-          setServiceItems(responses.flatMap((response) => response.data ?? []));
-
-          if (responses.length === 0) {
-            const failedResult = results.find(
-              (result): result is PromiseRejectedResult =>
-                result.status === "rejected",
-            );
-            setServicesError(
-              failedResult?.reason instanceof Error
-                ? failedResult.reason
-                : new Error("Unable to load services."),
-            );
-          }
-        }
-      } catch (error) {
-        if (isMounted) {
-          setServiceItems([]);
-          setServicesError(
-            error instanceof Error
-              ? error
-              : new Error("Unable to load services."),
-          );
-        }
-      } finally {
-        if (isMounted) setIsServicesLoading(false);
-      }
-    };
-
-    fetchServices();
-    return () => {
-      isMounted = false;
-    };
-  }, [subCategories, zoneId]);
+  // Fetches every sub-category's services as separate cached queries keyed
+  // by [subCategoryId, zoneId] (see useServiceItemsForSubCategories) — this
+  // is what lets a "See all" click from the home page's CategoryServices
+  // (same key) reuse the cache instead of refetching.
+  const {
+    services: serviceItems,
+    isLoading: isServicesLoading,
+    isError: isServicesError,
+  } = useServiceItemsForSubCategories(
+    subCategories.map((subCategory) => subCategory.id),
+    zoneId,
+    { enabled: subCategories.length > 0 },
+  );
+  const servicesError = isServicesError
+    ? new Error("Unable to load services.")
+    : null;
 
   // The catalog API already embeds each service item's own durations/packages/addOns
   // (see GET /catalog/service-items) — no need for separate, catalog-wide fetches.
@@ -522,16 +328,20 @@ export default function SpaBookingLayout() {
     categoriesLoading ||
     isZoneLoading ||
     isDetailsLoading ||
+    isSubCategoriesLoading ||
     isServicesLoading
   )
     return <DetailSkeleton />;
-  if (categoriesError || zoneError || detailsError || servicesError)
+  if (categoriesError || zoneNotFoundError || detailsError || subCategoriesErrorObj || servicesError)
     return (
       <MessageState
         title="Service details unavailable"
         message={
-          (categoriesError ?? zoneError ?? detailsError ?? servicesError)
-            ?.message ?? "Please try again shortly."
+          (categoriesError as Error | null ??
+            zoneNotFoundError ??
+            detailsError ??
+            (subCategoriesErrorObj as Error | null) ??
+            servicesError)?.message ?? "Please try again shortly."
         }
       />
     );

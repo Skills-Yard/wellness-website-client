@@ -14,7 +14,7 @@ import {
   UserCircle2,
 } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
-import AuthModal from "../auth/AuthModal";
+import AuthModal from "../auth/LazyAuthModal";
 import BottomNav from "../home/mobile/Bottomnav";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";

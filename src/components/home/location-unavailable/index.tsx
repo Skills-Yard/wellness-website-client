@@ -5,6 +5,8 @@ import Image from "next/image";
 import { MapPin, Send, CheckCircle, X } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
 import { ACTIVE_AREAS} from "@/src/utils/data";
+import { useAddresses } from "@/src/hooks/queries/useAddresses";
+import { formatAddressLabel } from "@/src/services/addressApi";
 
 interface LocationUnavailableModalProps {
     isOpen: boolean;
@@ -12,7 +14,9 @@ interface LocationUnavailableModalProps {
 }
 
 export default function LocationUnavailableModal({ isOpen, onClose }: LocationUnavailableModalProps) {
-    const { setLocation } = useCart();
+    const { setLocation, addressId, updateCartAddress } = useCart();
+    const { data: addressesData } = useAddresses();
+    const addresses = addressesData ?? [];
     const [email, setEmail] = useState("");
     const [notified, setNotified] = useState(false);
 
@@ -93,6 +97,39 @@ export default function LocationUnavailableModal({ isOpen, onClose }: LocationUn
                             </form>
                         )}
                     </div>
+
+                    {/* Saved Addresses — only shown when logged in with at
+                        least one saved address (see useAddresses). Picking
+                        one syncs the cart to that address's zone instead of
+                        one of the static areas below. */}
+                    {addresses.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest">
+                                Your Addresses
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {addresses.map((address) => (
+                                    <button
+                                        key={address.id}
+                                        onClick={() => {
+                                            updateCartAddress(address.id);
+                                            onClose();
+                                        }}
+                                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all group ${
+                                            addressId === address.id
+                                                ? "border-amber-300 bg-amber-50/50"
+                                                : "border-gray-200 bg-white hover:border-amber-300 hover:shadow-md hover:bg-amber-50/30"
+                                        }`}
+                                    >
+                                        <MapPin className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform" />
+                                        <span className="text-[11px] font-bold text-gray-800 text-center line-clamp-2">
+                                            {address.label ?? address.customLabel ?? formatAddressLabel(address)}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Areas Grid */}
                     <div className="space-y-4">

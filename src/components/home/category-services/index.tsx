@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import { getSubCategoriesByCategoryId } from "@/src/services/categoryApi";
-import { getServiceItems } from "@/src/services/serviceItemApi";
+import { useSubCategories } from "@/src/hooks/queries/useSubCategories";
+import { useServiceItemsForSubCategories } from "@/src/hooks/queries/useServiceItems";
 import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
 import { DynamicService } from "@/src/utils/types/spabooking";
-import SubDetailPopUp from "@/src/components/detail/[slug]/mainfile";
+import SubDetailPopUp from "@/src/components/detail/[slug]/LazySubDetailPopUp";
 
 type CategoryServicesProps = {
   category: HomeCategory;
@@ -85,25 +85,12 @@ export default function CategoryServices({
   onFaqsChange,
 }: CategoryServicesProps) {
   const sectionRef = useRef<HTMLElement>(null);
-  const loadingRef = useRef(false);
-  const mountedRef = useRef(false);
   const [isActive, setIsActive] = useState(false);
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [error, setError] = useState(false);
   // Clicking a card opens the same detail popup the category page uses,
   // instead of navigating there — see the card's onClick below.
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(
     null,
   );
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -124,63 +111,27 @@ export default function CategoryServices({
   }, [isActive]);
 
   // Fetches every sub-category's services in parallel (same pattern as the
-  // full category page — see spa-booking/index.tsx's fetchServices) rather
-  // than one sub-category at a time, gated behind scrolling far enough to
-  // trigger the next fetch. That incremental version meant "all services"
-  // actually only meant "all services from whichever sub-category loaded
-  // first" until the user scrolled further — this loads the lot up front.
-  const loadAllServices = useCallback(async () => {
-    if (!isActive || loadingRef.current) return;
+  // full category page — see spa-booking/index.tsx), gated behind
+  // scrolling close enough to trigger the fetch (isActive → enabled).
+  // Keyed by [subCategoryId, zoneId] via React Query, so clicking "See
+  // all" into this same category's detail page reuses this cache instead
+  // of refetching identical data.
+  const { data: subCategoriesData, isLoading: isSubCategoriesLoading, isError: isSubCategoriesError } =
+    useSubCategories(category.id, { enabled: isActive });
+  const subCategoryIds = useMemo(
+    () => (subCategoriesData ?? []).map((subCategory) => subCategory.id),
+    [subCategoriesData],
+  );
+  const {
+    services,
+    isLoading: isServicesLoading,
+    isError: isServicesError,
+  } = useServiceItemsForSubCategories(subCategoryIds, zoneId, {
+    enabled: isActive && !!subCategoriesData,
+  });
 
-    loadingRef.current = true;
-    setIsLoading(true);
-    setError(false);
-
-    try {
-      const subCategoryResponse = await getSubCategoriesByCategoryId(category.id);
-      const availableSubCategories = subCategoryResponse.data ?? [];
-      if (!mountedRef.current) return;
-
-      const results = await Promise.allSettled(
-        availableSubCategories.map((subCategory) =>
-          getServiceItems({ isActive: true, subCategoryId: subCategory.id, zoneId }),
-        ),
-      );
-
-      if (!mountedRef.current) return;
-
-      const responses = results
-        .filter(
-          (result): result is PromiseFulfilledResult<
-            Awaited<ReturnType<typeof getServiceItems>>
-          > => result.status === "fulfilled",
-        )
-        .map((result) => result.value);
-
-      // A single sub-category failing to load (e.g. no services in this
-      // zone) shouldn't hide every sub-category that did load successfully.
-      setServices(responses.flatMap((response) => response.data ?? []));
-      if (responses.length === 0 && availableSubCategories.length > 0) {
-        setError(true);
-      }
-      setHasLoaded(true);
-    } catch (requestError) {
-      if (!mountedRef.current) return;
-      console.error(`Unable to load ${category.name} services:`, requestError);
-      setError(true);
-      setHasLoaded(true);
-    } finally {
-      loadingRef.current = false;
-      if (mountedRef.current) setIsLoading(false);
-    }
-  }, [category.id, category.name, isActive, zoneId]);
-
-  useEffect(() => {
-    if (!isActive || hasLoaded) return;
-
-    const loadTimer = window.setTimeout(() => void loadAllServices(), 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [hasLoaded, isActive, loadAllServices]);
+  const isLoading = isSubCategoriesLoading || isServicesLoading;
+  const error = isSubCategoriesError || isServicesError;
 
   const categoryFaqs = useMemo(() => {
     const uniqueFaqs = new Map<string, HomeFaq>();

@@ -47,6 +47,17 @@ export interface CartContextType {
   isHydrated: boolean;
   zoneId: string | null;
   setZoneId: (zoneId: string | null) => void;
+  /** True once `zoneId` has resolved to a real, servable zone — derived
+   *  from `zoneId !== null`. Centralized zone resolution (geolocation or a
+   *  manually picked location, see CartProvider) is what sets `zoneId`. */
+  zoneExists: boolean;
+  /** True while zone resolution is still in flight — waiting on GPS,
+   *  waiting on the zones API, or both. */
+  isZoneLoading: boolean;
+  /** Set when geolocation was denied/unavailable (and nothing was manually
+   *  picked) or the zones API call itself failed. Null when resolution
+   *  succeeded or is still in progress. */
+  zoneError: Error | null;
   /** The zone the server-side cart is actually pinned to (follows the
    *  selected delivery address once one is picked) — distinct from `zoneId`
    *  above, which is the ambient browsing/geolocation zone. Slot discovery

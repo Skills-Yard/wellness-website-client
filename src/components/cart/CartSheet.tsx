@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { useCart } from "@/src/context/CartContext";
-import { addressApi, type Address, type CreateAddressBody } from "@/src/services/addressApi";
+import { addressApi, formatAddressLabel, type Address, type CreateAddressBody } from "@/src/services/addressApi";
+import { useAddresses } from "@/src/hooks/queries/useAddresses";
+import { queryKeys } from "@/src/hooks/queries/queryKeys";
 import { cartApi } from "@/src/services/cartApi";
 import { paymentApi } from "@/src/services/paymentApi";
 import EmptyCart from "./Emptycart";
@@ -19,11 +22,7 @@ declare global {
   }
 }
 
-const getAddresses = (data: Awaited<ReturnType<typeof addressApi.get>>["data"]): Address[] =>
-  Array.isArray(data) ? data : data.addresses ?? data.items ?? [];
-
-const formatAddress = (address: Address) =>
-  [address.line1, address.line2, address.landmark, address.city, address.state, address.pincode].filter(Boolean).join(", ");
+const formatAddress = formatAddressLabel;
 
 const getUserIdFromToken = (token: string) => {
   try {
@@ -47,9 +46,9 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
 
 export default function CartSheet() {
   const { isCartOpen, setIsCartOpen, cartItems, clearCart, addressId, updateCartAddress } = useCart();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<BookingStep>("cart");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
-  const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
@@ -57,22 +56,37 @@ export default function CartSheet() {
   const [addressError, setAddressError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  const { data: addressesData, error: addressesQueryError } = useAddresses();
+  const addresses = addressesData ?? [];
+
   useEffect(() => {
     if (!isCartOpen) return;
-    const token = localStorage.getItem("accessToken");
-    if (!token) { setAddressError("Please log in to select a service address."); return; }
-    void (async () => {
-      try {
-        setAddressError(null);
-        const response = await addressApi.get(token);
-        const list = getAddresses(response.data);
-        setAddresses(list);
-        setSelectedAddress((current) => current && list.some((item) => item.id === current.id) ? current : list.find((item) => item.id === addressId) ?? list.find((item) => item.isDefault) ?? list[0] ?? null);
-      } catch (error) {
-        setAddressError(error instanceof Error ? error.message : "Unable to load saved addresses.");
-      }
-    })();
-  }, [isCartOpen]);
+    if (!localStorage.getItem("accessToken")) {
+      setAddressError("Please log in to select a service address.");
+      return;
+    }
+    if (addressesQueryError) {
+      setAddressError(
+        addressesQueryError instanceof Error
+          ? addressesQueryError.message
+          : "Unable to load saved addresses.",
+      );
+      return;
+    }
+    setAddressError(null);
+    setSelectedAddress((current) =>
+      current && addresses.some((item) => item.id === current.id)
+        ? current
+        : (addresses.find((item) => item.id === addressId) ??
+          addresses.find((item) => item.isDefault) ??
+          addresses[0] ??
+          null),
+    );
+    // addresses is a new array reference every render (derived from
+    // addressesData ?? []) — depending on addressesData directly avoids
+    // re-running this on every render once the query has settled.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCartOpen, addressesData, addressesQueryError, addressId]);
 
   function handleOpenChange(open: boolean) {
     setIsCartOpen(open);
@@ -88,7 +102,10 @@ export default function CartSheet() {
       setIsSavingAddress(true);
       setAddressError(null);
       const response = await addressApi.create({ ...address, userId }, token);
-      setAddresses((current) => [...current, response.data]);
+      queryClient.setQueryData<Address[]>(queryKeys.addresses(), (current) => [
+        ...(current ?? []),
+        response.data,
+      ]);
       setSelectedAddress(response.data);
       updateCartAddress(response.data.id);
       setIsAddressFormOpen(false);
@@ -104,7 +121,9 @@ export default function CartSheet() {
       setIsSavingAddress(true);
       setAddressError(null);
       const response = await addressApi.update(addressId, address, token);
-      setAddresses((current) => current.map((item) => (item.id === addressId ? response.data : item)));
+      queryClient.setQueryData<Address[]>(queryKeys.addresses(), (current) =>
+        (current ?? []).map((item) => (item.id === addressId ? response.data : item)),
+      );
       setSelectedAddress((current) => (current?.id === addressId ? response.data : current));
       setIsAddressFormOpen(false);
     } catch (error) {

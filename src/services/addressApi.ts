@@ -40,6 +40,20 @@ export type AddressesResponse = ApiSuccess<
 export type CreateAddressResponse = ApiSuccess<Address>;
 export type UpdateAddressResponse = ApiSuccess<Address>;
 
+/** GET /users/addresses' `data` comes back either as a bare array or
+ *  wrapped in { addresses } / { items } depending on endpoint version —
+ *  normalizes both shapes into a plain array. Shared by every caller that
+ *  lists addresses (CartSheet, useAddresses, the location pickers) so
+ *  there's one place that knows about the shape quirk. */
+export const getAddressList = (data: AddressesResponse["data"]): Address[] =>
+  Array.isArray(data) ? data : (data.addresses ?? data.items ?? []);
+
+/** Single-line, comma-joined address for display in pickers/labels. */
+export const formatAddressLabel = (address: Address) =>
+  [address.line1, address.line2, address.landmark, address.city, address.state, address.pincode]
+    .filter(Boolean)
+    .join(", ");
+
 export const addressApi = {
   get(accessToken: string) {
     return apiClient.get<AddressesResponse>("/users/addresses", {

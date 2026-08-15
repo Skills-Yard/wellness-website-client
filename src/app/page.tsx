@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useCart } from "@/src/context/CartContext";
 
 import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
@@ -9,35 +10,27 @@ import Inspotlight from "@/src/components/home/in-spotlight";
 import WallPanel from "@/src/components/home/wall-panel";
 import CategoryServices from "@/src/components/home/category-services";
 import MobileHome from "@/src/components/home/mobile";
-import LocationUnavailableModal from "@/src/components/home/location-unavailable";
 import HomeSkeleton from "@/src/components/home/home-skeleton";
 
-import { getZones } from "@/src/services/zoneApi";
-import { getHomeDetails } from "@/src/services/homeApi";
-import { HomeDetails, ZoneDetails } from "@/src/types/serviceTypes";
+// Only ever rendered when the resolved zone isn't servable — never needed
+// on the happy path, so it shouldn't be in the home page's initial bundle.
+const LocationUnavailableModal = dynamic(
+  () => import("@/src/components/home/location-unavailable"),
+  { ssr: false, loading: () => null },
+);
+
+import { useHomeDetails } from "@/src/hooks/queries/useHomeDetails";
 
 export default function Home() {
+  const { zoneId, zoneExists, isZoneLoading } = useCart();
+
   const {
-    setZoneId: setCartZoneId,
-    locationCoords,
-    isLocationManuallySelected,
-    isHydrated: isLocationHydrated,
-  } = useCart();
+    data: homeDetails,
+    isLoading: isHomeLoading,
+    isError: homeError,
+    refetch: refetchHomeDetails,
+  } = useHomeDetails(zoneId, { enabled: !!zoneId });
 
-  const [zoneDetails, setZoneDetails] = useState<ZoneDetails | null>(null);
-  const [homeDetails, setHomeDetails] = useState<HomeDetails | null>(null);
-
-  const [zoneId, setZoneId] = useState<string | null>(null);
-  const [zoneExists, setZoneExists] = useState(false);
-
-  // Kept separate from isHomeLoading below — otherwise the moment zone
-  // resolution finished but home details hadn't started fetching yet, the
-  // "no services" screen would flash on screen before the home-details
-  // fetch (fired by a *different* effect, once zoneId lands) had a chance
-  // to even start.
-  const [isZoneLoading, setIsZoneLoading] = useState(true);
-  const [isHomeLoading, setIsHomeLoading] = useState(false);
-  const [homeError, setHomeError] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
 
@@ -54,6 +47,14 @@ export default function Home() {
     };
   }, []);
 
+  // Zone resolution (geolocation/manual location → getZones) now happens
+  // once, app-wide, in CartContext — this just reacts to the result: once
+  // it's settled, no servable zone means "prompt the user to pick one".
+  useEffect(() => {
+    if (isZoneLoading) return;
+    setShowLocationModal(!zoneExists);
+  }, [isZoneLoading, zoneExists]);
+
   const handleFaqsChange = useCallback(
     (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
       setCategoryFaqs((current) => {
@@ -63,130 +64,6 @@ export default function Home() {
     },
     [],
   );
-
-  /*
-   * API 1
-   * Get zone from user's coordinates
-   */
-  const fetchZone = async (latitude: number, longitude: number) => {
-    try {
-      const response = await getZones({
-        lat: latitude,
-        long: longitude,
-      });
-
-      const zoneResponse = response.data;
-
-      setZoneDetails(zoneResponse);
-
-      if (zoneResponse?.exists && zoneResponse?.zoneId) {
-        setZoneId(zoneResponse.zoneId);
-        setCartZoneId(zoneResponse.zoneId);
-        setZoneExists(true);
-      } else {
-        setZoneId(null);
-        setCartZoneId(null);
-        setZoneExists(false);
-        setHomeDetails(null);
-      }
-    } catch (error) {
-      console.error("Error fetching zone:", error);
-
-      setZoneId(null);
-      setCartZoneId(null);
-      setZoneExists(false);
-      setHomeDetails(null);
-    }
-  };
-
-  /*
-   * API 2
-   * Get home details using zoneId
-   */
-  const fetchHomeDetails = async (id: string) => {
-    try {
-      setIsHomeLoading(true);
-      setHomeError(false);
-
-      const response = await getHomeDetails(id);
-
-      setHomeDetails(response.data);
-    } catch (error) {
-      console.error("Error fetching home details:", error);
-
-      setHomeDetails(null);
-      setHomeError(true);
-    } finally {
-      setIsHomeLoading(false);
-    }
-  };
-
-  /*
-   * Resolve which zone to load services for. Checks CartContext's persisted
-   * location first (localStorage, read on mount — see CartContext) and, if
-   * one was already saved there, uses its hardcoded coordinates directly.
-   * Only when nothing was saved does this ask the browser for geolocation,
-   * and only when that also fails does it show the "pick your location"
-   * modal — so a returning visitor with a saved location never sees a
-   * geolocation prompt or the picker at all.
-   *
-   * Waiting on isLocationHydrated matters: CartContext's own localStorage
-   * read happens in an effect too, one tick after this component mounts.
-   * Acting before it resolves would mean reading isLocationManuallySelected/
-   * locationCoords while they're still at their pre-hydration defaults —
-   * i.e. always falling through to geolocation (and flashing the modal on
-   * denial) even when a location was already known.
-   */
-  useEffect(() => {
-    if (!isLocationHydrated) return;
-
-    if (isLocationManuallySelected && locationCoords) {
-      setShowLocationModal(false);
-      setIsZoneLoading(true);
-      void fetchZone(locationCoords.lat, locationCoords.lon).finally(() => {
-        setIsZoneLoading(false);
-      });
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported.");
-
-      setShowLocationModal(true);
-      setIsZoneLoading(false);
-
-      return;
-    }
-
-    setIsZoneLoading(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        await fetchZone(latitude, longitude);
-
-        setIsZoneLoading(false);
-      },
-
-      (error) => {
-        console.error("Geolocation error:", error);
-
-        setShowLocationModal(true);
-        setIsZoneLoading(false);
-      },
-    );
-  }, [isLocationHydrated, isLocationManuallySelected, locationCoords]);
-
-  /*
-   * Once zoneId is available,
-   * fetch home details.
-   */
-  useEffect(() => {
-    if (!zoneId) return;
-
-    fetchHomeDetails(zoneId);
-  }, [zoneId]);
 
   /*
    * Loading state — covers both resolving the zone and, once that succeeds,
@@ -248,7 +125,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => void fetchHomeDetails(zoneId)}
+            onClick={() => void refetchHomeDetails()}
             className="mt-6 inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors cursor-pointer"
           >
             Retry
@@ -271,7 +148,7 @@ export default function Home() {
             categories={homeDetails.categories}
           />
 
-          {homeDetails.categories.map((category) => {
+          {homeDetails.categories.map((category, index) => {
             const highlightBanner = homeDetails.promotionalCampaigns
               .filter(
                 (campaign) =>
@@ -283,7 +160,9 @@ export default function Home() {
 
             return (
             <div key={category.id}>
-              {highlightBanner && <WallPanel campaign={highlightBanner} category={category} />}
+              {highlightBanner && (
+                <WallPanel campaign={highlightBanner} category={category} priority={index === 0} />
+              )}
               <CategoryServices
                 category={category}
                 zoneId={zoneId}

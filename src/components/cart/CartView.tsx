@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   CalendarClock,
   ChevronRight,
@@ -16,7 +17,12 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { useCart, isPendingSync } from "@/src/context/CartContext";
 import type { Address, CreateAddressBody } from "@/src/services/addressApi";
-import SlotPickerModal from "./SlotPickerModal";
+
+// Only rendered after "Select time slot" is clicked on a synced cart item.
+const SlotPickerModal = dynamic(() => import("./SlotPickerModal"), {
+  ssr: false,
+  loading: () => null,
+});
 
 type AddressInput = Omit<CreateAddressBody, "userId">;
 type Props = {

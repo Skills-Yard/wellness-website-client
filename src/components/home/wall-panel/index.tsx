@@ -7,9 +7,14 @@ import CampaignVideo from "@/src/components/media/CampaignVideo";
 type WallPanelProps = {
     campaign: HomeCampaign;
     category: HomeCategory;
+    /** Only the first category's banner is actually above-the-fold — every
+     *  later one should lazy-load like any other below-fold image instead
+     *  of forcing eager load for all of them. Defaults to false so any
+     *  other caller doesn't silently regress to eager-loading. */
+    priority?: boolean;
 };
 
-export default function WallPanel({ campaign, category }: WallPanelProps) {
+export default function WallPanel({ campaign, category, priority = false }: WallPanelProps) {
     const image = campaign.cdnUrl ?? campaign.s3Key;
     const isVideo = campaign.mediaType === "VIDEO";
     const categoryName = `${category.name} ${category.slug}`.toLowerCase();
@@ -71,7 +76,7 @@ export default function WallPanel({ campaign, category }: WallPanelProps) {
                         fill
                         sizes="100vw"
                         className="absolute inset-0 object-cover"
-                        priority
+                        priority={priority}
                     />
                 )}
                 <span className={`absolute z-10 flex h-5 max-w-[calc(100%-48px)] items-center truncate rounded-[4px] border border-black/[0.09] px-2 text-[10px] font-semibold leading-3 ${mobileTheme.badgeClass}`}>
@@ -102,7 +107,7 @@ export default function WallPanel({ campaign, category }: WallPanelProps) {
                         fill
                         sizes="100vw"
                         className="absolute inset-0 object-cover"
-                        priority
+                        priority={priority}
                     />
                 )}
 

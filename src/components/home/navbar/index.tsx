@@ -37,9 +37,18 @@ import {
   SheetTrigger,
 } from "@/src/components/ui/sheet";
 import { useRouter } from "next/navigation";
-import AuthModal from "@/src/components/auth/AuthModal";
-import CartSheet from "@/src/components/cart/CartSheet";
+import dynamic from "next/dynamic";
+import AuthModal from "@/src/components/auth/LazyAuthModal";
 import { authApi } from "@/src/services/authApi";
+
+// Only ever rendered once the cart icon is clicked — no reason to ship its
+// JS (address forms, Razorpay glue, etc.) in the navbar's initial bundle.
+const CartSheet = dynamic(() => import("@/src/components/cart/CartSheet"), {
+  ssr: false,
+  loading: () => null,
+});
+import { useAddresses } from "@/src/hooks/queries/useAddresses";
+import { formatAddressLabel } from "@/src/services/addressApi";
 
 export default function Navbar() {
   const {
@@ -47,7 +56,17 @@ export default function Navbar() {
     setIsCartOpen,
     location,
     setLocation,
+    addressId,
+    updateCartAddress,
   } = useCart();
+
+  // Saved delivery addresses (only fetched when logged in — see
+  // useAddresses) surfaced alongside the static location list, so a
+  // returning logged-in user sees their real address as an option here,
+  // not just the 5 hardcoded areas.
+  const { data: addressesData } = useAddresses();
+  const addresses = addressesData ?? [];
+  const selectedSavedAddress = addresses.find((address) => address.id === addressId) ?? null;
 
   const [active, setActive] = useState<NavLinkType>("Massage");
   const [query, setQuery] = useState("");
@@ -224,7 +243,9 @@ export default function Navbar() {
               >
                 <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span className="truncate flex-1 text-left">
-                  {isMounted ? location : LOCATIONS[0]}
+                  {isMounted
+                    ? (selectedSavedAddress ? formatAddressLabel(selectedSavedAddress) : location)
+                    : LOCATIONS[0]}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200" />
               </Button>
@@ -233,7 +254,30 @@ export default function Navbar() {
               align="start"
               className="w-64 rounded-2xl p-1.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] border-gray-100 bg-white"
             >
-              <div className="px-2.5 py-1 text-[10px] font-bold text-amber-600 bg-amber-50/50 rounded-lg select-none mb-1">
+              {addresses.length > 0 && (
+                <>
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-50/50 rounded-lg select-none mb-1">
+                    Your Addresses
+                  </div>
+                  {addresses.map((address) => (
+                    <DropdownMenuItem
+                      key={address.id}
+                      onClick={() => updateCartAddress(address.id)}
+                      className={cn(
+                        "cursor-pointer gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors",
+                        addressId === address.id &&
+                          "bg-amber-50 text-amber-600 font-medium focus:bg-amber-50 focus:text-amber-600",
+                      )}
+                    >
+                      <MapPin className="w-3.5 h-3.5 opacity-50 shrink-0 text-amber-500" />
+                      <span className="truncate">
+                        {address.label ?? address.customLabel ?? formatAddressLabel(address)}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              <div className="px-2.5 py-1 text-[10px] font-bold text-amber-600 bg-amber-50/50 rounded-lg select-none mb-1 mt-2.5">
                 Active Areas
               </div>
               {LOCATIONS.map((loc) => (
@@ -440,10 +484,26 @@ export default function Navbar() {
                   Your Location
                 </label>
                 <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  value={selectedSavedAddress ? `address:${selectedSavedAddress.id}` : location}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.startsWith("address:")) {
+                      updateCartAddress(value.slice("address:".length));
+                    } else {
+                      setLocation(value);
+                    }
+                  }}
                   className="w-full bg-gray-50 text-sm text-gray-800 border border-gray-200 rounded-xl h-10 px-3 outline-none focus:border-amber-400 cursor-pointer"
                 >
+                  {addresses.length > 0 && (
+                    <optgroup label="Your Addresses">
+                      {addresses.map((address) => (
+                        <option key={address.id} value={`address:${address.id}`}>
+                          {address.label ?? address.customLabel ?? formatAddressLabel(address)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                   <optgroup label="Active Areas">
                     {LOCATIONS.map((loc) => (
                       <option key={loc} value={loc}>
