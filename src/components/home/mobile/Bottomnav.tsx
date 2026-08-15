@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/src/lib/utils";
+import { useUnreadNotificationCount } from "@/src/hooks/queries/useNotifications";
 
 interface BottomNavProps {
   activeTab: string;
@@ -9,6 +10,9 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, onTabClick }: BottomNavProps) {
+  // No-ops (query stays disabled) when logged out — see useUnreadNotificationCount.
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
+
   const navItems = [
     { id: "top", label: "Home", icon: "/icon/Home.png", color: "amber" },
     { id: "wellness", label: "Spa", icon: "/icon/spa.png", color: "emerald" },
@@ -75,19 +79,25 @@ export default function BottomNav({ activeTab, onTabClick }: BottomNavProps) {
           activeTab === "profile" ? "text-amber-500" : "text-stone-400",
         )}
       >
-        <span
-          className={cn("w-4.5 h-4.5 transition-colors duration-200", activeTab === "profile" ? "bg-amber-500" : "bg-stone-400")}
-          style={{
-            WebkitMaskImage: `url(/icon/Profile.png)`,
-            maskImage: `url(/icon/Profile.png)`,
-            WebkitMaskSize: "contain",
-            maskSize: "contain",
-            WebkitMaskRepeat: "no-repeat",
-            maskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
-            maskPosition: "center",
-          }}
-        />
+        <span className="relative">
+          <span
+            className={cn("w-4.5 h-4.5 transition-colors duration-200", activeTab === "profile" ? "bg-amber-500" : "bg-stone-400")}
+            style={{
+              WebkitMaskImage: `url(/icon/Profile.png)`,
+              maskImage: `url(/icon/Profile.png)`,
+              WebkitMaskSize: "contain",
+              maskSize: "contain",
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+              WebkitMaskPosition: "center",
+              maskPosition: "center",
+            }}
+          />
+          {/* Unseen-notification highlight — full bell + list live at /profile/notifications. */}
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white animate-pulse" />
+          )}
+        </span>
         <span className="text-[9px] font-bold">Profile</span>
       </Link>
     </nav>

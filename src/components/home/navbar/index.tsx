@@ -40,6 +40,8 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AuthModal from "@/src/components/auth/LazyAuthModal";
 import { authApi } from "@/src/services/authApi";
+import { unregisterPushToken } from "@/src/lib/notifications/push";
+import NotificationBell from "@/src/components/notifications/NotificationBell";
 
 // Only ever rendered once the cart icon is clicked — no reason to ship its
 // JS (address forms, Razorpay glue, etc.) in the navbar's initial bundle.
@@ -177,7 +179,10 @@ export default function Navbar() {
   const handleLogout = async () => {
     const accessToken = localStorage.getItem("accessToken");
     try {
-      if (accessToken) await authApi.logout(accessToken);
+      if (accessToken) {
+        await unregisterPushToken(accessToken);
+        await authApi.logout(accessToken);
+      }
     } catch {
       // End the local session even when the server session has expired.
     } finally {
@@ -386,6 +391,9 @@ export default function Navbar() {
             )}
           </Button>
 
+          {/* Notifications Bell */}
+          <NotificationBell isLoggedIn={isMounted && isLoggedIn} />
+
           {/* Account Profile Action */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -455,6 +463,8 @@ export default function Navbar() {
               </span>
             )}
           </Button>
+
+          <NotificationBell isLoggedIn={isMounted && isLoggedIn} className="w-9 h-9" />
 
           {/* Shadcn Sheet Drawer Primitive Substitution */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

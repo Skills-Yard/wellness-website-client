@@ -6,6 +6,7 @@ import { CartProvider } from "@/src/context/CartContext";
 import { CategoryProvider } from "@/src/context/CategoryContext";
 import Navbar from "@/src/components/home/navbar";
 import Providers from "./providers";
+import PushNotificationBootstrap from "@/src/components/notifications/PushNotificationBootstrap";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,6 +54,7 @@ export default function RootLayout({
         <Providers>
           <CategoryProvider>
             <CartProvider>
+              <PushNotificationBootstrap />
               <Navbar />
               {children}
               <div className="hidden md:block">

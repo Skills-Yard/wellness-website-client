@@ -19,6 +19,9 @@ import BottomNav from "../home/mobile/Bottomnav";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import { authApi } from "@/src/services/authApi";
+import { requestPushNotifications, unregisterPushToken } from "@/src/lib/notifications/push";
+import Link from "next/link";
+import { Bell } from "lucide-react";
 
 const AccountSection = ({
   user,
@@ -190,6 +193,38 @@ const AddressSection = ({ user }: { user: UserProfile }) => {
 // 3. SETTINGS COMPONENT
 // ==========================================
 const SettingsSection = () => {
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushEnabled(Notification.permission === "granted");
+    }
+  }, []);
+
+  const handleTogglePush = async (checked: boolean) => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken || isTogglingPush) return;
+
+    setIsTogglingPush(true);
+    try {
+      if (checked) {
+        const registered = await requestPushNotifications(accessToken);
+        setPushEnabled(registered);
+        if (!registered) {
+          toast.error("Couldn't enable notifications. Check your browser's permission settings.");
+        }
+      } else {
+        // Browser permission itself can only be revoked from browser settings —
+        // this stops the backend from targeting this device going forward.
+        await unregisterPushToken(accessToken);
+        setPushEnabled(false);
+      }
+    } finally {
+      setIsTogglingPush(false);
+    }
+  };
+
   return (
     <AccordionItem value="settings" className="border-b-slate-200 py-2">
       <AccordionTrigger className="hover:no-underline">
@@ -198,12 +233,30 @@ const SettingsSection = () => {
 
       <AccordionContent className="pt-2">
         <div className="divide-y divide-slate-100">
+          <Link
+            href="/profile/notifications"
+            className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Bell className="h-4 w-4 text-amber-500" />
+              <div className="space-y-0.5">
+                <p className="font-medium text-slate-900">Notifications</p>
+                <p className="text-xs text-slate-500">View booking updates and offers</p>
+              </div>
+            </div>
+            <span className="text-slate-400">→</span>
+          </Link>
+
           <div className="flex items-center justify-between py-4">
             <div className="space-y-0.5">
               <p className="font-medium text-slate-900">Push Notifications</p>
-              <p className="text-xs text-slate-500">Updates on your bookings</p>
+              <p className="text-xs text-slate-500">Get notified on this device</p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={pushEnabled}
+              disabled={isTogglingPush}
+              onCheckedChange={(checked) => void handleTogglePush(checked)}
+            />
           </div>
 
           <div className="flex items-center justify-between py-4">
@@ -331,7 +384,10 @@ export default function ProfilePage() {
     setIsLoggingOut(true);
 
     try {
-      if (accessToken) await authApi.logout(accessToken);
+      if (accessToken) {
+        await unregisterPushToken(accessToken);
+        await authApi.logout(accessToken);
+      }
     } catch {
       // The local session should still end if the server session has expired.
     } finally {

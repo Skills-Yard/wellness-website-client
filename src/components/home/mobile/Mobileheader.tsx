@@ -15,6 +15,7 @@ import { HomeServiceItem } from "@/src/types/serviceTypes";
 import { useCart } from "@/src/context/CartContext";
 import { useAddresses } from "@/src/hooks/queries/useAddresses";
 import { formatAddressLabel } from "@/src/services/addressApi";
+import NotificationBell from "@/src/components/notifications/NotificationBell";
 
 interface MobileHeaderProps {
     location: string;
@@ -164,6 +165,10 @@ export default function MobileHeader({
                         </span>
                     )}
                 </Button>
+
+                {isMounted && (
+                    <NotificationBell className="rounded-full bg-white shadow-sm border-none" />
+                )}
             </div>
 
             {/* Search Row */}

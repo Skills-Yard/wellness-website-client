@@ -23,4 +23,6 @@ export const queryKeys = {
   campaigns: (categoryId: string, zoneId: string) =>
     ["campaigns", categoryId, zoneId] as const,
   addresses: () => ["addresses"] as const,
+  notifications: () => ["notifications"] as const,
+  unreadNotificationCount: () => ["notifications", "unread-count"] as const,
 };
