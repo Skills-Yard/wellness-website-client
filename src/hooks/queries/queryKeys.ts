@@ -25,4 +25,8 @@ export const queryKeys = {
   addresses: () => ["addresses"] as const,
   notifications: () => ["notifications"] as const,
   unreadNotificationCount: () => ["notifications", "unread-count"] as const,
+  bookings: () => ["bookings"] as const,
+  booking: (id: string) => ["bookings", id] as const,
+  me: () => ["me"] as const,
+  notificationPreference: () => ["notification-preference"] as const,
 };

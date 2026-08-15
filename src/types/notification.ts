@@ -32,3 +32,17 @@ export type RegisterDeviceTokenBody = {
 
 export type RegisterDeviceTokenResponse = ApiSuccess<{ id: string }>;
 export type UnregisterDeviceTokenResponse = ApiSuccess<{ success: boolean }>;
+
+/** GET/PATCH /users/notification-preference. Email is intentionally not
+ *  exposed in the Settings UI — the backend has no real email delivery
+ *  channel configured, even though the field exists on this row. */
+export type NotificationPreference = {
+  id?: string;
+  userId?: string;
+  whatsappOptIn: boolean;
+  emailOptIn: boolean;
+  pushOptIn: boolean;
+  promotionalOptIn: boolean;
+};
+
+export type NotificationPreferenceResponse = ApiSuccess<NotificationPreference>;

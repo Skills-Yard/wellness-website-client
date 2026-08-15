@@ -10,6 +10,7 @@ import {
   X,
   Sparkles,
   Menu,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/src/context/CartContext";
@@ -420,7 +421,7 @@ export default function Navbar() {
               </DropdownMenuItem>
               {isLoggedIn && (
               <DropdownMenuItem
-                onClick={() => alert("My Bookings section coming soon!")}
+                onClick={() => router.push("/bookings")}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
                 My Bookings
@@ -428,7 +429,7 @@ export default function Navbar() {
               )}
               {isLoggedIn && (
               <DropdownMenuItem
-                onClick={() => alert("Account Settings coming soon!")}
+                onClick={() => router.push("/profile?section=settings")}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
                 Account Settings
@@ -592,12 +593,28 @@ export default function Navbar() {
               </div>
 
               {/* Account / User Drawer Bottom Actions Footer section */}
-              <div className="border-t border-gray-100 pt-4 mt-auto">
+              {isLoggedIn && (
+              <div className="border-t border-gray-100 pt-4 mt-auto space-y-1">
                 <button
                   type="button"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    alert("Account Settings coming soon!");
+                    router.push("/bookings");
+                  }}
+                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 text-left transition-colors cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                    <CalendarClock className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    My Bookings
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    router.push("/profile?section=settings");
                   }}
                   className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 text-left transition-colors cursor-pointer"
                 >
@@ -609,6 +626,7 @@ export default function Navbar() {
                   </span>
                 </button>
               </div>
+              )}
             </SheetContent>
           </Sheet>
         </div>

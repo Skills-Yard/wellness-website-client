@@ -46,6 +46,36 @@ export type CreateUserResponse = ApiSuccess<{
   };
 }>;
 
+/** GET /users/me — the logged-in client's own profile. */
+export type UserProfile = {
+  id: string;
+  countryCode: string;
+  /** Decrypted server-side for this exact endpoint only (a client viewing
+   *  their own record) — see UserService.applyFieldVisibility. */
+  phone?: string;
+  name?: string | null;
+  email?: string | null;
+  profilePhotoKey?: string | null;
+  dateOfBirth?: string | null;
+  gender?: "MALE" | "FEMALE" | "OTHER" | null;
+  referralCode?: string;
+  isPhoneVerified: boolean;
+  isProfileComplete: boolean;
+};
+
+export type GetMeResponse = ApiSuccess<UserProfile>;
+
+/** Body for PATCH /users/me — a client editing their own profile. */
+export type UpdateProfileBody = {
+  name?: string;
+  email?: string;
+  profilePhotoKey?: string;
+  dateOfBirth?: string;
+  gender?: "MALE" | "FEMALE" | "OTHER";
+};
+
+export type UpdateProfileResponse = ApiSuccess<UserProfile>;
+
 export type RefreshTokenBody = {
   refreshToken: string;
 };

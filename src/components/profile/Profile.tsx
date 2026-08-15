@@ -8,12 +8,10 @@ import {
   AccordionTrigger,
 } from "@/src/components/ui/accordion";
 import { Switch } from "@/src/components/ui/switch";
-import { tempUser, UserProfile } from "@/src/utils/data/tempUserData";
 import {
   ShieldCheck,
   UserCircle2,
 } from "lucide-react";
-import { useCart } from "@/src/context/CartContext";
 import AuthModal from "../auth/LazyAuthModal";
 import BottomNav from "../home/mobile/Bottomnav";
 import { useRouter } from "next/navigation";
@@ -21,19 +19,50 @@ import { toast, ToastContainer } from "react-toastify";
 import { authApi } from "@/src/services/authApi";
 import { requestPushNotifications, unregisterPushToken } from "@/src/lib/notifications/push";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, CalendarClock } from "lucide-react";
+import { useMe, useUpdateProfile, useNotificationPreference, useUpdateNotificationPreference } from "@/src/hooks/queries/useProfile";
+import { useAddresses, useCreateAddress, useUpdateAddress, useRemoveAddress } from "@/src/hooks/queries/useAddresses";
+import type { Address } from "@/src/services/addressApi";
+import type { UserProfile } from "@/src/types/auth";
+import { AddressPicker, type AddressInput } from "@/src/components/addresses/AddressPicker";
 
+const getAccessToken = () =>
+  typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+
+// ==========================================
+// 1. ACCOUNT COMPONENT
+// ==========================================
 const AccountSection = ({
-  user,
-  onEdit,
+  profile,
+  isLoading,
+  isSaving,
+  onSave,
 }: {
-  user: UserProfile;
-  onEdit: () => void;
+  profile: UserProfile | undefined;
+  isLoading: boolean;
+  isSaving: boolean;
+  onSave: (values: { name: string; email: string }) => void;
 }) => {
-  const isProfileComplete = user.name && user.email;
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
+  // Seed the draft from whatever's currently loaded whenever we're not
+  // mid-edit — keeps the form in sync once useMe() resolves without
+  // clobbering what the user is actively typing.
+  useEffect(() => {
+    if (isEditing) return;
+    setName(profile?.name ?? "");
+    setEmail(profile?.email ?? "");
+  }, [profile, isEditing]);
 
+  const isProfileComplete = !!profile?.name && !!profile?.email;
 
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    onSave({ name: name.trim(), email: email.trim() });
+    setIsEditing(false);
+  };
 
   return (
     <AccordionItem value="account" className="border-b-slate-200 py-2">
@@ -42,7 +71,7 @@ const AccountSection = ({
           <span className="text-lg font-bold text-slate-900">
             Account Details
           </span>
-          {!isProfileComplete && (
+          {!isLoading && !isProfileComplete && (
             <span className="inline-flex animate-pulse items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800">
               INCOMPLETE
             </span>
@@ -55,95 +84,145 @@ const AccountSection = ({
           Manage your personal information
         </p>
 
-        {!isProfileComplete && (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm text-amber-800">
-              Please complete your profile to receive booking confirmations
-              and exclusive offers.
-            </p>
-          </div>
+        {isLoading ? (
+          <p className="text-sm text-slate-400">Loading…</p>
+        ) : (
+          <>
+            {!isProfileComplete && (
+              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm text-amber-800">
+                  Please complete your profile to receive booking confirmations
+                  and exclusive offers.
+                </p>
+              </div>
+            )}
+
+            {isEditing ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Full Name</label>
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Your full name"
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Email Address</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="you@example.com"
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="flex-1 rounded-lg bg-amber-500 py-2 text-sm font-bold text-white hover:bg-amber-500/90 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isSaving ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs font-medium text-slate-500">
+                    Mobile Number
+                  </label>
+                  <div className="mt-1 flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                    <span className="font-medium">
+                      {profile?.phone ? `${profile.countryCode} ${profile.phone}` : "—"}
+                    </span>
+                    {profile?.isPhoneVerified && (
+                      <span className="text-xs font-semibold text-green-600">
+                        Verified ✓
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-500">
+                    Full Name
+                  </label>
+                  <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
+                    <span
+                      className={
+                        profile?.name ? "text-slate-900" : "text-slate-400 italic"
+                      }
+                    >
+                      {profile?.name || "Not provided yet"}
+                    </span>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
+                    >
+                      {profile?.name ? "Edit" : "Add"}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-500">
+                    Email Address
+                  </label>
+                  <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
+                    <span
+                      className={
+                        profile?.email ? "text-slate-900" : "text-slate-400 italic"
+                      }
+                    >
+                      {profile?.email || "Not provided yet"}
+                    </span>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
+                    >
+                      {profile?.email ? "Edit" : "Add"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
-
-        <div className="space-y-5">
-          <div>
-            <label className="text-xs font-medium text-slate-500">
-              Mobile Number
-            </label>
-            <div className="mt-1 flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-              <span className="font-medium">{user.phone}</span>
-              <span className="text-xs font-semibold text-green-600">
-                Verified ✓
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-slate-500">
-              Full Name
-            </label>
-            <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
-              <span
-                className={
-                  user.name ? "text-slate-900" : "text-slate-400 italic"
-                }
-              >
-                {user.name || "Not provided yet"}
-              </span>
-              <button
-                onClick={onEdit}
-                className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
-              >
-                {user.name ? "Edit" : "Add"}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-slate-500">
-              Email Address
-            </label>
-            <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
-              <span
-                className={
-                  user.email ? "text-slate-900" : "text-slate-400 italic"
-                }
-              >
-                {user.email || "Not provided yet"}
-              </span>
-              <button
-                onClick={onEdit}
-                className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
-              >
-                {user.email ? "Edit" : "Add"}
-              </button>
-            </div>
-          </div>
-        </div>
       </AccordionContent>
     </AccordionItem>
-
   );
 };
 
 // ==========================================
 // 2. ADDRESS COMPONENT
 // ==========================================
-const AddAddressCard = ({ onAdd }: { onAdd: () => void }) => {
-  return (
-    <button
-      onClick={onAdd}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-amber-600 transition-all hover:border-amber-300 hover:bg-amber-50 active:scale-[0.98] cursor-pointer"
-    >
-      <span className="text-lg">+</span> Add New Address
-    </button>
-  );
-};
-
-const AddressSection = ({ user }: { user: UserProfile }) => {
-  const handleAddAddress = () => {
-    alert("Open address modal or navigate to map here!");
-  };
-
+const AddressSection = ({
+  addresses,
+  isLoading,
+  isSaving,
+  isDeleting,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: {
+  addresses: Address[];
+  isLoading: boolean;
+  isSaving: boolean;
+  isDeleting: boolean;
+  onCreate: (address: AddressInput) => void;
+  onUpdate: (addressId: string, address: AddressInput) => void;
+  onDelete: (addressId: string) => void;
+}) => {
   return (
     <AccordionItem value="address" className="border-b-slate-200 py-2">
       <AccordionTrigger className="hover:no-underline">
@@ -157,33 +236,24 @@ const AddressSection = ({ user }: { user: UserProfile }) => {
           Manage where we deliver our spa services.
         </p>
 
-        <div className="space-y-4">
-          {/* List Existing Addresses */}
-          {user.addresses.map((address) => (
-            <div
-              key={address.id}
-              className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                  {address.type}
-                </span>
-                <div className="flex gap-3 text-sm font-medium text-amber-600">
-                  <button className="hover:text-amber-700 cursor-pointer">Edit</button>
-                  <button className="text-red-500 hover:text-red-600 cursor-pointer">
-                    Delete
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed">
-                {address.fullAddress}
-              </p>
-            </div>
-          ))}
-
-          {/* Add New Address Component */}
-          <AddAddressCard onAdd={handleAddAddress} />
-        </div>
+        {isLoading ? (
+          <p className="text-sm text-slate-400">Loading…</p>
+        ) : (
+          // AddressPicker (shared with checkout's address step) already
+          // renders the full list — each row with working Edit/Delete —
+          // plus the add/edit form together, so there's no separate
+          // "view mode" card list to keep in sync with it here.
+          <div className="-mx-1 overflow-hidden rounded-xl border border-slate-100">
+            <AddressPicker
+              addresses={addresses}
+              isSaving={isSaving}
+              isDeleting={isDeleting}
+              onCreate={onCreate}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+            />
+          </div>
+        )}
       </AccordionContent>
     </AccordionItem>
   );
@@ -196,6 +266,9 @@ const SettingsSection = () => {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isTogglingPush, setIsTogglingPush] = useState(false);
 
+  const { data: preference } = useNotificationPreference();
+  const updatePreference = useUpdateNotificationPreference();
+
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       setPushEnabled(Notification.permission === "granted");
@@ -203,7 +276,7 @@ const SettingsSection = () => {
   }, []);
 
   const handleTogglePush = async (checked: boolean) => {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = getAccessToken();
     if (!accessToken || isTogglingPush) return;
 
     setIsTogglingPush(true);
@@ -234,6 +307,20 @@ const SettingsSection = () => {
       <AccordionContent className="pt-2">
         <div className="divide-y divide-slate-100">
           <Link
+            href="/bookings"
+            className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <CalendarClock className="h-4 w-4 text-amber-500" />
+              <div className="space-y-0.5">
+                <p className="font-medium text-slate-900">My Bookings</p>
+                <p className="text-xs text-slate-500">View upcoming and past bookings</p>
+              </div>
+            </div>
+            <span className="text-slate-400">→</span>
+          </Link>
+
+          <Link
             href="/profile/notifications"
             className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
           >
@@ -261,12 +348,24 @@ const SettingsSection = () => {
 
           <div className="flex items-center justify-between py-4">
             <div className="space-y-0.5">
-              <p className="font-medium text-slate-900">Location Services</p>
-              <p className="text-xs text-slate-500">
-                For accurate service delivery
-              </p>
+              <p className="font-medium text-slate-900">WhatsApp Updates</p>
+              <p className="text-xs text-slate-500">Booking updates over WhatsApp</p>
             </div>
-            <Switch />
+            <Switch
+              checked={preference?.whatsappOptIn ?? false}
+              onCheckedChange={(checked) => updatePreference.mutate({ whatsappOptIn: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between py-4">
+            <div className="space-y-0.5">
+              <p className="font-medium text-slate-900">Offers & Promotions</p>
+              <p className="text-xs text-slate-500">Occasional deals and discounts</p>
+            </div>
+            <Switch
+              checked={preference?.promotionalOptIn ?? false}
+              onCheckedChange={(checked) => updatePreference.mutate({ promotionalOptIn: checked })}
+            />
           </div>
         </div>
       </AccordionContent>
@@ -328,36 +427,36 @@ const AboutSection = ({
 // ==========================================
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile>(tempUser);
-  const { cartCount, setIsCartOpen } = useCart();
 
   const [isLogin, setIsLogin] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   // Prevents Next.js hydration mismatch errors
   const [isMounted, setIsMounted] = useState(false);
+  // Which accordion section opens first — read from ?section= below so
+  // links like the navbar's "Account Settings" can land directly on it,
+  // same `new URLSearchParams(window.location.search)` convention
+  // useMobileHome.ts already uses for its own ?tab= deep link.
+  const [openSection, setOpenSection] = useState("account");
+
+  const { data: profile, isLoading: isProfileLoading } = useMe();
+  const updateProfile = useUpdateProfile();
+  const { data: addresses = [], isLoading: isAddressesLoading } = useAddresses();
+  const createAddress = useCreateAddress();
+  const updateAddress = useUpdateAddress();
+  const removeAddress = useRemoveAddress();
 
   // This function is called when the user successfully finishes the AuthModal flow
   // 1. Check local storage when the component loads
   useEffect(() => {
     setIsMounted(true);
     const storedLoginState = localStorage.getItem("isUserLoggedIn");
-
-    const storedProfile = localStorage.getItem("userProfile");
-    if (storedProfile) {
-      try {
-        const profile = JSON.parse(storedProfile) as Pick<
-          UserProfile,
-          "phone" | "name" | "email"
-        >;
-        setUser((currentUser) => ({ ...currentUser, ...profile }));
-      } catch {
-        localStorage.removeItem("userProfile");
-      }
-    }
-
     if (storedLoginState === "true") {
       setIsLogin(true);
+    }
+    const section = new URLSearchParams(window.location.search).get("section");
+    if (section === "settings") {
+      setOpenSection("settings");
     }
   }, []);
 
@@ -375,12 +474,43 @@ export default function ProfilePage() {
   // Do not render the UI until we have checked local storage on the client
   if (!isMounted) return null;
 
-  const handleEditProfile = () => {
-    alert("Open an edit modal or navigate to an edit page here!");
+  const handleSaveProfile = (values: { name: string; email: string }) => {
+    updateProfile.mutate(values, {
+      onSuccess: () => toast.success("Profile updated."),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't update your profile."),
+    });
+  };
+
+  const handleCreateAddress = (values: AddressInput) => {
+    if (!profile) return;
+    createAddress.mutate(
+      { ...values, userId: profile.id },
+      {
+        onSuccess: () => toast.success("Address added."),
+        onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't add this address."),
+      },
+    );
+  };
+
+  const handleUpdateAddress = (addressId: string, values: AddressInput) => {
+    updateAddress.mutate(
+      { addressId, body: values },
+      {
+        onSuccess: () => toast.success("Address updated."),
+        onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't update this address."),
+      },
+    );
+  };
+
+  const handleDeleteAddress = (addressId: string) => {
+    removeAddress.mutate(addressId, {
+      onSuccess: () => toast.success("Address removed."),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't remove this address."),
+    });
   };
 
   const handleLogout = async () => {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = getAccessToken();
     setIsLoggingOut(true);
 
     try {
@@ -450,11 +580,24 @@ export default function ProfilePage() {
               <Accordion
                 type="single"
                 collapsible
-                defaultValue="account"
+                defaultValue={openSection}
                 className="w-full"
               >
-                <AccountSection user={user} onEdit={handleEditProfile} />
-                <AddressSection user={user} />
+                <AccountSection
+                  profile={profile}
+                  isLoading={isProfileLoading}
+                  isSaving={updateProfile.isPending}
+                  onSave={handleSaveProfile}
+                />
+                <AddressSection
+                  addresses={addresses}
+                  isLoading={isAddressesLoading}
+                  isSaving={createAddress.isPending || updateAddress.isPending}
+                  isDeleting={removeAddress.isPending}
+                  onCreate={handleCreateAddress}
+                  onUpdate={handleUpdateAddress}
+                  onDelete={handleDeleteAddress}
+                />
                 <SettingsSection />
                 <AboutSection
                   onLogout={handleLogout}

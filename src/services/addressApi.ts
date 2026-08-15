@@ -39,6 +39,7 @@ export type AddressesResponse = ApiSuccess<
 >;
 export type CreateAddressResponse = ApiSuccess<Address>;
 export type UpdateAddressResponse = ApiSuccess<Address>;
+export type RemoveAddressResponse = ApiSuccess<Address>;
 
 /** GET /users/addresses' `data` comes back either as a bare array or
  *  wrapped in { addresses } / { items } depending on endpoint version —
@@ -73,6 +74,12 @@ export const addressApi = {
     return apiClient.patch<UpdateAddressBody, UpdateAddressResponse>(
       `/users/addresses/${addressId}`,
       body,
+      { accessToken },
+    );
+  },
+  remove(addressId: string, accessToken: string) {
+    return apiClient.delete<RemoveAddressResponse>(
+      `/users/addresses/${addressId}`,
       { accessToken },
     );
   },
