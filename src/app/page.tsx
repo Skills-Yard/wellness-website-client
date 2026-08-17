@@ -141,7 +141,7 @@ export default function Home() {
         {/* ───────── DESKTOP ───────── */}
 
         <div className="hidden md:block">
-          <Header homeDetails={homeDetails} />
+          <Header homeDetails={homeDetails} zoneId={zoneId} />
 
           <Inspotlight
             campaigns={homeDetails.promotionalCampaigns}

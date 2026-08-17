@@ -3,19 +3,29 @@ import { getServiceItems } from "@/src/services/serviceItemApi";
 import { ServiceItem } from "@/src/types/serviceItemTypes";
 import { queryKeys } from "./queryKeys";
 
-/** Active service items for one sub-category, in one zone. */
+/** Active service items for one sub-category, in one zone — optionally
+ *  narrowed to one gender and/or suite (see the category-select flow). */
 export function useServiceItems(
   subCategoryId: string | undefined,
   zoneId: string | null | undefined,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; genderId?: string; suiteId?: string },
 ) {
+  const { genderId, suiteId } = options ?? {};
+
   return useQuery({
-    queryKey: queryKeys.serviceItems(subCategoryId ?? "", zoneId ?? ""),
+    queryKey: queryKeys.serviceItems(
+      subCategoryId ?? "",
+      zoneId ?? "",
+      genderId ?? "",
+      suiteId ?? "",
+    ),
     queryFn: () =>
       getServiceItems({
         isActive: true,
         subCategoryId: subCategoryId as string,
         zoneId: zoneId as string,
+        genderId,
+        suiteId,
       }).then((r) => r.data ?? []),
     enabled: (options?.enabled ?? true) && !!subCategoryId && !!zoneId,
   });
@@ -25,9 +35,12 @@ export function useServiceItems(
  * Fetches every given sub-category's service items in parallel, same as
  * the previous Promise.allSettled-based fetches in category-services and
  * spa-booking, but as N cached React Query entries keyed by
- * [subCategoryId, zoneId] — this is what lets the home page's category
- * row and its own "See all" detail page share a cache entry instead of
- * both re-fetching the same sub-category's services.
+ * [subCategoryId, zoneId, genderId, suiteId] (see queryKeys.serviceItems)
+ * — this is what lets the home page's category row and its own "See all"
+ * detail page share a cache entry instead of both re-fetching the same
+ * sub-category's services, while a gender/suite-filtered fetch (the
+ * category-select flow) gets its own distinct cache entry instead of
+ * colliding with the unfiltered one.
  *
  * Uses `combine` (not a plain .flatMap() over the raw results) so the
  * returned `services` array is structurally shared/referentially stable
@@ -41,18 +54,26 @@ export function useServiceItems(
 export function useServiceItemsForSubCategories(
   subCategoryIds: string[],
   zoneId: string | null | undefined,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; genderId?: string; suiteId?: string },
 ) {
   const enabled = (options?.enabled ?? true) && !!zoneId;
+  const { genderId, suiteId } = options ?? {};
 
   return useQueries({
     queries: subCategoryIds.map((subCategoryId) => ({
-      queryKey: queryKeys.serviceItems(subCategoryId, zoneId ?? ""),
+      queryKey: queryKeys.serviceItems(
+        subCategoryId,
+        zoneId ?? "",
+        genderId ?? "",
+        suiteId ?? "",
+      ),
       queryFn: () =>
         getServiceItems({
           isActive: true,
           subCategoryId,
           zoneId: zoneId as string,
+          genderId,
+          suiteId,
         }).then((r) => r.data ?? []),
       enabled,
     })),

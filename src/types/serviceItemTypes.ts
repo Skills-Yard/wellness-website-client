@@ -10,6 +10,12 @@ export type ServiceItemsQuery = {
   isActive: boolean;
   subCategoryId: string;
   zoneId: string;
+  /** ServiceGender ID (see GET /service-genders) — narrows results to one
+   *  audience, chosen in the category-select flow. */
+  genderId?: string;
+  /** ServiceSuite ID (see GET /service-suites) — narrows results to one
+   *  suite, chosen in the category-select flow. */
+  suiteId?: string;
 };
 
 export type ServiceFaq = {

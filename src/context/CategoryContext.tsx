@@ -12,6 +12,7 @@ import { getCategoryById } from "@/src/services/categoryApi";
 import { CatalogCategory, CategoryDetails } from "@/src/types/categoryTypes";
 import { useCategories as useCategoriesQuery } from "@/src/hooks/queries/useCategories";
 import { queryKeys } from "@/src/hooks/queries/queryKeys";
+import { useCart } from "./CartContext";
 
 type CategoryContextValue = {
   categories: CatalogCategory[];
@@ -36,7 +37,11 @@ const EMPTY_CATEGORIES: CatalogCategory[] = [];
 
 export function CategoryProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const { data, isLoading, error } = useCategoriesQuery();
+  // Categories are zone-filtered on the backend (see categoryApi.ts) — this
+  // provider must sit inside CartProvider (see layout.tsx) to read the zone
+  // it resolves.
+  const { zoneId } = useCart();
+  const { data, isLoading, error } = useCategoriesQuery(zoneId);
   const categories = data ?? EMPTY_CATEGORIES;
 
   const findCategoryBySlug = useCallback(
@@ -59,10 +64,10 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
   const loadCategory = useCallback(
     (categoryId: string) =>
       queryClient.fetchQuery({
-        queryKey: queryKeys.category(categoryId),
-        queryFn: () => getCategoryById(categoryId).then((r) => r.data),
+        queryKey: queryKeys.category(categoryId, zoneId ?? ""),
+        queryFn: () => getCategoryById(categoryId, zoneId ?? undefined).then((r) => r.data),
       }),
-    [queryClient],
+    [queryClient, zoneId],
   );
 
   const value = useMemo(

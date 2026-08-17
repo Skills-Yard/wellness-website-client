@@ -99,14 +99,14 @@ export default function SpaBookingLayout() {
     data: categoryDetails,
     isLoading: isDetailsLoading,
     error: detailsErrorObj,
-  } = useCategory(categoryId, { enabled: !!categoryId });
+  } = useCategory(categoryId, zoneId, { enabled: !!categoryId });
   const detailsError = detailsErrorObj as Error | null;
 
   const {
     data: subCategoriesData,
     isLoading: isSubCategoriesLoading,
     error: subCategoriesErrorObj,
-  } = useSubCategories(categoryId, { enabled: !!categoryId });
+  } = useSubCategories(categoryId, zoneId, { enabled: !!categoryId });
   const subCategories: SubCategory[] = subCategoriesData ?? EMPTY_SUB_CATEGORIES;
 
   const { data: campaignsData } = usePromotionalCampaigns(
@@ -140,10 +140,17 @@ export default function SpaBookingLayout() {
     return { heroCampaign: best ?? null, carouselCampaigns: carousel };
   }, [campaignsData, categoryId]);
 
+  // Set by the home page's category-select flow (CategorySelectModal) —
+  // absent for links that skip straight here (e.g. "See all"), in which
+  // case every gender/suite is shown, same as before that flow existed.
+  const genderId = searchParams.get("genderId") ?? undefined;
+  const suiteId = searchParams.get("suiteId") ?? undefined;
+
   // Fetches every sub-category's services as separate cached queries keyed
-  // by [subCategoryId, zoneId] (see useServiceItemsForSubCategories) — this
-  // is what lets a "See all" click from the home page's CategoryServices
-  // (same key) reuse the cache instead of refetching.
+  // by [subCategoryId, zoneId, genderId, suiteId] (see
+  // useServiceItemsForSubCategories) — this is what lets a "See all" click
+  // from the home page's CategoryServices (same key, no gender/suite) reuse
+  // the cache instead of refetching.
   const {
     services: serviceItems,
     isLoading: isServicesLoading,
@@ -151,7 +158,7 @@ export default function SpaBookingLayout() {
   } = useServiceItemsForSubCategories(
     subCategories.map((subCategory) => subCategory.id),
     zoneId,
-    { enabled: subCategories.length > 0 },
+    { enabled: subCategories.length > 0, genderId, suiteId },
   );
   const servicesError = isServicesError
     ? new Error("Unable to load services.")
@@ -219,11 +226,27 @@ export default function SpaBookingLayout() {
       features: service.features ?? [],
       };
     });
+    // subCategories comes from the zone-derived (but suite/gender-agnostic)
+    // sub-categories endpoint — a tab can still end up with zero services
+    // once the category-select flow's suite/gender narrows things further
+    // (see CategorySelectModal). Only drop empty tabs when that narrowing
+    // is actually active: without it, the raw list is already correct, and
+    // filtering unconditionally would hide a genuinely-empty-right-now tab
+    // a merchant is mid-stocking, purely because of a client-side guess.
+    const hasSuiteOrGenderFilter = Boolean(genderId || suiteId);
+    const subCategoryIdsWithServices = new Set(
+      services.map((service) => service.subCategoryId),
+    );
+    const dropEmptyTabs = (categories: Category[]) =>
+      hasSuiteOrGenderFilter
+        ? categories.filter((category) => subCategoryIdsWithServices.has(category.id))
+        : categories;
+
     if (subCategories.length) {
-      return { services, serviceCategories: subCategories };
+      return { services, serviceCategories: dropEmptyTabs(subCategories) };
     }
     if (categoryDetails?.categories?.length) {
-      return { services, serviceCategories: categoryDetails.categories };
+      return { services, serviceCategories: dropEmptyTabs(categoryDetails.categories) };
     }
     const serviceCategories: Category[] = [
       ...new Set(services.map((service) => service.category).filter(Boolean)),
@@ -231,11 +254,13 @@ export default function SpaBookingLayout() {
     return { services, serviceCategories };
   }, [
     categoryDetails,
+    genderId,
     serviceAddOns,
     serviceDurations,
     serviceItems,
     servicePackages,
     subCategories,
+    suiteId,
   ]);
 
   // ServiceCategory has no rating/review fields of its own in the schema — this
