@@ -11,6 +11,7 @@ import { Switch } from "@/src/components/ui/switch";
 import {
   ShieldCheck,
   UserCircle2,
+  MonitorSmartphone,
 } from "lucide-react";
 import AuthModal from "../auth/LazyAuthModal";
 import BottomNav from "../home/mobile/Bottomnav";
@@ -329,6 +330,20 @@ const SettingsSection = () => {
               <div className="space-y-0.5">
                 <p className="font-medium text-slate-900">Notifications</p>
                 <p className="text-xs text-slate-500">View booking updates and offers</p>
+              </div>
+            </div>
+            <span className="text-slate-400">→</span>
+          </Link>
+
+          <Link
+            href="/profile/devices"
+            className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <MonitorSmartphone className="h-4 w-4 text-amber-500" />
+              <div className="space-y-0.5">
+                <p className="font-medium text-slate-900">Devices</p>
+                <p className="text-xs text-slate-500">Manage where you&apos;re logged in</p>
               </div>
             </div>
             <span className="text-slate-400">→</span>

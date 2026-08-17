@@ -117,7 +117,7 @@ export default function CategoryServices({
   // all" into this same category's detail page reuses this cache instead
   // of refetching identical data.
   const { data: subCategoriesData, isLoading: isSubCategoriesLoading, isError: isSubCategoriesError } =
-    useSubCategories(category.id, { enabled: isActive });
+    useSubCategories(category.id, zoneId, { enabled: isActive });
   const subCategoryIds = useMemo(
     () => (subCategoriesData ?? []).map((subCategory) => subCategory.id),
     [subCategoriesData],

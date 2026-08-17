@@ -86,3 +86,28 @@ export type RefreshTokenResponse = ApiSuccess<{
 }>;
 
 export type LogoutResponse = ApiSuccess<Record<string, never>>;
+
+/** GET /auth/devices — a merged view of live login sessions and registered
+ *  push tokens ("devices"), see backend DeviceSessionService. A SESSION item
+ *  is an actual logged-in session; a TOKEN item is a push registration with
+ *  no (or no longer any) live session behind it. */
+export type DeviceKind = "SESSION" | "TOKEN";
+
+export type DeviceItem = {
+  id: string;
+  kind: DeviceKind;
+  deviceType: "WEB" | "ANDROID" | "IOS" | null;
+  deviceName: string | null;
+  deviceModel: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  /** True only when this device's own current FCM token was sent along with
+   *  the request and matches this entry — otherwise always false, e.g. no
+   *  push permission ever granted on this browser. */
+  isCurrent: boolean;
+};
+
+export type ListDevicesResponse = ApiSuccess<DeviceItem[]>;
+export type RevokeDeviceResponse = ApiSuccess<{ success: boolean }>;

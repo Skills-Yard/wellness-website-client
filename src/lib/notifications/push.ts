@@ -1,7 +1,7 @@
 import { getExistingPushToken, requestPushPermissionAndToken } from "@/src/lib/firebase/messaging";
 import { notificationApi } from "@/src/services/notificationApi";
 
-const DEVICE_TOKEN_STORAGE_KEY = "fcmDeviceToken";
+export const DEVICE_TOKEN_STORAGE_KEY = "fcmDeviceToken";
 
 async function persistToken(token: string, accessToken: string) {
   try {

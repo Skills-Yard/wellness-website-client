@@ -14,11 +14,29 @@ const roundCoord = (value: number) => Math.round(value * 1000) / 1000;
 export const queryKeys = {
   zones: (lat: number, lon: number) =>
     ["zones", roundCoord(lat), roundCoord(lon)] as const,
-  categories: () => ["categories"] as const,
-  category: (categoryId: string) => ["category", categoryId] as const,
-  subCategories: (categoryId: string) => ["subCategories", categoryId] as const,
-  serviceItems: (subCategoryId: string, zoneId: string) =>
-    ["serviceItems", subCategoryId, zoneId] as const,
+  // Zone-scoped — see categoryApi.ts: /catalog/categories and friends are
+  // @LocationRequired on the backend (FLEXIBLE mode, filtered by zone), not
+  // the zone-independent lookups they were originally treated as. Keying by
+  // zoneId means a stale/errored zoneless attempt (fired before CartContext
+  // resolves one) never blocks the correctly-zoned refetch that follows.
+  categories: (zoneId: string) => ["categories", zoneId] as const,
+  category: (categoryId: string, zoneId: string) =>
+    ["category", categoryId, zoneId] as const,
+  subCategories: (categoryId: string, zoneId: string) =>
+    ["subCategories", categoryId, zoneId] as const,
+  serviceGenders: (categoryId: string) => ["serviceGenders", categoryId] as const,
+  serviceSuites: (categoryId: string, zoneId: string) =>
+    ["serviceSuites", categoryId, zoneId] as const,
+  // genderId/suiteId default to "" so every existing caller (unfiltered
+  // browse rows) keeps resolving to the same key shape/cache entry it
+  // always has — only the category-select flow's filtered fetches
+  // (spa-booking) actually pass them.
+  serviceItems: (
+    subCategoryId: string,
+    zoneId: string,
+    genderId = "",
+    suiteId = "",
+  ) => ["serviceItems", subCategoryId, zoneId, genderId, suiteId] as const,
   homeDetails: (zoneId: string) => ["homeDetails", zoneId] as const,
   campaigns: (categoryId: string, zoneId: string) =>
     ["campaigns", categoryId, zoneId] as const,
@@ -29,4 +47,5 @@ export const queryKeys = {
   booking: (id: string) => ["bookings", id] as const,
   me: () => ["me"] as const,
   notificationPreference: () => ["notification-preference"] as const,
+  devices: () => ["devices"] as const,
 };

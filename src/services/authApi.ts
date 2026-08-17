@@ -7,6 +7,9 @@ import {
   RefreshTokenBody,
   RefreshTokenResponse,
   LogoutResponse,
+  DeviceKind,
+  ListDevicesResponse,
+  RevokeDeviceResponse,
 } from "../types/auth";
 
 export const authApi = {
@@ -43,5 +46,18 @@ export const authApi = {
       {},
       { accessToken },
     );
+  },
+
+  listDevices(accessToken: string, currentFcmToken?: string) {
+    return authClient.get<ListDevicesResponse>("/devices", {
+      accessToken,
+      params: currentFcmToken ? { fcmToken: currentFcmToken } : undefined,
+    });
+  },
+
+  revokeDevice(kind: DeviceKind, id: string, accessToken: string) {
+    return authClient.delete<RevokeDeviceResponse>(`/devices/${kind}/${id}`, {
+      accessToken,
+    });
   },
 };

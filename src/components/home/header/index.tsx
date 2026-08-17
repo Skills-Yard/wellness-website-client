@@ -1,12 +1,14 @@
 "use client";
 
-import { CampaignMediaType, HomeDetails } from "@/src/types/serviceTypes";
+import { useState } from "react";
+import { CampaignMediaType, HomeCategory, HomeDetails } from "@/src/types/serviceTypes";
 import Image from "next/image";
-import Link from "next/link";
 import CampaignVideo from "@/src/components/media/CampaignVideo";
+import CategorySelectModal from "@/src/components/home/category-select/CategorySelectModal";
 
 interface HeaderProps {
   homeDetails: HomeDetails | null;
+  zoneId: string;
 }
 
 type BentoCardProps = {
@@ -23,7 +25,7 @@ type ServiceCardProps = {
   badge?: string;
   badgeColor: string;
   bg: string;
-  path: string;
+  onClick: () => void;
 };
 
 function BentoCard({ title, subtitle, img, mediaType, borderRounded }: BentoCardProps) {
@@ -71,10 +73,10 @@ function ServiceCard({
   badge,
   badgeColor,
   bg,
-  path,
+  onClick,
 }: ServiceCardProps) {
   return (
-    <Link href={path || "#"} className="block">
+    <button type="button" onClick={onClick} className="block w-full text-left">
       <div
         className={`relative flex flex-col items-center gap-3.5 p-4 rounded-2xl ${bg} hover:scale-[1.02] transition-all duration-300 group cursor-pointer w-full shadow-xs`}
       >
@@ -105,11 +107,11 @@ function ServiceCard({
           {label}
         </span>
       </div>
-    </Link>
+    </button>
   );
 }
 
-export default function Header({ homeDetails }: HeaderProps) {
+export default function Header({ homeDetails, zoneId }: HeaderProps) {
   /*
    * All data now comes from page.tsx.
    *
@@ -117,11 +119,13 @@ export default function Header({ homeDetails }: HeaderProps) {
    * - fetch location
    * - call getZones()
    * - call getHomeDetails()
-   * - manage zoneId
+   * - resolve zoneId
    *
-   * It only displays the data received through props.
+   * It only displays the data received through props (zoneId included,
+   * needed to look up suites for the category-select flow below).
    */
 
+  const [selectedCategory, setSelectedCategory] = useState<HomeCategory | null>(null);
   const categories = homeDetails?.categories ?? [];
 
   const campaigns = [...(homeDetails?.promotionalCampaigns ?? [])]
@@ -183,7 +187,7 @@ export default function Header({ homeDetails }: HeaderProps) {
                       badge={index === 0 ? "Popular" : undefined}
                       badgeColor="bg-amber-500"
                       bg="bg-stone-50"
-                      path={`/detail/${category.slug}?categoryId=${encodeURIComponent(category.id)}`}
+                      onClick={() => setSelectedCategory(category)}
                     />
                   ))}
                 </div>
@@ -257,6 +261,14 @@ export default function Header({ homeDetails }: HeaderProps) {
           </div>
         </div>
       </div>
+
+      {selectedCategory && (
+        <CategorySelectModal
+          category={selectedCategory}
+          zoneId={zoneId}
+          onClose={() => setSelectedCategory(null)}
+        />
+      )}
     </header>
   );
 }

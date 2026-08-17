@@ -69,7 +69,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
         categories={homeDetails.categories}
       />
 
-      <CategoryGrid categories={homeDetails.categories} />
+      <CategoryGrid categories={homeDetails.categories} zoneId={zoneId} />
 
       <div className="space-y-2 mt-4">
         <Inspotlight

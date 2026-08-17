@@ -29,3 +29,26 @@ export type SubCategory = Category & {
   categoryId?: string;
   iconKey?: string | null;
 };
+
+/** GET /catalog/service-genders — not zone-scoped, just filtered by
+ *  categoryId + isActive (see backend's ClientServiceGenderController). */
+export type ServiceGender = {
+  id: string;
+  code: "MALE" | "FEMALE";
+  name: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+};
+
+/** GET /catalog/service-suites — zone-scoped (ZoneSuiteConfig). An empty
+ *  list for a category+zone means that category has no suite step there;
+ *  the caller falls back to listing its service items directly. */
+export type ServiceSuite = {
+  id: string;
+  categoryId: string;
+  name: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+};

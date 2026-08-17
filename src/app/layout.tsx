@@ -52,16 +52,19 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
-          <CategoryProvider>
-            <CartProvider>
+          {/* CartProvider resolves the browsing zone; CategoryProvider reads
+              it from here (via useCart()) to fetch zone-filtered categories
+              — see categoryApi.ts. */}
+          <CartProvider>
+            <CategoryProvider>
               <PushNotificationBootstrap />
               <Navbar />
               {children}
               <div className="hidden md:block">
                 <Footer />
               </div>
-            </CartProvider>
-          </CategoryProvider>
+            </CategoryProvider>
+          </CartProvider>
         </Providers>
       </body>
     </html>
