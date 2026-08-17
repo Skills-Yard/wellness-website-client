@@ -27,6 +27,20 @@ const buildLocalCartItemId = (item: {
  *  composite placeholder as the id, which the backend won't recognize. */
 export const isPendingSync = (item: CartItem) => item.id === buildLocalCartItemId(item);
 
+// `next/image` throws if `src` isn't an absolute URL or a root-relative
+// path. The cart API's nested `serviceItem` is a raw Prisma read (see
+// syncCart/updateItemSlot below) with no CDN-resolution step applied — it
+// only ever carries `thumbnailKey`, an unresolved storage key like
+// "services/udwarthanam/thumbnails/xyz_v1.jpg", not a usable URL. Same
+// situation as the booking payload's serviceItem.thumbnailKey (see
+// resolveImageSrc in components/bookings/bookingStatus.ts); duplicated
+// here rather than imported, since a feature component isn't a sensible
+// dependency for this context to carry.
+const resolveCartItemImage = (key?: string | null): string | null =>
+    key && (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("/"))
+        ? key
+        : null;
+
 const toCartItem = (item: CartApiItem): CartItem => ({
     id: item.id ?? buildLocalCartItemId(item),
     serviceItemId: item.serviceItemId,
@@ -36,16 +50,29 @@ const toCartItem = (item: CartApiItem): CartItem => ({
     quantity: item.quantity,
     title: item.serviceItem?.title ?? item.serviceItem?.name ?? "Selected service",
     image:
-        item.serviceItem?.image ??
-        item.serviceItem?.media ??
-        "/placeholder.svg",
+        resolveCartItemImage(
+            item.serviceItem?.image ?? item.serviceItem?.media ?? item.serviceItem?.thumbnailKey,
+        ) ?? "/images/hero-fallback.jpg",
     duration:
         item.duration?.label ??
         item.duration?.name ??
         item.duration?.title ??
         item.duration?.duration ??
         "Selected duration",
-    price: Number(item.package?.price ?? item.serviceItem?.price ?? 0),
+    // item.unitPrice (attached server-side by CartService.attachPricing) is
+    // the one price that actually includes selected add-ons — package/
+    // duration price alone (the fallback below, for local/not-yet-synced
+    // items that never carry unitPrice) silently drops them. Mirrors
+    // PricingService.priceCartLines' own precedence otherwise: package
+    // beats duration, discountedPrice beats price. ServiceItem itself
+    // carries no price field of its own to fall back to.
+    price: Number(
+        item.unitPrice ??
+        item.package?.price ??
+        item.duration?.discountedPrice ??
+        item.duration?.price ??
+        0,
+    ),
     slotDate: item.slotDate,
     slotStartTime: item.slotStartTime,
 });

@@ -13,10 +13,22 @@ export type CartApiItem = {
   // "on-demand" / no-slot-picked bookings fall back to.
   slotDate?: string;
   slotStartTime?: string;
-  serviceItem?: { title?: string; name?: string; image?: string; media?: string; price?: number | string };
-  duration?: { label?: string; name?: string; title?: string; duration?: string; durationMinutes?: number };
+  // `image`/`media`/`price` don't actually exist on the Prisma ServiceItem
+  // model (it only has thumbnailKey — a raw, unresolved storage key — and
+  // carries no price of its own; price lives on duration/package). Kept
+  // here only as historical dead fallbacks; see toCartItem in CartContext.
+  serviceItem?: { title?: string; name?: string; image?: string; media?: string; thumbnailKey?: string; price?: number | string };
+  duration?: { label?: string; name?: string; title?: string; duration?: string; durationMinutes?: number; price?: number; discountedPrice?: number | null };
   package?: { label?: string; name?: string; price?: number | string; sessions?: number; pricePerSession?: number | string };
   addOns?: { name?: string; price?: number | string; extraMinutes?: number }[];
+  // Attached server-side by CartService.attachPricing, computed fresh from
+  // the cart's zone on every read — this is the one authoritative per-unit
+  // price (package/duration price plus every selected add-on's price), and
+  // should be preferred over deriving price from package/duration alone
+  // (see toCartItem in CartContext), which silently drops add-ons.
+  unitPrice?: number | null;
+  totalPrice?: number | null;
+  addOnsTotal?: number | null;
 };
 
 // Body for PATCH /cart/items/{itemId} — a full item representation (not a
