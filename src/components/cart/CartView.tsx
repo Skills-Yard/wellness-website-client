@@ -7,6 +7,7 @@ import {
   CalendarClock,
   ChevronRight,
   Clock,
+  Loader2,
   MapPin,
   Minus,
   Plus,
@@ -82,6 +83,7 @@ export default function CartView({
     zoneId,
     cartZoneId,
     updateItemSlot,
+    isUpdatingSlot,
   } = useCart();
   // Slot discovery must be scoped to the same zone reservation will check
   // capacity against — that's the server-side cart's zone (cartZoneId),
@@ -181,13 +183,23 @@ export default function CartView({
               <button
                 type="button"
                 onClick={() => setSlotPickerItemId(item.id)}
-                className="mt-1.5 flex w-full items-center gap-1 text-[11px] font-semibold text-amber-600"
+                disabled={isUpdatingSlot(item.id)}
+                className="mt-1.5 flex w-full items-center gap-1 text-[11px] font-semibold text-amber-600 disabled:opacity-60"
               >
-                <CalendarClock className="h-3 w-3 shrink-0" />
-                {item.slotDate && item.slotStartTime
-                  ? formatSlotDisplay(item.slotDate, item.slotStartTime)
-                  : "Select time slot"}
-                <ChevronRight className="h-3 w-3 shrink-0" />
+                {isUpdatingSlot(item.id) ? (
+                  <>
+                    <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                    Saving slot…
+                  </>
+                ) : (
+                  <>
+                    <CalendarClock className="h-3 w-3 shrink-0" />
+                    {item.slotDate && item.slotStartTime
+                      ? formatSlotDisplay(item.slotDate, item.slotStartTime)
+                      : "Select time slot"}
+                    <ChevronRight className="h-3 w-3 shrink-0" />
+                  </>
+                )}
               </button>
             </div>
           </div>
