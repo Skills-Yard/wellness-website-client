@@ -1,7 +1,15 @@
 export interface CartItem {
   id: string;
   title: string;
+  /** Per-unit price — the selected duration × package pricing plus every
+   *  selected add-on's price (see getCartItemPricing in utils/pricing.ts).
+   *  What's sent to the backend as a cart write's `unitPrice`. */
   price: number;
+  /** Per-unit portion of `price` contributed by selected add-ons — broken
+   *  out separately (rather than re-derived) because the flattened
+   *  CartItem shape has no raw add-on catalog to recompute it from once a
+   *  cart row is loaded from local storage. Sent as `addOnsTotal`. */
+  addOnsTotal?: number;
   image: string;
   duration: string;
   quantity: number;
@@ -73,4 +81,9 @@ export interface CartContextType {
   couponCode: string;
   updateCartSchedule: (details: { scheduledDate?: string; scheduledTime?: string; isOnDemand?: boolean; couponCode?: string }) => void;
   updateItemSlot: (id: string, slotDate: string, slotStartTime: string) => void;
+  /** True while this cart item's slot update (PATCH /cart/items/{itemId})
+   *  is in flight — the local slot picked via updateItemSlot is already
+   *  applied optimistically, but callers can use this to show a loading
+   *  state until the server has actually confirmed it. */
+  isUpdatingSlot: (id: string) => boolean;
 }

@@ -10,53 +10,16 @@ import { ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import StepsSection from "../StepSection/SectionSteps";
 import { useCart } from "@/src/context/CartContext";
+import {
+  getAddOnsTotal,
+  getDurationPricing,
+  getPackPricing,
+} from "@/src/utils/pricing";
 
 type ServiceDetails = {
   durations: ServiceDuration[];
   packages: ServicePackage[];
   addOns: ServiceAddOn[];
-};
-
-// Pack cards don't trust price/originalPrice/discount straight off the API
-// — "original" is defined relative to whichever duration is currently
-// selected (sessions × that duration's price), with savingsPercent applied
-// on top, so a "4 Session" pack's numbers stay correct (and stay in sync
-// with the duration picker above it) no matter which duration is active.
-const getPackPricing = (pack: ServicePackage, durationPrice: number) => {
-  const sessionCount = Number(pack.sessions ?? 1) || 1;
-  const originalTotal = sessionCount * durationPrice;
-  const savingsPercent = Number(pack.savingsPercent ?? 0) || 0;
-  const discountedTotal =
-    savingsPercent > 0
-      ? originalTotal * (1 - savingsPercent / 100)
-      : originalTotal;
-
-  return {
-    sessionCount,
-    originalTotal,
-    discountedTotal,
-    perSessionPrice: discountedTotal / sessionCount,
-    savingsPercent,
-  };
-};
-
-// discountedPrice, when present and actually lower, is what the duration
-// really costs today — displayPrice is what to show as the main price
-// (and what pack math below should treat as "the duration's price"), price
-// is what to strike through next to it.
-const getDurationPricing = (duration: ServiceDuration) => {
-  const price = Number(duration.price ?? 0);
-  const raw = duration.discountedPrice;
-  const discountedPrice =
-    raw === null || raw === undefined || raw === "" ? null : Number(raw);
-  const hasDiscount =
-    discountedPrice !== null && !Number.isNaN(discountedPrice) && discountedPrice < price;
-
-  return {
-    price,
-    displayPrice: hasDiscount ? (discountedPrice as number) : price,
-    hasDiscount,
-  };
 };
 
 // Sort key for "low to high" duration ordering. durationMinutes is the
@@ -203,14 +166,7 @@ export default function RequirementSelector({
     ? getPackPricing(selectedPackage, durationPrice).discountedTotal
     : 0;
 
-  const selectedAddons = addOns.filter((addon) =>
-    selectedAddonIds.includes(addon.id),
-  );
-
-  const addonsPrice = selectedAddons.reduce(
-    (total, addon) => total + Number(addon.price ?? 0),
-    0,
-  );
+  const addonsPrice = getAddOnsTotal(addOns, selectedAddonIds);
 
   // Rounded once here — packagePrice can be fractional (e.g. a 10% cut off
   // an odd-numbered total), and this is the number charged/displayed.
@@ -228,6 +184,11 @@ export default function RequirementSelector({
       addOnIds: selectedAddonIds,
       title: service.title,
       price: totalPrice,
+      // Sent up to the backend as `addOnsTotal` on every cart write (see
+      // syncCart in CartContext) — kept alongside `price` since the
+      // flattened cart item has no raw add-on catalog to recompute this
+      // breakdown from later.
+      addOnsTotal: Math.round(addonsPrice),
       image: service.media,
       duration:
         selectedDuration?.label ??
