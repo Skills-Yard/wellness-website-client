@@ -19,6 +19,7 @@ export type CartApiItem = {
     image?: string;
     media?: string;
     price?: number | string;
+    thumbnailKey?: string | null;
   };
   duration?: {
     label?: string;
@@ -26,6 +27,8 @@ export type CartApiItem = {
     title?: string;
     duration?: string;
     durationMinutes?: number;
+    price?: number | string;
+    discountedPrice?: number | string | null;
   };
   package?: {
     label?: string;

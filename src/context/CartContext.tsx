@@ -84,8 +84,7 @@ const toCartItem = (item: CartApiItem): CartItem => ({
     ),
     slotDate: item.slotDate,
     slotStartTime: item.slotStartTime,
-  };
-};
+  });
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
