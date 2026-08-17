@@ -3,6 +3,7 @@
 import { LOCATIONS, LOCATION_COORDINATES } from "@/src/utils/data";
 import { CartItem, CartContextType } from "@/src/utils/types";
 import { cartApi, type CartApiItem } from "@/src/services/cartApi";
+import { getCartItemPricing } from "@/src/utils/pricing";
 import { useZones } from "@/src/hooks/queries/useZones";
 import React, {
   createContext,
@@ -34,27 +35,46 @@ const buildLocalCartItemId = (item: {
 export const isPendingSync = (item: CartItem) =>
   item.id === buildLocalCartItemId(item);
 
-const toCartItem = (item: CartApiItem): CartItem => ({
-  id: item.id ?? buildLocalCartItemId(item),
-  serviceItemId: item.serviceItemId,
-  durationId: item.durationId,
-  packageId: item.packageId,
-  addOnIds: item.addOnIds ?? [],
-  quantity: item.quantity,
-  title:
-    item.serviceItem?.title ?? item.serviceItem?.name ?? "Selected service",
-  image:
-    item.serviceItem?.image ?? item.serviceItem?.media ?? "/placeholder.svg",
-  duration:
-    item.duration?.label ??
-    item.duration?.name ??
-    item.duration?.title ??
-    item.duration?.duration ??
-    "Selected duration",
-  price: Number(item.package?.price ?? item.serviceItem?.price ?? 0),
-  slotDate: item.slotDate,
-  slotStartTime: item.slotStartTime,
-});
+const toCartItem = (item: CartApiItem): CartItem => {
+  // Not item.package?.price / item.unitPrice / item.totalPrice — the
+  // backend always reports those as 0 (package pricing is derived, not
+  // stored). Re-derive the same way SelectPack's add-to-cart button priced
+  // this selection: the chosen duration's price × the chosen package's
+  // sessions (minus its savingsPercent), plus every selected add-on's
+  // price (resolved via serviceItem.addOns, the service's own add-on
+  // catalog). See src/utils/pricing.ts — this is also what gets sent back
+  // to the backend as unitPrice/addOnsTotal/totalPrice on the next write.
+  const { unitPrice, addOnsTotal } = getCartItemPricing(
+    item.duration,
+    item.package,
+    item.serviceItem?.addOns ?? [],
+    item.addOnIds ?? [],
+    item.quantity,
+  );
+
+  return {
+    id: item.id ?? buildLocalCartItemId(item),
+    serviceItemId: item.serviceItemId,
+    durationId: item.durationId,
+    packageId: item.packageId,
+    addOnIds: item.addOnIds ?? [],
+    quantity: item.quantity,
+    title:
+      item.serviceItem?.title ?? item.serviceItem?.name ?? "Selected service",
+    image:
+      item.serviceItem?.image ?? item.serviceItem?.media ?? "/placeholder.svg",
+    duration:
+      item.duration?.label ??
+      item.duration?.name ??
+      item.duration?.title ??
+      item.duration?.duration ??
+      "Selected duration",
+    price: unitPrice,
+    addOnsTotal,
+    slotDate: item.slotDate,
+    slotStartTime: item.slotStartTime,
+  };
+};
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -296,6 +316,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               packageId: item.packageId,
               addOnIds: item.addOnIds ?? [],
               quantity: item.quantity,
+              // Client-computed (see getCartItemPricing in utils/pricing.ts)
+              // — GET /cart always reports these as 0 itself, so leaving
+              // them off here would keep pushing 0 back to the server on
+              // every sync.
+              unitPrice: item.price,
+              addOnsTotal: item.addOnsTotal ?? 0,
+              totalPrice: item.price * item.quantity,
             },
           ]
         : [],
@@ -407,7 +434,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // DELETE /cart/items/{itemId} — {itemId} is the service's own id
     // (serviceItemId), not this cart row's own `id` field.
     void cartApi
-      .deleteItem(item.serviceItemId, accessToken, cartZoneId ?? zoneId)
+      .deleteItem(item.id, accessToken, cartZoneId ?? zoneId)
       .catch((error) => {
         // Local removal stands either way, but log this — a failed
         // delete here means the item comes back on the next cart load.
@@ -450,7 +477,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // {itemId} in PATCH /cart/items/{itemId} is the service's
         // own id (serviceItemId), not this cart row's own `id`
         // field — same as updateItemSlot below.
-        item.serviceItemId,
+        item.id,
         {
           serviceItemId: item.id,
           durationId: item.durationId,
@@ -463,6 +490,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // this item.
           ...(item.slotDate ? { slotDate: item.slotDate } : {}),
           ...(item.slotStartTime ? { slotStartTime: item.slotStartTime } : {}),
+          // Client-computed (see getCartItemPricing) — resent on every
+          // write since GET /cart always reports these as 0 itself.
+          // item.price is per-unit, so totalPrice scales with the new
+          // quantity rather than the old one.
+          unitPrice: item.price,
+          addOnsTotal: item.addOnsTotal ?? 0,
+          totalPrice: item.price * nextQuantity,
         },
         accessToken,
         cartZoneId ?? zoneId,
@@ -577,7 +611,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // {itemId} in PATCH /cart/items/{itemId} is the service's
         // own id (serviceItemId) — the id of the service this cart
         // item was added for — not this cart row's own `id` field.
-        item.serviceItemId,
+        item.id,
         {
           serviceItemId: item.serviceItemId,
           durationId: item.durationId,
@@ -586,6 +620,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           quantity: item.quantity,
           slotDate,
           slotStartTime,
+          // Client-computed (see getCartItemPricing) — resent on every
+          // write since GET /cart always reports these as 0 itself.
+          unitPrice: item.price,
+          addOnsTotal: item.addOnsTotal ?? 0,
+          totalPrice: item.price * item.quantity,
         },
         accessToken,
         cartZoneId ?? zoneId,

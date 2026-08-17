@@ -13,9 +13,47 @@ export type CartApiItem = {
   // "on-demand" / no-slot-picked bookings fall back to.
   slotDate?: string;
   slotStartTime?: string;
-  serviceItem?: { title?: string; name?: string; image?: string; media?: string; price?: number | string };
-  duration?: { label?: string; name?: string; title?: string; duration?: string; durationMinutes?: number };
-  package?: { label?: string; name?: string; price?: number | string; sessions?: number; pricePerSession?: number | string };
+  // Client-computed (see getCartItemPricing in utils/pricing.ts) and sent
+  // on every write — GET /cart always reports these three as 0 itself
+  // (package pricing is derived, not stored server-side), so the client
+  // is the one source of truth for them.
+  unitPrice?: number;
+  totalPrice?: number;
+  addOnsTotal?: number;
+  serviceItem?: {
+    title?: string;
+    name?: string;
+    image?: string;
+    media?: string;
+    price?: number | string;
+    // The service's own add-on catalog — item.addOnIds above indexes into
+    // this to resolve which add-ons (and prices) this cart row actually
+    // has selected (see toCartItem's price recompute in CartContext).
+    addOns?: { id?: string; name?: string; price?: number | string; extraMinutes?: number }[];
+  };
+  // price/discountedPrice: what this duration actually costs — the source
+  // toCartItem re-derives a cart row's price from (see pricing.ts), since
+  // package.price/pricePerSession below are always reported as 0.
+  duration?: {
+    label?: string;
+    name?: string;
+    title?: string;
+    duration?: string;
+    durationMinutes?: number;
+    price?: number | string;
+    discountedPrice?: number | string | null;
+  };
+  // price/pricePerSession are always 0 — the backend derives package
+  // pricing from sessions × the selected duration's price rather than
+  // storing it (see getPackPricing in pricing.ts, used by toCartItem).
+  package?: {
+    label?: string;
+    name?: string;
+    price?: number | string;
+    sessions?: number;
+    pricePerSession?: number | string;
+    savingsPercent?: number | string | null;
+  };
   addOns?: { name?: string; price?: number | string; extraMinutes?: number }[];
 };
 
@@ -30,6 +68,11 @@ export type CartItemUpdateBody = {
   quantity: number;
   slotDate?: string;
   slotStartTime?: string;
+  // See the matching fields on CartApiItem above — client-computed, sent
+  // so the backend doesn't fall back to storing/returning 0 for them.
+  unitPrice?: number;
+  totalPrice?: number;
+  addOnsTotal?: number;
 };
 
 export type UpdateCartBody = {

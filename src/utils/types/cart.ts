@@ -1,7 +1,15 @@
 export interface CartItem {
   id: string;
   title: string;
+  /** Per-unit price — the selected duration × package pricing plus every
+   *  selected add-on's price (see getCartItemPricing in utils/pricing.ts).
+   *  What's sent to the backend as a cart write's `unitPrice`. */
   price: number;
+  /** Per-unit portion of `price` contributed by selected add-ons — broken
+   *  out separately (rather than re-derived) because the flattened
+   *  CartItem shape has no raw add-on catalog to recompute it from once a
+   *  cart row is loaded from local storage. Sent as `addOnsTotal`. */
+  addOnsTotal?: number;
   image: string;
   duration: string;
   quantity: number;
