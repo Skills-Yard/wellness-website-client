@@ -76,7 +76,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
           campaigns={homeDetails.promotionalCampaigns}
           categories={homeDetails.categories}
         />
-        {homeDetails.categories.map((category) => {
+        {homeDetails.categories.map((category, index) => {
           const highlightBanner = homeDetails.promotionalCampaigns
             .filter(
               (campaign) =>
@@ -88,7 +88,9 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
 
           return (
           <div key={category.id}>
-            {highlightBanner && <WallPanel campaign={highlightBanner} category={category} />}
+            {highlightBanner && (
+              <WallPanel campaign={highlightBanner} category={category} priority={index === 0} />
+            )}
             <CategoryServices
               category={category}
               zoneId={zoneId}

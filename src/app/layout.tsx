@@ -5,6 +5,8 @@ import Footer from "@/src/components/home/footer";
 import { CartProvider } from "@/src/context/CartContext";
 import { CategoryProvider } from "@/src/context/CategoryContext";
 import Navbar from "@/src/components/home/navbar";
+import Providers from "./providers";
+import PushNotificationBootstrap from "@/src/components/notifications/PushNotificationBootstrap";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,15 +51,18 @@ export default function RootLayout({
         className="min-h-full flex flex-col"
         suppressHydrationWarning
       >
-        <CategoryProvider>
-          <CartProvider>
-            <Navbar />
-            {children}
-            <div className="hidden md:block">
-              <Footer />
-            </div>
-          </CartProvider>
-        </CategoryProvider>
+        <Providers>
+          <CategoryProvider>
+            <CartProvider>
+              <PushNotificationBootstrap />
+              <Navbar />
+              {children}
+              <div className="hidden md:block">
+                <Footer />
+              </div>
+            </CartProvider>
+          </CategoryProvider>
+        </Providers>
       </body>
     </html>
   );

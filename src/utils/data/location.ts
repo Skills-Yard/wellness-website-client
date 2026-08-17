@@ -6,6 +6,7 @@ export const ACTIVE_AREAS: ActiveArea[] = [
     { name: "Connaught Place, Delhi", full: LOCATIONS[1], icon: "/images/3d_wellness.png" },
     { name: "Lajpat Nagar, Delhi", full: LOCATIONS[2], icon: "/images/3d_physio.png" },
     { name: "Vasant Kunj, Delhi", full: LOCATIONS[3], icon: "/images/3d_wellness.png" },
+    { name: "Burari, Delhi", full: LOCATIONS[4], icon: "/images/3d_massage.png" },
 ];
 
 export const COMING_SOON_CITIES: ComingSoonCity[] = [

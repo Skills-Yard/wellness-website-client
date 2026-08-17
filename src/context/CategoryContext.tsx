@@ -5,13 +5,13 @@ import {
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
 } from "react";
-import { getCategories, getCategoryById } from "@/src/services/categoryApi";
+import { useQueryClient } from "@tanstack/react-query";
+import { getCategoryById } from "@/src/services/categoryApi";
 import { CatalogCategory, CategoryDetails } from "@/src/types/categoryTypes";
+import { useCategories as useCategoriesQuery } from "@/src/hooks/queries/useCategories";
+import { queryKeys } from "@/src/hooks/queries/queryKeys";
 
 type CategoryContextValue = {
   categories: CatalogCategory[];
@@ -26,40 +26,18 @@ const CategoryContext = createContext<CategoryContextValue | undefined>(undefine
 const normalizeSlug = (slug: string) =>
   slug === "physiotherapy" ? "physio" : slug;
 
+// A module-level constant, not `data ?? []` inline — the latter builds a
+// brand new array every render while `data` is still undefined (loading/
+// logged-out), which cascades into findCategoryBySlug/value below being
+// rebuilt every render too (see useServiceItemsForSubCategories' `combine`
+// comment for why an unstable derived reference like this is worth
+// avoiding, not just wasteful).
+const EMPTY_CATEGORIES: CatalogCategory[] = [];
+
 export function CategoryProvider({ children }: { children: ReactNode }) {
-  const [categories, setCategories] = useState<CatalogCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const detailsCache = useRef<Record<string, CategoryDetails>>({});
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadCategories = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await getCategories();
-        if (isMounted) setCategories(response.data ?? []);
-      } catch (caughtError) {
-        if (isMounted) {
-          setCategories([]);
-          setError(
-            caughtError instanceof Error
-              ? caughtError
-              : new Error("Unable to load categories."),
-          );
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    loadCategories();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useCategoriesQuery();
+  const categories = data ?? EMPTY_CATEGORIES;
 
   const findCategoryBySlug = useCallback(
     (slug: string) => {
@@ -71,20 +49,30 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
     [categories],
   );
 
+  // Imperative (not a hook) because callers — see spa-booking/index.tsx —
+  // fetch this alongside other data in a Promise.all inside their own
+  // effect, rather than rendering it directly. queryClient.fetchQuery is
+  // React Query's cache-backed equivalent of the old useRef details cache
+  // this replaced: cached results resolve instantly, cache misses fetch
+  // and populate the cache for every other caller (e.g. the home page's
+  // "See all" link into the same category's detail page).
   const loadCategory = useCallback(
-    async (categoryId: string) => {
-      const cachedDetails = detailsCache.current[categoryId];
-      if (cachedDetails) return cachedDetails;
-
-      const response = await getCategoryById(categoryId);
-      detailsCache.current[categoryId] = response.data;
-      return response.data;
-    },
-    [],
+    (categoryId: string) =>
+      queryClient.fetchQuery({
+        queryKey: queryKeys.category(categoryId),
+        queryFn: () => getCategoryById(categoryId).then((r) => r.data),
+      }),
+    [queryClient],
   );
 
   const value = useMemo(
-    () => ({ categories, isLoading, error, findCategoryBySlug, loadCategory }),
+    () => ({
+      categories,
+      isLoading,
+      error: error as Error | null,
+      findCategoryBySlug,
+      loadCategory,
+    }),
     [categories, isLoading, error, findCategoryBySlug, loadCategory],
   );
 

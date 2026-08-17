@@ -10,6 +10,7 @@ import {
   X,
   Sparkles,
   Menu,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/src/context/CartContext";
@@ -37,9 +38,20 @@ import {
   SheetTrigger,
 } from "@/src/components/ui/sheet";
 import { useRouter } from "next/navigation";
-import AuthModal from "@/src/components/auth/AuthModal";
-import CartSheet from "@/src/components/cart/CartSheet";
+import dynamic from "next/dynamic";
+import AuthModal from "@/src/components/auth/LazyAuthModal";
 import { authApi } from "@/src/services/authApi";
+import { unregisterPushToken } from "@/src/lib/notifications/push";
+import NotificationBell from "@/src/components/notifications/NotificationBell";
+
+// Only ever rendered once the cart icon is clicked — no reason to ship its
+// JS (address forms, Razorpay glue, etc.) in the navbar's initial bundle.
+const CartSheet = dynamic(() => import("@/src/components/cart/CartSheet"), {
+  ssr: false,
+  loading: () => null,
+});
+import { useAddresses } from "@/src/hooks/queries/useAddresses";
+import { formatAddressLabel } from "@/src/services/addressApi";
 
 export default function Navbar() {
   const {
@@ -47,7 +59,17 @@ export default function Navbar() {
     setIsCartOpen,
     location,
     setLocation,
+    addressId,
+    updateCartAddress,
   } = useCart();
+
+  // Saved delivery addresses (only fetched when logged in — see
+  // useAddresses) surfaced alongside the static location list, so a
+  // returning logged-in user sees their real address as an option here,
+  // not just the 5 hardcoded areas.
+  const { data: addressesData } = useAddresses();
+  const addresses = addressesData ?? [];
+  const selectedSavedAddress = addresses.find((address) => address.id === addressId) ?? null;
 
   const [active, setActive] = useState<NavLinkType>("Massage");
   const [query, setQuery] = useState("");
@@ -158,7 +180,10 @@ export default function Navbar() {
   const handleLogout = async () => {
     const accessToken = localStorage.getItem("accessToken");
     try {
-      if (accessToken) await authApi.logout(accessToken);
+      if (accessToken) {
+        await unregisterPushToken(accessToken);
+        await authApi.logout(accessToken);
+      }
     } catch {
       // End the local session even when the server session has expired.
     } finally {
@@ -224,7 +249,9 @@ export default function Navbar() {
               >
                 <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span className="truncate flex-1 text-left">
-                  {isMounted ? location : LOCATIONS[0]}
+                  {isMounted
+                    ? (selectedSavedAddress ? formatAddressLabel(selectedSavedAddress) : location)
+                    : LOCATIONS[0]}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200" />
               </Button>
@@ -233,7 +260,30 @@ export default function Navbar() {
               align="start"
               className="w-64 rounded-2xl p-1.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] border-gray-100 bg-white"
             >
-              <div className="px-2.5 py-1 text-[10px] font-bold text-amber-600 bg-amber-50/50 rounded-lg select-none mb-1">
+              {addresses.length > 0 && (
+                <>
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-50/50 rounded-lg select-none mb-1">
+                    Your Addresses
+                  </div>
+                  {addresses.map((address) => (
+                    <DropdownMenuItem
+                      key={address.id}
+                      onClick={() => updateCartAddress(address.id)}
+                      className={cn(
+                        "cursor-pointer gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors",
+                        addressId === address.id &&
+                          "bg-amber-50 text-amber-600 font-medium focus:bg-amber-50 focus:text-amber-600",
+                      )}
+                    >
+                      <MapPin className="w-3.5 h-3.5 opacity-50 shrink-0 text-amber-500" />
+                      <span className="truncate">
+                        {address.label ?? address.customLabel ?? formatAddressLabel(address)}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              <div className="px-2.5 py-1 text-[10px] font-bold text-amber-600 bg-amber-50/50 rounded-lg select-none mb-1 mt-2.5">
                 Active Areas
               </div>
               {LOCATIONS.map((loc) => (
@@ -342,6 +392,9 @@ export default function Navbar() {
             )}
           </Button>
 
+          {/* Notifications Bell */}
+          <NotificationBell isLoggedIn={isMounted && isLoggedIn} />
+
           {/* Account Profile Action */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -368,7 +421,7 @@ export default function Navbar() {
               </DropdownMenuItem>
               {isLoggedIn && (
               <DropdownMenuItem
-                onClick={() => alert("My Bookings section coming soon!")}
+                onClick={() => router.push("/bookings")}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
                 My Bookings
@@ -376,7 +429,7 @@ export default function Navbar() {
               )}
               {isLoggedIn && (
               <DropdownMenuItem
-                onClick={() => alert("Account Settings coming soon!")}
+                onClick={() => router.push("/profile?section=settings")}
                 className="cursor-pointer gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-600 focus:bg-gray-50 focus:text-gray-900 transition-colors"
               >
                 Account Settings
@@ -412,6 +465,8 @@ export default function Navbar() {
             )}
           </Button>
 
+          <NotificationBell isLoggedIn={isMounted && isLoggedIn} className="w-9 h-9" />
+
           {/* Shadcn Sheet Drawer Primitive Substitution */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -440,10 +495,26 @@ export default function Navbar() {
                   Your Location
                 </label>
                 <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  value={selectedSavedAddress ? `address:${selectedSavedAddress.id}` : location}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.startsWith("address:")) {
+                      updateCartAddress(value.slice("address:".length));
+                    } else {
+                      setLocation(value);
+                    }
+                  }}
                   className="w-full bg-gray-50 text-sm text-gray-800 border border-gray-200 rounded-xl h-10 px-3 outline-none focus:border-amber-400 cursor-pointer"
                 >
+                  {addresses.length > 0 && (
+                    <optgroup label="Your Addresses">
+                      {addresses.map((address) => (
+                        <option key={address.id} value={`address:${address.id}`}>
+                          {address.label ?? address.customLabel ?? formatAddressLabel(address)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                   <optgroup label="Active Areas">
                     {LOCATIONS.map((loc) => (
                       <option key={loc} value={loc}>
@@ -522,12 +593,28 @@ export default function Navbar() {
               </div>
 
               {/* Account / User Drawer Bottom Actions Footer section */}
-              <div className="border-t border-gray-100 pt-4 mt-auto">
+              {isLoggedIn && (
+              <div className="border-t border-gray-100 pt-4 mt-auto space-y-1">
                 <button
                   type="button"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    alert("Account Settings coming soon!");
+                    router.push("/bookings");
+                  }}
+                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 text-left transition-colors cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                    <CalendarClock className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    My Bookings
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    router.push("/profile?section=settings");
                   }}
                   className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 text-left transition-colors cursor-pointer"
                 >
@@ -539,6 +626,7 @@ export default function Navbar() {
                   </span>
                 </button>
               </div>
+              )}
             </SheetContent>
           </Sheet>
         </div>

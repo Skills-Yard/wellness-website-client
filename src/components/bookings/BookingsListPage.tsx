@@ -1,0 +1,175 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { ArrowLeft, CalendarClock, ChevronRight, ClipboardList } from "lucide-react";
+import { useBookings } from "@/src/hooks/queries/useBookings";
+import { UPCOMING_BOOKING_STATUSES, type Booking } from "@/src/types/booking";
+import {
+  formatBookingAmount,
+  formatBookingDate,
+  formatBookingTime,
+  getStatusMeta,
+  resolveImageSrc,
+} from "./bookingStatus";
+import { useIsLoggedIn } from "./useIsLoggedIn";
+import BottomNav from "@/src/components/home/mobile/Bottomnav";
+
+type Tab = "upcoming" | "past";
+
+const isUpcoming = (booking: Booking) => UPCOMING_BOOKING_STATUSES.includes(booking.status);
+
+function BookingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void }) {
+  const status = getStatusMeta(booking.status);
+  const thumbnail = resolveImageSrc(booking.items[0]?.serviceItem?.thumbnailKey);
+  const title =
+    booking.items.length === 1
+      ? booking.items[0].serviceItemName
+      : `${booking.items[0]?.serviceItemName ?? "Service"} + ${booking.items.length - 1} more`;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-colors hover:bg-slate-50 cursor-pointer"
+    >
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+        {thumbnail ? (
+          <Image src={thumbnail} alt={title} fill className="object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-slate-300">
+            <ClipboardList className="h-6 w-6" />
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-bold text-slate-900">{title}</p>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className}`}>
+            {status.label}
+          </span>
+        </div>
+        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+          <CalendarClock className="h-3 w-3" />
+          {formatBookingDate(booking.scheduledDate)} • {formatBookingTime(booking.scheduledTime)}
+        </p>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-xs text-slate-400">
+            {booking.partner?.name ? `Partner: ${booking.partner.name}` : "Partner not assigned yet"}
+          </span>
+          <span className="text-xs font-bold text-slate-800">
+            {formatBookingAmount(booking.totalAmount)}
+          </span>
+        </div>
+      </div>
+
+      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+    </button>
+  );
+}
+
+export default function BookingsListPage() {
+  const router = useRouter();
+  const { isMounted, isLoggedIn } = useIsLoggedIn();
+  const [tab, setTab] = useState<Tab>("upcoming");
+
+  const { data: bookings = [], isLoading } = useBookings();
+
+  const { upcoming, past } = useMemo(() => {
+    const sorted = [...bookings].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return {
+      upcoming: sorted.filter(isUpcoming),
+      past: sorted.filter((booking) => !isUpcoming(booking)),
+    };
+  }, [bookings]);
+
+  if (!isMounted) return null;
+
+  if (!isLoggedIn) {
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+        <ClipboardList className="mb-4 h-10 w-10 text-stone-300" strokeWidth={1.5} />
+        <h2 className="mb-2 text-xl font-bold text-slate-900">Log in to see your bookings</h2>
+        <p className="mb-6 max-w-xs text-sm text-slate-500">
+          Your upcoming and past appointments will show up here once you&apos;re logged in.
+        </p>
+        <button
+          onClick={() => router.push("/profile")}
+          className="rounded-2xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-white cursor-pointer hover:bg-amber-500/90"
+        >
+          Go to profile
+        </button>
+      </div>
+    );
+  }
+
+  const activeList = tab === "upcoming" ? upcoming : past;
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-24 md:pb-10">
+      <div className="mx-auto max-w-2xl bg-white px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            onClick={() => router.push("/profile")}
+            className="rounded-full p-1.5 hover:bg-slate-100 cursor-pointer"
+            aria-label="Back to profile"
+          >
+            <ArrowLeft className="h-5 w-5 text-slate-700" />
+          </button>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">My Bookings</h1>
+        </div>
+
+        <div className="mb-4 flex gap-1 rounded-xl bg-slate-100 p-1">
+          {(["upcoming", "past"] as const).map((value) => (
+            <button
+              key={value}
+              onClick={() => setTab(value)}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition-colors cursor-pointer ${
+                tab === value ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
+              }`}
+            >
+              {value} {value === "upcoming" ? `(${upcoming.length})` : `(${past.length})`}
+            </button>
+          ))}
+        </div>
+
+        {isLoading && bookings.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-slate-400">Loading…</p>
+        ) : activeList.length === 0 ? (
+          <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center">
+            <ClipboardList className="mb-3 h-8 w-8 text-slate-300" strokeWidth={1.5} />
+            <p className="text-sm text-slate-500">
+              {tab === "upcoming"
+                ? "No upcoming bookings — go book a service you'll love."
+                : "No past bookings yet."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activeList.map((booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                onOpen={() => router.push(`/bookings/${booking.id}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="block md:hidden">
+        <BottomNav
+          activeTab="profile"
+          onTabClick={(tabId) => {
+            if (tabId === "top" || tabId === "home") router.push("/");
+            else router.push(`/?tab=${tabId}`);
+          }}
+        />
+      </div>
+    </div>
+  );
+}

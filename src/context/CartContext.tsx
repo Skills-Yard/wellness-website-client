@@ -1,8 +1,9 @@
 "use client";
 
-import { LOCATIONS } from "@/src/utils/data";
+import { LOCATIONS, LOCATION_COORDINATES } from "@/src/utils/data";
 import { CartItem, CartContextType } from "@/src/utils/types";
 import { cartApi, type CartApiItem } from "@/src/services/cartApi";
+import { useZones } from "@/src/hooks/queries/useZones";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -54,8 +55,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isHydrated, setIsHydrated] = useState(false);
     const [location, setLocationState] = useState("");
-    const [isLocationDetected, setIsLocationDetected] = useState<boolean | null>(null);
+    // Device GPS fix, used only when the user hasn't manually picked a
+    // location (see the unified zone-resolution effect below).
+    const [gpsCoords, setGpsCoords] = useState<{ lat: number; lon: number } | null>(null);
+    const [geolocationUnavailable, setGeolocationUnavailable] = useState(false);
     const [isManuallySelected, setIsManuallySelected] = useState(false);
+    // Hardcoded lat/lon for whichever location is currently selected (see
+    // LOCATION_COORDINATES) — lets a dropdown pick stand in for the
+    // device's GPS position when feeding getZones().
+    const [locationCoords, setLocationCoords] = useState<{ lat: number; lon: number } | null>(null);
     const [zoneId, setZoneIdState] = useState<string | null>(null);
     // The zone the server-side cart is actually pinned to — see
     // CartContextType.cartZoneId for why this is kept separate from `zoneId`.
@@ -67,33 +75,44 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [isOnDemand, setIsOnDemand] = useState(true);
     const [couponCode, setCouponCode] = useState("");
 
-    // Check geolocation on mount
+    // Resolves the device's GPS position — but only once, and only when no
+    // location was manually picked/persisted (checked below via isHydrated,
+    // so this doesn't fire, and prompt for permission, before the
+    // localStorage read has had a chance to find a saved one). This is now
+    // the SINGLE geolocation call for the whole app: page.tsx and
+    // spa-booking/index.tsx used to each run their own resolution on top of
+    // this, which meant up to two extra permission prompts and duplicate
+    // getZones calls for the exact same coordinates.
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        if (!isHydrated) return;
+        if (isManuallySelected && locationCoords) return;
 
-        const checkGeolocation = () => {
-            if (!navigator.geolocation) {
-                console.log("Geolocation not available");
-                setIsLocationDetected(false);
-                return;
-            }
+        if (typeof window === "undefined" || !navigator.geolocation) {
+            setGeolocationUnavailable(true);
+            return;
+        }
 
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    console.log("Geolocation allowed:", position.coords);
-                    setIsLocationDetected(true);
-                },
-                (error) => {
-                    console.log("Geolocation denied:", error.code);
-                    // error.code: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
-                    setIsLocationDetected(false);
-                },
-                { timeout: 5000, enableHighAccuracy: false }
-            );
+        let isMounted = true;
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                if (!isMounted) return;
+                setGpsCoords({ lat: position.coords.latitude, lon: position.coords.longitude });
+                setGeolocationUnavailable(false);
+            },
+            (error) => {
+                if (!isMounted) return;
+                // error.code: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+                console.warn("Geolocation denied or unavailable:", error.code);
+                setGeolocationUnavailable(true);
+            },
+            { timeout: 5000, enableHighAccuracy: false },
+        );
+
+        return () => {
+            isMounted = false;
         };
-
-        checkGeolocation();
-    }, []);
+    }, [isHydrated, isManuallySelected, locationCoords]);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -115,9 +134,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (storedLoc) {
             setLocationState(storedLoc);
             setIsManuallySelected(storedManual === "true");
+            setLocationCoords(LOCATION_COORDINATES[storedLoc] ?? null);
         } else {
             setLocationState(LOCATIONS[0]);
             setIsManuallySelected(false);
+            setLocationCoords(LOCATION_COORDINATES[LOCATIONS[0]] ?? null);
         }
 
         setZoneIdState(storedZoneId);
@@ -167,6 +188,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.log("Location selected:", loc);
         setLocationState(loc);
         setIsManuallySelected(true);
+        // Picking a location from the dropdown has no GPS fix of its own —
+        // fall back to its hardcoded coordinates so the catalog can still
+        // be loaded for that region (see the locationCoords effect in
+        // page.tsx). Unrecognized location strings (e.g. Coming Soon areas)
+        // simply clear it.
+        setLocationCoords(LOCATION_COORDINATES[loc] ?? null);
         if (typeof window !== "undefined") {
             localStorage.setItem("vellora_location", loc);
             localStorage.setItem("vellora_manual_location", "true");
@@ -182,10 +209,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     }, []);
 
+    // The coordinates actually used to resolve a service zone: a manually
+    // picked location's hardcoded coordinates (see setLocation above) take
+    // priority over the device's GPS fix.
+    const activeCoords = isManuallySelected && locationCoords ? locationCoords : gpsCoords;
+
+    const zonesQuery = useZones(activeCoords?.lat ?? null, activeCoords?.lon ?? null, {
+        enabled: isHydrated,
+    });
+
+    // Keeps `zoneId` (the ambient browsing zone the home/detail catalog
+    // fetches for) in sync with whichever coordinates are currently active.
+    // Only reacts to the zones query's own result changing — so it won't
+    // clobber a zoneId set by updateCartAddress below (picking an address
+    // in a different zone) unless the user also changes location/GPS.
+    useEffect(() => {
+        if (zonesQuery.isSuccess) {
+            const zone = zonesQuery.data;
+            setZoneId(zone?.exists && zone?.zoneId ? zone.zoneId : null);
+        } else if (zonesQuery.isError) {
+            setZoneId(null);
+        }
+    }, [zonesQuery.isSuccess, zonesQuery.isError, zonesQuery.data, setZoneId]);
+
+    const zoneExists = zoneId !== null;
+    const isZoneLoading =
+        !isHydrated || (!activeCoords && !geolocationUnavailable) || zonesQuery.isLoading;
+    const zoneError: Error | null =
+        !isManuallySelected && geolocationUnavailable
+            ? new Error("Location permission is required.")
+            : ((zonesQuery.error as Error | null) ?? null);
+
     const syncCart = async (
         items: CartItem[],
         selectedAddressId = addressId,
         details: Partial<Pick<import("@/src/services/cartApi").UpdateCartBody, "scheduledDate" | "scheduledTime" | "isOnDemand" | "couponCode">> = {},
+        propagateZoneToAmbient = false,
     ) => {
         const accessToken = localStorage.getItem("accessToken");
         const apiItems: CartApiItem[] = items.flatMap((item) =>
@@ -242,6 +301,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 // and it can change out from under us (e.g. updateCartAddress
                 // switching to an address in a different zone).
                 setCartZoneId(response.data.zoneId ?? null);
+                // Only when this sync was triggered by an explicit address
+                // change (see updateCartAddress) — not on every quantity
+                // bump/slot pick — also point the ambient browsing zone at
+                // wherever the newly selected address actually is, so the
+                // home/detail catalog (keyed by zoneId) refetches for it.
+                if (propagateZoneToAmbient && response.data.zoneId) {
+                    setZoneId(response.data.zoneId);
+                }
             } else {
                 // If this fires, PATCH /cart's response doesn't actually
                 // carry data.items the way CartResponse assumes — item ids
@@ -460,7 +527,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const updateCartAddress = (nextAddressId: string) => {
         setAddressId(nextAddressId);
-        void syncCart(cartItems, nextAddressId);
+        void syncCart(cartItems, nextAddressId, {}, true);
     };
 
     const updateCartSchedule = (details: {
@@ -478,17 +545,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
-    // FIXED: Show unavailable if:
-    // 1. Geolocation explicitly denied (isLocationDetected = false) AND
-    // 2. User hasn't manually selected location yet
-    const isLocationSupported = isManuallySelected || isLocationDetected !== false;
-
-    console.log("Location State:", {
-        isLocationDetected,
-        isManuallySelected,
-        isLocationSupported,
-        location
-    });
+    // Show unavailable if geolocation was explicitly denied/unavailable and
+    // the user hasn't manually selected a location yet.
+    const isLocationSupported = isManuallySelected || !geolocationUnavailable;
 
     return (
         <CartContext.Provider
@@ -505,8 +564,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 location,
                 setLocation,
                 isLocationSupported,
+                locationCoords,
+                isLocationManuallySelected: isManuallySelected,
+                isHydrated,
                 zoneId,
                 setZoneId,
+                zoneExists,
+                isZoneLoading,
+                zoneError,
                 cartZoneId,
                 cartId,
                 addressId,

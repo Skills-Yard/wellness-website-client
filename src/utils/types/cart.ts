@@ -29,8 +29,35 @@ export interface CartContextType {
   location: string;
   setLocation: (loc: string) => void;
   isLocationSupported: boolean;
+  /** Hardcoded lat/lon for the current `location` (see
+   *  utils/data/coordinates.ts), null when it isn't a recognized dropdown
+   *  entry. Lets a manual dropdown pick substitute for the device's GPS
+   *  position when loading the catalog. */
+  locationCoords: { lat: number; lon: number } | null;
+  /** True once the user has explicitly picked a location (dropdown or the
+   *  "Select Your Area" grid) rather than it coming from geolocation or the
+   *  default. */
+  isLocationManuallySelected: boolean;
+  /** True once CartContext has finished reading localStorage (cart, location,
+   *  zone) on mount. Callers that decide whether to prompt for geolocation
+   *  or show a "pick your location" UI should wait for this first — acting
+   *  on `isLocationManuallySelected`/`locationCoords` before it flips means
+   *  reading their still-default, pre-hydration values and prompting even
+   *  when a location was already saved. */
+  isHydrated: boolean;
   zoneId: string | null;
   setZoneId: (zoneId: string | null) => void;
+  /** True once `zoneId` has resolved to a real, servable zone — derived
+   *  from `zoneId !== null`. Centralized zone resolution (geolocation or a
+   *  manually picked location, see CartProvider) is what sets `zoneId`. */
+  zoneExists: boolean;
+  /** True while zone resolution is still in flight — waiting on GPS,
+   *  waiting on the zones API, or both. */
+  isZoneLoading: boolean;
+  /** Set when geolocation was denied/unavailable (and nothing was manually
+   *  picked) or the zones API call itself failed. Null when resolution
+   *  succeeded or is still in progress. */
+  zoneError: Error | null;
   /** The zone the server-side cart is actually pinned to (follows the
    *  selected delivery address once one is picked) — distinct from `zoneId`
    *  above, which is the ambient browsing/geolocation zone. Slot discovery

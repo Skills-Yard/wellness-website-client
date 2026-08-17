@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from "@/src/components/ui/dialog";
 import type { CreateUserBody } from "@/src/types/auth";
 import { authApi } from "@/src/services/authApi";
 import { userApi } from "@/src/services/userApi";
+import { requestPushNotifications } from "@/src/lib/notifications/push";
 
 type AuthStep = "PHONE" | "OTP" | "ONBOARDING";
 
@@ -71,6 +72,11 @@ export default function AuthModal({
     if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     if (profile) localStorage.setItem("userProfile", JSON.stringify(profile));
     localStorage.setItem("isUserLoggedIn", "true");
+    // Best-effort: prompts for notification permission now that we have an
+    // identity to attach the device token to. No-ops silently if Firebase
+    // isn't configured, the browser doesn't support it, or the user denies —
+    // never blocks navigation on the outcome.
+    void requestPushNotifications(accessToken);
     onComplete?.();
     onClose();
     router.push("/profile");
@@ -86,6 +92,9 @@ export default function AuthModal({
         countryCode: "+91",
         code,
         clientId: "uc_web_customer_portal",
+        // Left blank on purpose — requesting notification permission before the
+        // visitor is authenticated is bad UX. completeAuthentication() below
+        // requests it (and registers the resulting token) right after login instead.
         fcmToken: "",
         deviceType: "WEB",
         deviceName: navigator.userAgent,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useCart } from "@/src/context/CartContext";
 
 import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
@@ -9,22 +10,27 @@ import Inspotlight from "@/src/components/home/in-spotlight";
 import WallPanel from "@/src/components/home/wall-panel";
 import CategoryServices from "@/src/components/home/category-services";
 import MobileHome from "@/src/components/home/mobile";
-import LocationUnavailableModal from "@/src/components/home/location-unavailable";
+import HomeSkeleton from "@/src/components/home/home-skeleton";
 
-import { getZones } from "@/src/services/zoneApi";
-import { getHomeDetails } from "@/src/services/homeApi";
-import { HomeDetails, ZoneDetails } from "@/src/types/serviceTypes";
+// Only ever rendered when the resolved zone isn't servable — never needed
+// on the happy path, so it shouldn't be in the home page's initial bundle.
+const LocationUnavailableModal = dynamic(
+  () => import("@/src/components/home/location-unavailable"),
+  { ssr: false, loading: () => null },
+);
+
+import { useHomeDetails } from "@/src/hooks/queries/useHomeDetails";
 
 export default function Home() {
-  const { setLocation, setZoneId: setCartZoneId } = useCart();
+  const { zoneId, zoneExists, isZoneLoading } = useCart();
 
-  const [zoneDetails, setZoneDetails] = useState<ZoneDetails | null>(null);
-  const [homeDetails, setHomeDetails] = useState<HomeDetails | null>(null);
+  const {
+    data: homeDetails,
+    isLoading: isHomeLoading,
+    isError: homeError,
+    refetch: refetchHomeDetails,
+  } = useHomeDetails(zoneId, { enabled: !!zoneId });
 
-  const [zoneId, setZoneId] = useState<string | null>(null);
-  const [zoneExists, setZoneExists] = useState(false);
-
-  const [loading, setLoading] = useState(true);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
 
@@ -41,6 +47,14 @@ export default function Home() {
     };
   }, []);
 
+  // Zone resolution (geolocation/manual location → getZones) now happens
+  // once, app-wide, in CartContext — this just reacts to the result: once
+  // it's settled, no servable zone means "prompt the user to pick one".
+  useEffect(() => {
+    if (isZoneLoading) return;
+    setShowLocationModal(!zoneExists);
+  }, [isZoneLoading, zoneExists]);
+
   const handleFaqsChange = useCallback(
     (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
       setCategoryFaqs((current) => {
@@ -52,117 +66,23 @@ export default function Home() {
   );
 
   /*
-   * API 1
-   * Get zone from user's coordinates
+   * Loading state — covers both resolving the zone and, once that succeeds,
+   * fetching home details for it. Kept as one combined check so there's no
+   * gap between the two where a definitive-looking "unavailable" screen
+   * could flash before we actually know the answer.
    */
-  const fetchZone = async (latitude: number, longitude: number) => {
-    try {
-      const response = await getZones({
-        lat: latitude,
-        long: longitude,
-      });
+  const isLoadingCatalog =
+    isZoneLoading ||
+    (zoneExists && (isHomeLoading || (!homeError && !homeDetails)));
 
-      const zoneResponse = response.data;
-
-      setZoneDetails(zoneResponse);
-
-      if (zoneResponse?.exists && zoneResponse?.zoneId) {
-        setZoneId(zoneResponse.zoneId);
-        setCartZoneId(zoneResponse.zoneId);
-        setZoneExists(true);
-
-        // If your CartContext needs location/zone
-        setLocation(zoneResponse.zoneId);
-      } else {
-        setZoneId(null);
-        setCartZoneId(null);
-        setZoneExists(false);
-        setHomeDetails(null);
-      }
-    } catch (error) {
-      console.error("Error fetching zone:", error);
-
-      setZoneId(null);
-      setCartZoneId(null);
-      setZoneExists(false);
-      setHomeDetails(null);
-    }
-  };
-
-  /*
-   * API 2
-   * Get home details using zoneId
-   */
-  const fetchHomeDetails = async (id: string) => {
-    try {
-      const response = await getHomeDetails(id);
-
-      setHomeDetails(response.data);
-    } catch (error) {
-      console.error("Error fetching home details:", error);
-
-      setHomeDetails(null);
-    }
-  };
-
-  /*
-   * Get user's current location
-   */
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported.");
-
-      setShowLocationModal(true);
-      setLoading(false);
-
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        await fetchZone(latitude, longitude);
-
-        setLoading(false);
-      },
-
-      (error) => {
-        console.error("Geolocation error:", error);
-
-        setShowLocationModal(true);
-        setLoading(false);
-      },
-    );
-  }, []);
-
-  /*
-   * Once zoneId is available,
-   * fetch home details.
-   */
-  useEffect(() => {
-    if (!zoneId) return;
-
-    fetchHomeDetails(zoneId);
-  }, [zoneId]);
-
-  /*
-   * Loading state
-   */
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 font-medium">
-          Checking services in your location...
-        </p>
-      </main>
-    );
+  if (isLoadingCatalog) {
+    return <HomeSkeleton />;
   }
 
   /*
    * No Zone Available
    */
-  if (!zoneExists || !zoneId || !homeDetails) {
+  if (!zoneExists || !zoneId) {
     return (
       <>
         <main className="min-h-[70vh] flex items-center justify-center px-4">
@@ -185,6 +105,36 @@ export default function Home() {
     );
   }
 
+  /*
+   * Zone resolved, but home details failed to load (network error, 500,
+   * etc.) — distinct from "not available in your area" above, since here
+   * the area is served and retrying is the right call, not picking a
+   * different location.
+   */
+  if (homeError || !homeDetails) {
+    return (
+      <main className="min-h-[70vh] flex items-center justify-center px-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Couldn&apos;t load services
+          </h2>
+
+          <p className="text-gray-500 mt-2">
+            Something went wrong while loading services for your area.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => void refetchHomeDetails()}
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <>
       <main className="w-full overflow-x-hidden flex-1 flex flex-col" id="top">
@@ -198,7 +148,7 @@ export default function Home() {
             categories={homeDetails.categories}
           />
 
-          {homeDetails.categories.map((category) => {
+          {homeDetails.categories.map((category, index) => {
             const highlightBanner = homeDetails.promotionalCampaigns
               .filter(
                 (campaign) =>
@@ -210,7 +160,9 @@ export default function Home() {
 
             return (
             <div key={category.id}>
-              {highlightBanner && <WallPanel campaign={highlightBanner} category={category} />}
+              {highlightBanner && (
+                <WallPanel campaign={highlightBanner} category={category} priority={index === 0} />
+              )}
               <CategoryServices
                 category={category}
                 zoneId={zoneId}
