@@ -114,6 +114,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [updatingSlotItemIds, setUpdatingSlotItemIds] = useState<Set<string>>(
     new Set(),
   );
+  const isUpdatingSlot = useCallback(
+    (id: string) => updatingSlotItemIds.has(id),
+    [updatingSlotItemIds],
+  );
 
   // Resolves the device's GPS position — but only once, and only when no
   // location was manually picked/persisted (checked below via isHydrated,
@@ -604,6 +608,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 // Local slot selection stands either way, but log this — a
                 // failed update here means the slot isn't actually saved.
                 console.error("Failed to update cart item slot", id, error);
+            })
+            .finally(() => {
+                setUpdatingSlotItemIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(id);
+                    return next;
+                });
             });
     };
 
