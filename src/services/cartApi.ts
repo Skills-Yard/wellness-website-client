@@ -13,9 +13,30 @@ export type CartApiItem = {
   // "on-demand" / no-slot-picked bookings fall back to.
   slotDate?: string;
   slotStartTime?: string;
-  serviceItem?: { title?: string; name?: string; image?: string; media?: string; price?: number | string };
-  duration?: { label?: string; name?: string; title?: string; duration?: string; durationMinutes?: number };
-  package?: { label?: string; name?: string; price?: number | string; sessions?: number; pricePerSession?: number | string };
+  serviceItem?: {
+    title?: string;
+    name?: string;
+    image?: string;
+    media?: string;
+    price?: number | string;
+    thumbnailKey?: string | null;
+  };
+  duration?: {
+    label?: string;
+    name?: string;
+    title?: string;
+    duration?: string;
+    durationMinutes?: number;
+    price?: number | string;
+    discountedPrice?: number | string | null;
+  };
+  package?: {
+    label?: string;
+    name?: string;
+    price?: number | string;
+    sessions?: number;
+    pricePerSession?: number | string;
+  };
   addOns?: { name?: string; price?: number | string; extraMinutes?: number }[];
   // Attached server-side (see CartService.attachPricing) from the cart's
   // current zoneId — the zone/duration/surge-adjusted per-unit price,
@@ -37,6 +58,11 @@ export type CartItemUpdateBody = {
   quantity: number;
   slotDate?: string;
   slotStartTime?: string;
+  // See the matching fields on CartApiItem above — client-computed, sent
+  // so the backend doesn't fall back to storing/returning 0 for them.
+  unitPrice?: number;
+  totalPrice?: number;
+  addOnsTotal?: number;
 };
 
 export type UpdateCartBody = {
