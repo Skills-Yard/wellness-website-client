@@ -45,7 +45,11 @@ const toCartItem = (item: CartApiItem): CartItem => ({
         item.duration?.title ??
         item.duration?.duration ??
         "Selected duration",
-    price: Number(item.package?.price ?? item.serviceItem?.price ?? 0),
+    // unitPrice is the zone/duration/surge-adjusted price CartService
+    // attaches server-side (add-ons already folded in) — prefer it so a
+    // zone switch or a duration-only item (no package) reprices correctly.
+    // Falls back to the raw base rates only if the server ever omits it.
+    price: Number(item.unitPrice ?? item.package?.price ?? item.serviceItem?.price ?? 0),
     slotDate: item.slotDate,
     slotStartTime: item.slotStartTime,
 });
@@ -151,7 +155,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const loadCart = async () => {
             try {
-                const response = await cartApi.get(accessToken);
+                const response = await cartApi.get(accessToken, zoneId);
                 setCartItems(response.data.items.map(toCartItem));
                 setCartId(response.data.id ?? response.data.cartId ?? null);
                 setAddressId(response.data.addressId ?? null);
@@ -270,7 +274,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 ...(resolvedScheduledTime ? { scheduledTime: resolvedScheduledTime } : {}),
                 isOnDemand: details.isOnDemand ?? isOnDemand,
                 ...(resolvedCouponCode ? { couponCode: resolvedCouponCode } : {}),
-            }, accessToken);
+            }, accessToken, zoneId);
             // Reconcile with the server's real item ids. addToCart etc. set a
             // client-generated composite id optimistically (see toCartItem) —
             // deleteItem/updateItem target a real backend id, so without this
@@ -341,7 +345,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Real delete, not the bulk PATCH /cart other mutations use here —
         // that only ever sent the trimmed items array along for the ride,
         // which silently did nothing to remove anything server-side.
-        void cartApi.deleteItem(id, accessToken).catch((error) => {
+        void cartApi.deleteItem(id, accessToken, zoneId).catch((error) => {
             // Local removal stands either way, but log this — a failed
             // delete here means the item comes back on the next cart load.
             console.error("Failed to delete cart item", id, error);
@@ -375,7 +379,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) return;
-        void cartApi.clearItems(accessToken).catch((error) => {
+        void cartApi.clearItems(accessToken, zoneId).catch((error) => {
             // Local clear stands either way, but log this — a failed clear
             // here means the items come back on the next cart load.
             console.error("Failed to clear cart items", error);
@@ -432,6 +436,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     slotStartTime,
                 },
                 accessToken,
+                zoneId,
             )
             .then((response) => {
                 if (response?.data?.items) {
@@ -516,3 +521,4 @@ export function useCart() {
     }
     return context;
 }
+
