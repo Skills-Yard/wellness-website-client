@@ -415,7 +415,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Real delete, not the bulk PATCH /cart other mutations use here —
         // that only ever sent the trimmed items array along for the ride,
         // which silently did nothing to remove anything server-side.
-        void cartApi.deleteItem(id, accessToken, zoneId).catch((error) => {
+        // Must resolve against the cart's actual pinned zone (cartZoneId),
+        // not the ambient browsing zoneId — they can diverge (e.g. after
+        // updateCartAddress points the cart at a different zone), and
+        // sending the wrong x-zone-id here makes the backend resolve a
+        // different cart, which 403s with "You do not have access to this
+        // cart item" for an id that's perfectly valid in the real one.
+        void cartApi.deleteItem(id, accessToken, cartZoneId ?? zoneId).catch((error) => {
             // Local removal stands either way, but log this — a failed
             // delete here means the item comes back on the next cart load.
             console.error("Failed to delete cart item", id, error);
@@ -454,12 +460,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     cartApi
       .updateItem(
-        // {itemId} in PATCH /cart/items/{itemId} is the service's
-        // own id (serviceItemId), not this cart row's own `id`
-        // field — same as updateItemSlot below.
+        // {itemId} in PATCH /cart/items/{itemId} is this cart row's own
+        // `id` field, same as updateItemSlot below — serviceItemId (a
+        // different id, the service being purchased) only ever belongs
+        // in the body.
         item.id,
         {
-          serviceItemId: item.id,
+          serviceItemId: item.serviceItemId,
           durationId: item.durationId,
           packageId: item.packageId,
           addOnIds: item.addOnIds ?? [],
@@ -510,7 +517,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) return;
-        void cartApi.clearItems(accessToken, zoneId).catch((error) => {
+        // Same cartZoneId-over-zoneId reasoning as removeFromCart above.
+        void cartApi.clearItems(accessToken, cartZoneId ?? zoneId).catch((error) => {
             // Local clear stands either way, but log this — a failed clear
             // here means the items come back on the next cart load.
             console.error("Failed to clear cart items", error);
@@ -597,7 +605,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     slotStartTime,
                 },
                 accessToken,
-                zoneId,
+                // cartZoneId over zoneId — see removeFromCart above for why.
+                cartZoneId ?? zoneId,
             )
             .then((response) => {
                 if (response?.data?.items) {
