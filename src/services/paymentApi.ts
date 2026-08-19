@@ -18,9 +18,15 @@ export type CheckoutResponse = ApiSuccess<{
 export type VerifyPaymentBody = {
   gateway: "razorpay";
   gatewayOrderId: string;
-  gatewayPaymentId: string;
-  gatewaySignature: string;
-  outcome: "success" | "failure";
+  // Optional on a failure report — there's no payment/signature to send when
+  // the user never completed a charge attempt (e.g. they just closed the
+  // Razorpay modal). Required by the backend only when outcome is "success"
+  // (see PaymentService.verifyPayment).
+  gatewayPaymentId?: string;
+  gatewaySignature?: string;
+  // Must match VerifyPaymentDto's class-validator @IsIn(['success', 'failed'])
+  // exactly — "failure" 400s.
+  outcome: "success" | "failed";
 };
 
 export type VerifyPaymentResponse = ApiSuccess<Record<string, unknown>>;
