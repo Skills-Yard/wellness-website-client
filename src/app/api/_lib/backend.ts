@@ -11,7 +11,7 @@ export async function forwardToBackend(request: Request, path: string) {
   }
 
   const headers = new Headers({
-    "User-Agent": "Vellora Web Customer Portal",
+    "User-Agent": "Eezit Web Customer Portal",
   });
   const authorization = request.headers.get("authorization");
   if (authorization) headers.set("Authorization", authorization);

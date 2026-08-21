@@ -551,7 +551,7 @@ export default function RequirementSelector({
 
                     <div className="relative w-full rounded-xl sm:rounded-2xl px-4 sm:px-5 py-5 sm:py-6 bg-gradient-to-r from-[#FFF0E6] to-[#FADBD8] mb-6 sm:mb-8 overflow-hidden">
                       <div className="inline-block bg-white text-[#8A4A24] text-xs font-bold tracking-wide px-3 py-1.5 rounded-md mb-3 sm:mb-4 shadow-sm">
-                        VELLORA EXPERTS
+                        EEZIT EXPERTS
                       </div>
 
                       <ul className="flex flex-col gap-2 sm:gap-3 w-full md:w-2/3 relative z-10">

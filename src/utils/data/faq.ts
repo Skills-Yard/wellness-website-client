@@ -15,7 +15,7 @@ export const FAQ_DATA: Record<"massage" | "wellness" | "physiotherapy", FaqItem[
         {
             id: 3,
             question: "Can I choose a male or female therapist?",
-            answer: "Yes. Vellora strictly adheres to same-gender policies for security and comfort. Male clients will be assigned certified male therapists, and female clients will be assigned certified female therapists.",
+            answer: "Yes. Eezit strictly adheres to same-gender policies for security and comfort. Male clients will be assigned certified male therapists, and female clients will be assigned certified female therapists.",
         }
     ],
     wellness: [
@@ -39,7 +39,7 @@ export const FAQ_DATA: Record<"massage" | "wellness" | "physiotherapy", FaqItem[
         {
             id: 1,
             question: "Are the physiotherapists certified and registered?",
-            answer: "Yes, 100%. Every Vellora physical therapist holds a professional degree (BPT or MPT) from a certified medical university, is registered with the state council, and has at least 3+ years of clinical and hospital rehab experience.",
+            answer: "Yes, 100%. Every Eezit physical therapist holds a professional degree (BPT or MPT) from a certified medical university, is registered with the state council, and has at least 3+ years of clinical and hospital rehab experience.",
         },
         {
             id: 2,

@@ -12,7 +12,7 @@ import MobileHeader from "./Mobileheader";
 import CategoryGrid from "./Categorygrid";
 import BottomNav from "./Bottomnav";
 import HeroSlider from "./HeroSlider";
-import VelloraPromiseCard from "./vellora";
+import EezitPromiseCard from "./eezit";
 import { HomeDetails } from "@/src/types/serviceTypes";
 
 interface MobileHomeProps {
@@ -101,7 +101,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
         })}
         <ServiceFaq categoryFaqs={categoryFaqs} />
       </div>
-      <VelloraPromiseCard />
+      <EezitPromiseCard />
 
       <BottomNav activeTab={activeTab} onTabClick={scrollToSection} />
     </div>

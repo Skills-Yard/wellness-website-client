@@ -74,6 +74,26 @@ export async function getExistingPushToken(): Promise<string | null> {
   }
 }
 
+/** Raises the same native OS/browser notification a backgrounded tab would
+ *  get, reusing the service worker's registration so it also gets the SW's
+ *  notificationclick→deeplink handling. A toast buried in the bell dropdown
+ *  is easy to miss while focused on the tab, so foreground pushes get this
+ *  too — no-op if permission isn't granted. */
+async function showForegroundNotification(title: string, body: string, deeplink?: string) {
+  if (Notification.permission !== "granted") return;
+
+  try {
+    const registration = await registerServiceWorker();
+    await registration.showNotification(title, {
+      body,
+      icon: "/icon/Profile.png",
+      data: { deeplink },
+    });
+  } catch (error) {
+    console.error("Failed to show foreground notification:", error);
+  }
+}
+
 /** Fires for a push that arrives while the tab is open and focused — the
  *  service worker's onBackgroundMessage never sees these. Returns a no-op
  *  unsubscribe when push isn't available so callers can always call it. */
@@ -87,10 +107,11 @@ export async function onForegroundPushMessage(
 
   const { onMessage } = await import("firebase/messaging");
   return onMessage(messaging, (payload) => {
-    callback(
-      payload.notification?.title ?? "Vellora",
-      payload.notification?.body ?? "",
-      payload.data?.deeplink,
-    );
+    const title = payload.notification?.title ?? "Eezit";
+    const body = payload.notification?.body ?? "";
+    const deeplink = payload.data?.deeplink;
+
+    callback(title, body, deeplink);
+    void showForegroundNotification(title, body, deeplink);
   });
 }

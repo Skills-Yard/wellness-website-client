@@ -23,6 +23,7 @@ firebase.initializeApp(${JSON.stringify(config)});
 
 // Only background (tab not focused / closed) messages land here — a foreground
 // message is handled in-app instead, via onMessage() in src/lib/firebase/messaging.ts,
+// which raises the same native notification itself (through this SW's registration),
 // so it isn't shown twice.
 const messaging = firebase.messaging.isSupported() ? firebase.messaging() : null;
 
@@ -30,7 +31,7 @@ messaging?.onBackgroundMessage((payload) => {
   const { title, body } = payload.notification ?? {};
   const deeplink = payload.data?.deeplink;
 
-  self.registration.showNotification(title ?? "Vellora", {
+  self.registration.showNotification(title ?? "Eezit", {
     body: body ?? "",
     icon: "/icon/Profile.png",
     data: { deeplink },
