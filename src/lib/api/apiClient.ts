@@ -210,3 +210,24 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// The backend now paginates every list endpoint (default 20/page, 100 max)
+// instead of returning everything in one call — see wellness-backend's
+// PaginationQueryDto. Screens here still expect a complete array (e.g.
+// useBookings, useServiceItems just take `.data` and render/filter it
+// as-is), so this walks every backend page and concatenates: same
+// "give me everything" contract they were built against, correct as a
+// resource grows past one page instead of silently truncating at 20.
+export async function fetchAllPaginated<TItem>(
+  fetchPage: (page: number, limit: number) => Promise<{ data?: TItem[] | null; pagination?: { totalPages: number } }>,
+  limit = 100,
+): Promise<TItem[]> {
+  const first = await fetchPage(1, limit);
+  const items = [...(first.data ?? [])];
+  const totalPages = first.pagination?.totalPages ?? 1;
+  for (let page = 2; page <= totalPages; page++) {
+    const next = await fetchPage(page, limit);
+    items.push(...(next.data ?? []));
+  }
+  return items;
+}

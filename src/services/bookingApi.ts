@@ -1,4 +1,4 @@
-import { apiClient } from "@/src/lib/api/apiClient";
+import { apiClient, fetchAllPaginated } from "@/src/lib/api/apiClient";
 import type { ApiSuccess } from "@/src/types/auth";
 import type {
   Booking,
@@ -50,8 +50,17 @@ export const bookingApi = {
     });
   },
 
-  findAll(accessToken: string) {
-    return apiClient.get<BookingListResponse>("/bookings", { accessToken });
+  // The backend now paginates this endpoint (20/page default, previously
+  // returned every booking the user ever made in one call), so this walks
+  // every page — useBookings still expects the complete list.
+  async findAll(accessToken: string): Promise<BookingListResponse> {
+    const data = await fetchAllPaginated<Booking>((page, limit) =>
+      apiClient.get<BookingListResponse>("/bookings", {
+        accessToken,
+        params: { page, limit },
+      }),
+    );
+    return { success: true, data };
   },
 
   findOne(id: string, accessToken: string) {
