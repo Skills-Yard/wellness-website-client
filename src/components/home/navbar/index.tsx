@@ -211,7 +211,7 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-gray-900 font-semibold text-[17px] tracking-tight">
-              Vell<span className="text-amber-500">ora</span>
+              Eez<span className="text-amber-500">it</span>
             </span>
           </Link>
 

@@ -17,7 +17,7 @@ const FOOTER_SECTIONS = [
   {
     title: "For Customers",
     links: [
-      "Vellora Reviews",
+      "Eezit Reviews",
       "Safety Protocol",
       "Contact us / Help Center"
     ]
@@ -53,7 +53,7 @@ export default function Footer() {
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span className="text-[17px] font-bold tracking-tight">Vell<span className="text-amber-500">ora</span></span>
+                <span className="text-[17px] font-bold tracking-tight">Eez<span className="text-amber-500">it</span></span>
                 <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Wellness & Therapy</span>
               </div>
             </div>
@@ -134,7 +134,7 @@ export default function Footer() {
               * Medical disclaimer: Home physiotherapy sessions are conducted by licensed, registered physical therapists. Consult a doctor for acute medical emergencies.
             </p>
             <p className="text-xs text-gray-500 font-medium">
-              © Copyright 2026 Vellora Wellness Limited. All rights reserved.
+              © Copyright 2026 Eezit Wellness Limited. All rights reserved.
             </p>
           </div>
         </div>

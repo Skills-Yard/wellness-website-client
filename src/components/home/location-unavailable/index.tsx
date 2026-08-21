@@ -52,7 +52,7 @@ export default function LocationUnavailableModal({ isOpen, onClose }: LocationUn
                     <div className="relative w-40 h-40 mx-auto rounded-3xl overflow-hidden border border-stone-150/40 shadow-md">
                         <Image
                             src="/images/wellness_category.png"
-                            alt="Vellora Location Availability"
+                            alt="Eezit Location Availability"
                             className="object-cover"
                             fill
                         />

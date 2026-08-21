@@ -170,7 +170,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedCart = localStorage.getItem("vellora_cart");
+    const storedCart = localStorage.getItem("eezit_cart");
     if (storedCart) {
       try {
         setCartItems(JSON.parse(storedCart));
@@ -179,9 +179,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const storedLoc = localStorage.getItem("vellora_location");
-    const storedZoneId = localStorage.getItem("vellora_zone_id");
-    const storedManual = localStorage.getItem("vellora_manual_location");
+    const storedLoc = localStorage.getItem("eezit_location");
+    const storedZoneId = localStorage.getItem("eezit_zone_id");
+    const storedManual = localStorage.getItem("eezit_manual_location");
 
     if (storedLoc) {
       setLocationState(storedLoc);
@@ -211,7 +211,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // the next render, but the raw value is already on disk.
         const response = await cartApi.get(
           accessToken,
-          localStorage.getItem("vellora_zone_id"),
+          localStorage.getItem("eezit_zone_id"),
         );
         setCartItems(response.data.items.map(toCartItem));
         setCartId(response.data.id ?? response.data.cartId ?? null);
@@ -232,7 +232,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Save to localStorage whenever cartItems changes
   useEffect(() => {
     if (isHydrated && typeof window !== "undefined") {
-      localStorage.setItem("vellora_cart", JSON.stringify(cartItems));
+      localStorage.setItem("eezit_cart", JSON.stringify(cartItems));
     }
   }, [cartItems, isHydrated]);
 
@@ -247,16 +247,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // simply clear it.
     setLocationCoords(LOCATION_COORDINATES[loc] ?? null);
     if (typeof window !== "undefined") {
-      localStorage.setItem("vellora_location", loc);
-      localStorage.setItem("vellora_manual_location", "true");
+      localStorage.setItem("eezit_location", loc);
+      localStorage.setItem("eezit_manual_location", "true");
     }
   }, []);
 
   const setZoneId = useCallback((id: string | null) => {
     setZoneIdState(id);
     if (typeof window !== "undefined") {
-      if (id) localStorage.setItem("vellora_zone_id", id);
-      else localStorage.removeItem("vellora_zone_id");
+      if (id) localStorage.setItem("eezit_zone_id", id);
+      else localStorage.removeItem("eezit_zone_id");
     }
   }, []);
 

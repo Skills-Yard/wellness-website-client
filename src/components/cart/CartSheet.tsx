@@ -165,7 +165,7 @@ export default function CartSheet() {
         key,
         amount: checkout.data.amount,
         currency: checkout.data.currency ?? "INR",
-        name: "Vellora",
+        name: "Eezit",
         order_id: orderId,
         handler: async (response: { razorpay_payment_id: string; razorpay_signature: string; razorpay_order_id?: string }) => {
           try {

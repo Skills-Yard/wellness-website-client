@@ -31,7 +31,7 @@ messaging?.onBackgroundMessage((payload) => {
   const { title, body } = payload.notification ?? {};
   const deeplink = payload.data?.deeplink;
 
-  self.registration.showNotification(title ?? "Vellora", {
+  self.registration.showNotification(title ?? "Eezit", {
     body: body ?? "",
     icon: "/icon/Profile.png",
     data: { deeplink },

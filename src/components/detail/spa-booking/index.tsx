@@ -23,7 +23,7 @@ import MobileCategoriesGrid from "./Mobilecategoriesgrid";
 import DesktopCategoriesSidebar from "./Desktopcategoriessidebar";
 import DesktopHero from "./Desktophero";
 import ServicesList from "./Serviceslist";
-import VelloraPPromiseBox from "./Vellorappromisebox";
+import EezitPPromiseBox from "./Eezitpromisebox";
 import FloatingMenuButton from "./Floatingmenubutton";
 import DetailSkeleton from "./DetailSkeleton";
 import SubDetailPopUp from "../[slug]/LazySubDetailPopUp";
@@ -438,7 +438,7 @@ export default function SpaBookingLayout() {
                 onDetailClick={setSelectedService}
                 onAddToCart={handleAddToCart}
               />
-              <VelloraPPromiseBox />
+              <EezitPPromiseBox />
             </div>
           </div>
         </div>

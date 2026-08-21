@@ -107,7 +107,7 @@ export async function onForegroundPushMessage(
 
   const { onMessage } = await import("firebase/messaging");
   return onMessage(messaging, (payload) => {
-    const title = payload.notification?.title ?? "Vellora";
+    const title = payload.notification?.title ?? "Eezit";
     const body = payload.notification?.body ?? "";
     const deeplink = payload.data?.deeplink;
 
