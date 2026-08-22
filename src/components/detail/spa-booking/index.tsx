@@ -81,6 +81,12 @@ export default function SpaBookingLayout() {
   const [selectedService, setSelectedService] = useState<DynamicService | null>(
     null,
   );
+  // Tracks the `?id=` value (e.g. from a search result deep-link) that the
+  // user has already dismissed, so closing that auto-opened modal doesn't
+  // just reopen it — see preselectedService below.
+  const [dismissedPreselectedId, setDismissedPreselectedId] = useState<
+    string | null
+  >(null);
 
   // A category ID in the URL is preferred. The slug lookup keeps existing links working.
   const categoryId =
@@ -322,12 +328,19 @@ export default function SpaBookingLayout() {
     [addToCart],
   );
 
+  const preselectedServiceId = searchParams.get("id");
+
+  // `null` once the auto-opened modal for this id has been closed — without
+  // this, `activeModalService` below falls straight back to it every time
+  // (selectedService starts at null too), so the popup never actually
+  // unmounts, its close animation just plays over a permanently-open modal
+  // that keeps `document.body` scroll-locked (see SubDetailPopUp/mainfile's
+  // scroll-lock effect, which only cleans up on unmount).
   const preselectedService = useMemo(() => {
-    const serviceId = searchParams.get("id");
-    return serviceId
-      ? (services.find((service) => service.id === serviceId) ?? null)
-      : null;
-  }, [searchParams, services]);
+    if (!preselectedServiceId || preselectedServiceId === dismissedPreselectedId)
+      return null;
+    return services.find((service) => service.id === preselectedServiceId) ?? null;
+  }, [preselectedServiceId, services, dismissedPreselectedId]);
 
   const activeModalService = selectedService ?? preselectedService;
 
@@ -460,7 +473,10 @@ export default function SpaBookingLayout() {
           service={activeModalService}
           serviceDetails={selectedServiceDetails}
           categoryName={activeModalService.category}
-          onClose={() => setSelectedService(null)}
+          onClose={() => {
+            setSelectedService(null);
+            setDismissedPreselectedId(preselectedServiceId);
+          }}
         />
       )}
     </div>
