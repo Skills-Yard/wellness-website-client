@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity, ArrowRight } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq } from "@/src/types/serviceItemTypes";
@@ -13,10 +14,19 @@ export type CategoryFaqGroup = {
 
 type ServiceFaqProps = {
     categoryFaqs: CategoryFaqGroup[];
+    // When set, only the active tab's first `limit` FAQs are shown, with a
+    // "Show more" link to the full /faq page below them — used for the
+    // teaser embedded on the home page. Omit for the full, unlimited list
+    // (the /faq page itself).
+    limit?: number;
+    // Pre-selects a tab (e.g. the one the visitor was on when they hit
+    // "Show more") instead of defaulting to the first category — used by
+    // the /faq page, which reads this from its own `?category=` param.
+    initialCategoryId?: string;
 };
 
-export default function ServiceFaq({ categoryFaqs }: ServiceFaqProps) {
-    const [activeTab, setActiveTab] = useState<string | null>(null);
+export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: ServiceFaqProps) {
+    const [activeTab, setActiveTab] = useState<string | null>(initialCategoryId ?? null);
     const [openId, setOpenId] = useState<string | null>(null);
 
     const activeCategoryId = categoryFaqs.some((group) => group.category.id === activeTab)
@@ -53,8 +63,20 @@ export default function ServiceFaq({ categoryFaqs }: ServiceFaqProps) {
 
     if (!activeGroup) return null;
 
+    const visibleFaqs = limit ? activeGroup.faqs.slice(0, limit) : activeGroup.faqs;
+    const hasMore = Boolean(limit) && activeGroup.faqs.length > visibleFaqs.length;
+
     return (
-        <section className="py-16 px-4 max-sm:hidden sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+        <section
+            className={cn(
+                "py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans",
+                // The home-page teaser (limit set) has always been desktop-only
+                // here — mobile gets its own FAQ entry point via the "Show
+                // more" link below. The full /faq page (no limit) is the only
+                // place this renders on small screens.
+                limit && "max-sm:hidden",
+            )}
+        >
             <div className="max-w-4xl mx-auto w-full">
                 {/* Header Title */}
                 <div className="text-center mb-10">
@@ -92,7 +114,7 @@ export default function ServiceFaq({ categoryFaqs }: ServiceFaqProps) {
 
                 {/* Accordion List container */}
                 <div className="space-y-3.5">
-                    {activeGroup.faqs.map((faq, index) => {
+                    {visibleFaqs.map((faq, index) => {
                         const faqId = `${activeGroup.category.id}-${faq.id ?? index}`;
                         const isOpen = openId === faqId;
                         const config = Object.values(tabConfig)[categoryFaqs.findIndex((group) => group.category.id === activeCategoryId) % 3];
@@ -141,9 +163,19 @@ export default function ServiceFaq({ categoryFaqs }: ServiceFaqProps) {
                         );
                     })}
                 </div>
+
+                {hasMore && (
+                    <div className="mt-6 flex justify-center">
+                        <Link
+                            href={`/faq?category=${encodeURIComponent(activeCategoryId ?? "")}`}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-100"
+                        >
+                            Show more
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                )}
             </div>
-
-
         </section>
     );
 }
