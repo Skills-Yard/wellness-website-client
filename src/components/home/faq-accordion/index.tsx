@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity, ArrowRight } from "lucide-react";
+import { ChevronDown, HelpCircle, ShieldCheck, Sparkles, Activity } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq } from "@/src/types/serviceItemTypes";
@@ -43,28 +43,46 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
         setOpenId((prev) => (prev === id ? null : id));
     };
 
-    const tabConfig = {
-        massage: {
+    // Keyed by the category's real `slug` (see CategoryServices' `id={category.slug}`
+    // and utils/data/navbar.ts's NAV_LINK_SECTION_IDS, the same source of truth) —
+    // not by array position, so each category always gets its own color no matter
+    // what order the backend returns categories in.
+    const tabConfig: Record<
+        string,
+        { icon: typeof Sparkles; color: string; activeClass: string; buttonGradient: string }
+    > = {
+        spa: {
             icon: Sparkles,
-            color: "text-amber-500 bg-amber-50 border-amber-100",
-            activeClass: "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+            color: "text-orange-600 bg-orange-50 border-orange-100",
+            activeClass: "bg-orange-500 text-white shadow-md shadow-orange-500/20",
+            buttonGradient: "from-orange-500 to-amber-400 shadow-orange-500/30",
         },
-        wellness: {
+        massage: {
             icon: ShieldCheck,
             color: "text-emerald-600 bg-emerald-50 border-emerald-100",
-            activeClass: "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+            activeClass: "bg-emerald-600 text-white shadow-md shadow-emerald-600/20",
+            buttonGradient: "from-emerald-500 to-emerald-400 shadow-emerald-500/30",
         },
         physiotherapy: {
             icon: Activity,
             color: "text-blue-600 bg-blue-50 border-blue-100",
-            activeClass: "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-        }
+            activeClass: "bg-blue-600 text-white shadow-md shadow-blue-600/20",
+            buttonGradient: "from-blue-500 to-blue-400 shadow-blue-500/30",
+        },
     };
+    const DEFAULT_TAB_CONFIG = {
+        icon: HelpCircle,
+        color: "text-gray-500 bg-gray-50 border-gray-100",
+        activeClass: "bg-gray-800 text-white shadow-md shadow-gray-800/20",
+        buttonGradient: "from-gray-700 to-gray-600 shadow-gray-700/30",
+    };
+    const configFor = (category: HomeCategory) => tabConfig[category.slug] ?? DEFAULT_TAB_CONFIG;
 
     if (!activeGroup) return null;
 
     const visibleFaqs = limit ? activeGroup.faqs.slice(0, limit) : activeGroup.faqs;
     const hasMore = Boolean(limit) && activeGroup.faqs.length > visibleFaqs.length;
+    const activeConfig = configFor(activeGroup.category);
 
     return (
         <section
@@ -91,9 +109,9 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
 
                 {/* Category Segment Control Tabs */}
                 <div className="grid grid-cols-3 gap-1.5 p-1 bg-stone-100/80 rounded-2xl mb-8">
-                    {categoryFaqs.map((group, index) => {
+                    {categoryFaqs.map((group) => {
                         const tab = group.category.id;
-                        const config = Object.values(tabConfig)[index % 3];
+                        const config = configFor(group.category);
                         const isActive = activeCategoryId === tab;
                         const Icon = config.icon;
                         return (
@@ -117,7 +135,6 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
                     {visibleFaqs.map((faq, index) => {
                         const faqId = `${activeGroup.category.id}-${faq.id ?? index}`;
                         const isOpen = openId === faqId;
-                        const config = Object.values(tabConfig)[categoryFaqs.findIndex((group) => group.category.id === activeCategoryId) % 3];
 
                         return (
                             <div
@@ -136,7 +153,7 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
                                             "w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 transition-colors",
-                                            isOpen ? config.color : "text-gray-400 bg-gray-50 border-gray-100"
+                                            isOpen ? activeConfig.color : "text-gray-400 bg-gray-50 border-gray-100"
                                         )}>
                                             <HelpCircle className="w-4.5 h-4.5" />
                                         </div>
@@ -165,13 +182,17 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
                 </div>
 
                 {hasMore && (
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-8 flex justify-center">
                         <Link
                             href={`/faq?category=${encodeURIComponent(activeCategoryId ?? "")}`}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-100"
+                            className={cn(
+                                "inline-flex items-center gap-2 rounded-full bg-gradient-to-r px-6 py-3 text-sm font-bold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]",
+                                activeConfig.buttonGradient,
+                            )}
                         >
-                            Show more
-                            <ArrowRight className="h-4 w-4" />
+                            <Sparkles className="h-4 w-4 shrink-0" />
+                            Show more FAQs
+                            <ChevronDown className="h-4 w-4 shrink-0" />
                         </Link>
                     </div>
                 )}
