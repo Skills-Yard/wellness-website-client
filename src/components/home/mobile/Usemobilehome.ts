@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { HomeServiceItem } from "@/src/types/serviceTypes";
+import { getVisibleElementById } from "@/src/utils/scroll";
+import { NAV_LINK_SECTION_IDS } from "@/src/utils/data";
 
 export function useMobileHome(serviceItems: HomeServiceItem[]) {
     const [searchQuery, setSearchQuery] = useState("");
@@ -25,19 +27,6 @@ export function useMobileHome(serviceItems: HomeServiceItem[]) {
         }
     }, []);
 
-    const getVisibleElementById = (id: string): HTMLElement | null => {
-        if (typeof document === "undefined") return null;
-        const elements = document.querySelectorAll(`#${id}`);
-        for (let i = 0; i < elements.length; i++) {
-            const el = elements[i] as HTMLElement;
-            const rect = el.getBoundingClientRect();
-            if (rect.width > 0 || rect.height > 0) {
-                return el;
-            }
-        }
-        return document.getElementById(id);
-    };
-
     // ✅ header scroll shadow ke liye simple listener (isme koi tab-logic nahi)
     useEffect(() => {
         const handleHeaderScroll = () => {
@@ -52,7 +41,7 @@ export function useMobileHome(serviceItems: HomeServiceItem[]) {
     useEffect(() => {
         if (!isMounted) return;
 
-        const sectionIds = ["massage", "wellness", "physiotherapy"];
+        const sectionIds = Object.values(NAV_LINK_SECTION_IDS);
         const observer = new IntersectionObserver(
             (entries) => {
                 if (isProgrammaticScroll.current) return;

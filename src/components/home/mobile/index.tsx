@@ -99,7 +99,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
           </div>
           );
         })}
-        <ServiceFaq categoryFaqs={categoryFaqs} />
+        <ServiceFaq categoryFaqs={categoryFaqs} limit={5} />
       </div>
       <EezitPromiseCard />
 

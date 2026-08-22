@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/src/context/CartContext";
 
 import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
@@ -11,6 +12,7 @@ import WallPanel from "@/src/components/home/wall-panel";
 import CategoryServices from "@/src/components/home/category-services";
 import MobileHome from "@/src/components/home/mobile";
 import HomeSkeleton from "@/src/components/home/home-skeleton";
+import { getVisibleElementById } from "@/src/utils/scroll";
 
 // Only ever rendered when the resolved zone isn't servable — never needed
 // on the happy path, so it shouldn't be in the home page's initial bundle.
@@ -22,6 +24,7 @@ const LocationUnavailableModal = dynamic(
 import { useHomeDetails } from "@/src/hooks/queries/useHomeDetails";
 
 export default function Home() {
+  const router = useRouter();
   const { zoneId, zoneExists, isZoneLoading } = useCart();
 
   const {
@@ -74,6 +77,30 @@ export default function Home() {
   const isLoadingCatalog =
     isZoneLoading ||
     (zoneExists && (isHomeLoading || (!homeError && !homeDetails)));
+
+  // Cross-page nav-link deep link (see Navbar's handleNavChange): clicking
+  // Massage/Spa/Physiotherapy from any other page lands here with
+  // `?tab=<id>` once the catalog (and therefore the section it points to)
+  // is actually on the page. MobileHome's own useMobileHome hook already
+  // handles this for the mobile tree; this mirrors it for the desktop one.
+  // Reads window.location.search directly rather than useSearchParams so
+  // this stays a plain client-only effect with no Suspense-boundary
+  // requirement.
+  useEffect(() => {
+    if (isLoadingCatalog) return;
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (!tab) return;
+    const timer = setTimeout(() => {
+      const element = getVisibleElementById(tab);
+      if (element) {
+        const y = element.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+      router.replace("/", { scroll: false });
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingCatalog]);
 
   if (isLoadingCatalog) {
     return <HomeSkeleton />;
@@ -172,7 +199,7 @@ export default function Home() {
             );
           })}
 
-          <ServiceFaq categoryFaqs={categoryFaqs} />
+          <ServiceFaq categoryFaqs={categoryFaqs} limit={5} />
         </div>
 
         {/* ───────── MOBILE ───────── */}

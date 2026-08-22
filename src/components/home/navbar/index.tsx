@@ -15,8 +15,15 @@ import {
 import Link from "next/link";
 import { useCart } from "@/src/context/CartContext";
 import { NavLinkType } from "@/src/utils/types";
-import { LOCATIONS, NAV_LINKS, UNSUPPORTED_LOCATIONS } from "@/src/utils/data";
+import {
+  LOCATIONS,
+  NAV_LINKS,
+  NAV_LINK_LABELS,
+  NAV_LINK_SECTION_IDS,
+  UNSUPPORTED_LOCATIONS,
+} from "@/src/utils/data";
 import { cn } from "@/src/lib/utils";
+import { getVisibleElementById } from "@/src/utils/scroll";
 import {
   useServiceSearchIndex,
   SearchableService,
@@ -37,7 +44,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/src/components/ui/sheet";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import AuthModal from "@/src/components/auth/LazyAuthModal";
 import { authApi } from "@/src/services/authApi";
@@ -93,6 +100,7 @@ export default function Navbar() {
     useServiceSearch(searchIndex);
 
   const router = useRouter();
+  const pathname = usePathname();
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -117,7 +125,7 @@ export default function Navbar() {
   }, []);
 
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
+    const element = getVisibleElementById(id);
     if (element) {
       const yOffset = -80; // height of navbar offset
       const y =
@@ -126,11 +134,22 @@ export default function Navbar() {
     }
   };
 
+  // Navbar renders on every page (see app/layout.tsx), but the
+  // Massage/Spa/Physiotherapy sections only exist on the home page —
+  // scrollToSection above would silently no-op from anywhere else. Off the
+  // home page, navigate there with `?tab=<id>` instead; Home (page.tsx)
+  // and MobileHome (useMobileHome) both already pick that param up once
+  // the catalog has loaded and scroll to it themselves.
   const handleNavChange = (link: NavLinkType) => {
     setActive(link);
     setQuery("");
     setSearchOpen(false);
-    scrollToSection(link.toLowerCase());
+    const id = NAV_LINK_SECTION_IDS[link];
+    if (pathname === "/") {
+      scrollToSection(id);
+    } else {
+      router.push(`/?tab=${id}`);
+    }
   };
 
   // Selecting a result navigates straight to its service — same
@@ -215,7 +234,7 @@ export default function Navbar() {
                     : "text-gray-400 hover:text-gray-700",
                 )}
               >
-                {link}
+                {NAV_LINK_LABELS[link]}
                 {active === link && (
                   <span className="absolute bottom-[-18px] left-1/2 -translate-x-1/2 w-4 h-0.5 bg-amber-400 rounded-full" />
                 )}
@@ -551,7 +570,7 @@ export default function Navbar() {
                           : "text-gray-500",
                       )}
                     >
-                      {link}
+                      {NAV_LINK_LABELS[link]}
                     </button>
                   ))}
                 </div>

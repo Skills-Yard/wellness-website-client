@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { cn } from "@/src/lib/utils";
 import { useUnreadNotificationCount } from "@/src/hooks/queries/useNotifications";
+import { NAV_LINK_SECTION_IDS } from "@/src/utils/data";
 
 interface BottomNavProps {
   activeTab: string;
@@ -15,9 +16,9 @@ export default function BottomNav({ activeTab, onTabClick }: BottomNavProps) {
 
   const navItems = [
     { id: "top", label: "Home", icon: "/icon/Home.png", color: "amber" },
-    { id: "wellness", label: "Spa", icon: "/icon/spa.png", color: "emerald" },
-    { id: "massage", label: "Massage", icon: "/icon/Massage.png", color: "rose" },
-    { id: "physiotherapy", label: "Physio", icon: "/icon/Physio.png", color: "blue" },
+    { id: NAV_LINK_SECTION_IDS.Wellness, label: "Spa", icon: "/icon/spa.png", color: "emerald" },
+    { id: NAV_LINK_SECTION_IDS.Massage, label: "Massage", icon: "/icon/Massage.png", color: "rose" },
+    { id: NAV_LINK_SECTION_IDS.Physiotherapy, label: "Physio", icon: "/icon/Physio.png", color: "blue" },
   ];
 
   const colorMap = {
