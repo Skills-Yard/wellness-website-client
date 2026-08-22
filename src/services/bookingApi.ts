@@ -63,6 +63,22 @@ export const bookingApi = {
     return { success: true, data };
   },
 
+  // Single-page fetch for usePaginatedList-backed screens (BookingsListPage)
+  // — unlike findAll() above, this does NOT walk every page, and forwards
+  // scope (the Upcoming/Past tab)/q straight to the backend instead of
+  // fetching everything and filtering client-side.
+  findAllPage(
+    accessToken: string,
+    page: number,
+    limit: number,
+    filters?: { scope?: "UPCOMING" | "PAST"; q?: string },
+  ) {
+    return apiClient.get<BookingListResponse>("/bookings", {
+      accessToken,
+      params: { page, limit, ...filters },
+    });
+  },
+
   findOne(id: string, accessToken: string) {
     return apiClient.get<BookingResponse>(`/bookings/${id}`, { accessToken });
   },
