@@ -94,11 +94,40 @@ async function showForegroundNotification(title: string, body: string, deeplink?
   }
 }
 
+/** Fires when the service worker relays a background push it just displayed
+ *  (see the SW's onBackgroundMessage). The worker can't call the API itself —
+ *  it has no access to the token in page memory — so an open tab acks on its
+ *  behalf. Returns a no-op unsubscribe where service workers aren't available
+ *  so callers can always call it. */
+export function onServiceWorkerDelivery(
+  callback: (notificationId: string) => void,
+): () => void {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return () => {};
+  }
+
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === "PUSH_DELIVERED" && event.data.notificationId) {
+      callback(event.data.notificationId as string);
+    }
+  };
+
+  navigator.serviceWorker.addEventListener("message", handler);
+  return () => navigator.serviceWorker.removeEventListener("message", handler);
+}
+
 /** Fires for a push that arrives while the tab is open and focused — the
- *  service worker's onBackgroundMessage never sees these. Returns a no-op
+ *  service worker's onBackgroundMessage never sees these. `data` is the raw
+ *  FCM data payload; `notificationId` on it is the delivery receipt the
+ *  backend waits for before escalating to another channel. Returns a no-op
  *  unsubscribe when push isn't available so callers can always call it. */
 export async function onForegroundPushMessage(
-  callback: (title: string, body: string, deeplink?: string) => void,
+  callback: (
+    title: string,
+    body: string,
+    deeplink: string | undefined,
+    data: Record<string, string>,
+  ) => void,
 ): Promise<() => void> {
   if (!canUsePush()) return () => {};
 
@@ -109,9 +138,10 @@ export async function onForegroundPushMessage(
   return onMessage(messaging, (payload) => {
     const title = payload.notification?.title ?? "Eezit";
     const body = payload.notification?.body ?? "";
-    const deeplink = payload.data?.deeplink;
+    const data = payload.data ?? {};
+    const deeplink = data.deeplink;
 
-    callback(title, body, deeplink);
+    callback(title, body, deeplink, data);
     void showForegroundNotification(title, body, deeplink);
   });
 }
