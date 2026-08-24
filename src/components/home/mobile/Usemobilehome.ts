@@ -1,13 +1,39 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { HomeServiceItem } from "@/src/types/serviceTypes";
+import { useRouter } from "next/navigation";
 import { getVisibleElementById } from "@/src/utils/scroll";
 import { NAV_LINK_SECTION_IDS } from "@/src/utils/data";
+import {
+    useServiceSearchIndex,
+    SearchableService,
+} from "@/src/hooks/queries/useServiceSearchIndex";
+import { useServiceSearch } from "@/src/hooks/useServiceSearch";
 
-export function useMobileHome(serviceItems: HomeServiceItem[]) {
-    const [searchQuery, setSearchQuery] = useState("");
+// Same full-catalog search infra the desktop Navbar uses (see its
+// searchEverOpened/useServiceSearchIndex/useServiceSearch trio) — mobile
+// used to just substring-filter whatever HomeServiceItem[] the home page
+// had already loaded, with no category info to link a tap anywhere, so
+// picking a suggestion silently did nothing. Reusing the same hooks gives
+// mobile the same fuzzy, full-zone-catalog search and working deep links,
+// and since useServiceSearchIndex fetches via the same queryKeys as the
+// home page's own useHomeDetails(zoneId) call, it resolves from cache
+// instead of refetching.
+export function useMobileHome(zoneId: string | null | undefined) {
     const [searchFocused, setSearchFocused] = useState(false);
+    // Stays true once flipped so the index (and its cache entries) persists
+    // across searchFocused toggling closed — mirrors the desktop navbar's
+    // searchEverOpened.
+    const [searchEverOpened, setSearchEverOpened] = useState(false);
+    const { items: searchIndex, isLoading: isSearchIndexLoading } =
+        useServiceSearchIndex(zoneId, { enabled: searchEverOpened });
+    const {
+        query: searchQuery,
+        setQuery: setSearchQuery,
+        results: searchResults,
+    } = useServiceSearch(searchIndex);
+
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState("home");
     const [isMounted, setIsMounted] = useState(false);
     const [headerScrolled, setHeaderScrolled] = useState(false);
@@ -99,13 +125,20 @@ export function useMobileHome(serviceItems: HomeServiceItem[]) {
         }, 700);
     };
 
-    const filteredSuggestions = searchQuery
-        ? serviceItems.filter((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        : serviceItems.slice(0, 8);
+    const handleSearchFocus = () => {
+        setSearchEverOpened(true);
+        setSearchFocused(true);
+    };
 
-    const handleSuggestionClick = (suggestion: HomeServiceItem) => {
-        setSearchQuery(suggestion.name);
+    // Same deep-link shape as desktop's handleResultClick —
+    // `/detail/{categorySlug}?categoryId=...&id=...`, which the detail page
+    // reads to auto-open that service's booking modal on load.
+    const handleSuggestionClick = (suggestion: SearchableService) => {
+        setSearchQuery("");
         setSearchFocused(false);
+        router.push(
+            `/detail/${suggestion.categorySlug}?categoryId=${encodeURIComponent(suggestion.categoryId)}&id=${encodeURIComponent(suggestion.id)}`,
+        );
     };
 
     return {
@@ -113,11 +146,13 @@ export function useMobileHome(serviceItems: HomeServiceItem[]) {
         setSearchQuery,
         searchFocused,
         setSearchFocused,
+        onSearchFocus: handleSearchFocus,
+        searchResults,
+        isSearchIndexLoading,
         activeTab,
         isMounted,
         headerScrolled,
         scrollToSection,
-        filteredSuggestions,
         handleSuggestionClick,
     };
 }

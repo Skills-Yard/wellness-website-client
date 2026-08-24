@@ -11,7 +11,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { cn } from "@/src/lib/utils";
 import { LOCATIONS, UNSUPPORTED_LOCATIONS } from "@/src/utils/data";
-import { HomeServiceItem } from "@/src/types/serviceTypes";
+import { SearchableService } from "@/src/hooks/queries/useServiceSearchIndex";
 import { useCart } from "@/src/context/CartContext";
 import { useAddresses } from "@/src/hooks/queries/useAddresses";
 import { formatAddressLabel } from "@/src/services/addressApi";
@@ -28,8 +28,10 @@ interface MobileHeaderProps {
     setSearchQuery: (q: string) => void;
     searchFocused: boolean;
     setSearchFocused: (f: boolean) => void;
-    filteredSuggestions: HomeServiceItem[];
-    onSuggestionClick: (suggestion: HomeServiceItem) => void;
+    onSearchFocus: () => void;
+    searchResults: SearchableService[];
+    isSearchIndexLoading: boolean;
+    onSuggestionClick: (suggestion: SearchableService) => void;
 }
 
 export default function MobileHeader({
@@ -43,7 +45,9 @@ export default function MobileHeader({
     setSearchQuery,
     searchFocused,
     setSearchFocused,
-    filteredSuggestions,
+    onSearchFocus,
+    searchResults,
+    isSearchIndexLoading,
     onSuggestionClick,
 }: MobileHeaderProps) {
     const { addressId, updateCartAddress } = useCart();
@@ -180,9 +184,9 @@ export default function MobileHeader({
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setSearchFocused(true);
+                            onSearchFocus();
                         }}
-                        onFocus={() => setSearchFocused(true)}
+                        onFocus={onSearchFocus}
                         className="flex-1 bg-transparent text-sm text-stone-900 placeholder:text-stone-400 outline-none border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 min-w-0"
                     />
                     {searchQuery && (
@@ -207,7 +211,17 @@ export default function MobileHeader({
                                 Close
                             </button>
                         </div>
-                        {filteredSuggestions.map((suggestion) => (
+                        {!searchQuery && (
+                            <p className="text-xs text-stone-400 py-4 text-center">
+                                Start typing to search services…
+                            </p>
+                        )}
+                        {searchQuery && isSearchIndexLoading && searchResults.length === 0 && (
+                            <p className="text-xs text-stone-400 py-4 text-center">
+                                Searching…
+                            </p>
+                        )}
+                        {searchResults.map((suggestion) => (
                             <button
                                 key={suggestion.id}
                                 type="button"
@@ -215,10 +229,13 @@ export default function MobileHeader({
                                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer"
                             >
                                 <Search className="w-3.5 h-3.5 opacity-40 shrink-0" />
-                                <span className="truncate">{suggestion.name}</span>
+                                <span className="truncate flex-1">{suggestion.name}</span>
+                                <span className="shrink-0 text-[10px] text-stone-400">
+                                    {suggestion.categoryName}
+                                </span>
                             </button>
                         ))}
-                        {searchQuery && filteredSuggestions.length === 0 && (
+                        {searchQuery && !isSearchIndexLoading && searchResults.length === 0 && (
                             <p className="text-xs text-stone-400 py-4 text-center">
                                 No results found for &quot;{searchQuery}&quot;
                             </p>
