@@ -79,11 +79,11 @@ export default function MobileHeader({
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <div className="flex flex-col cursor-pointer max-w-[80%]">
-                            <span className="text-[9px] text-amber-400 font-extrabold uppercase tracking-widest flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                In 15 minutes
+                            <span className="text-[20px] font-semibold leading-5 text-white flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                In 15 Minutes
                             </span>
-                            <span className="text-[12px] font-bold text-white flex items-center gap-1 truncate mt-0.5">
+                            <span className="text-[14px] font-medium text-white flex items-center gap-1 truncate mt-1">
                                 <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                                 <span className="truncate">{isMounted ? displayLocation : LOCATIONS[0]}</span>
                                 <ChevronDown className="w-3 h-3 text-stone-300 shrink-0" />
@@ -177,17 +177,17 @@ export default function MobileHeader({
 
             {/* Search Row */}
             <div className="relative">
-                <div className="flex items-center h-10 px-3.5 gap-2 rounded-xl bg-white border border-stone-250/30 shadow-sm focus-within:ring-2 focus-within:ring-amber-500/20">
-                    <Search className="w-4 h-4 text-stone-400 shrink-0" />
+                <div className="flex h-10.75 items-center px-3.5 gap-2 rounded-lg bg-white border border-stone-250/30 shadow-sm focus-within:ring-2 focus-within:ring-amber-500/20">
+                    <Search className="w-5 h-5 text-stone-400 shrink-0" />
                     <Input
-                        placeholder="Search for massage, facial, physiotherapy..."
+                        placeholder="Search for Services (e.g., Spa for Women)"
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
                             onSearchFocus();
                         }}
                         onFocus={onSearchFocus}
-                        className="flex-1 bg-transparent text-sm text-stone-900 placeholder:text-stone-400 outline-none border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 min-w-0"
+                        className="flex-1 bg-transparent text-sm text-stone-900 placeholder:text-black/36 placeholder:font-medium outline-none border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 min-w-0"
                     />
                     {searchQuery && (
                         <button type="button" onClick={() => setSearchQuery("")} className="cursor-pointer">

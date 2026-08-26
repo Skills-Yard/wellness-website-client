@@ -61,7 +61,7 @@ export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
         return (
             <div className="flex h-60 items-end bg-neutral-950 px-5 pb-5 text-white">
                 <div>
-                    <h2 className="text-xl font-extrabold text-amber-100">Wellness at your doorstep</h2>
+                    <h2 className="text-xl font-extrabold text-[#FFC558]">Wellness at your doorstep</h2>
                     <p className="mt-1 text-[11px] font-semibold text-white/80">New campaigns will appear here shortly.</p>
                 </div>
             </div>
@@ -101,7 +101,7 @@ export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
 
                     {/* Slide Text */}
                     <div className="absolute bottom-4 left-5 right-5 text-white space-y-1 z-20">
-                        <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight drop-shadow-md text-amber-100">
+                        <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight drop-shadow-md text-[#FFC558]">
                             {campaign.title}
                         </h2>
                         <p className="text-white/80 text-[11px] sm:text-xs font-semibold drop-shadow-sm max-w-[85%]">

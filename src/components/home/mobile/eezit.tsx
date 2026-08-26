@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function EezitPromiseCard() {
     return (
-        < div className="flex absolute h-[250px] bottom-0 flex-row items-start justify-between gap-4 mt-12  p-5 bg-gradient-to-br from-[#FFFDFC] via-[#FFF5F0] to-[#FFEAE5]  text-left shadow-xs overflow-hidden relative" >
+        <div className="relative flex h-62.5 flex-row items-start justify-between gap-4 mt-12 p-5 bg-gradient-to-br from-[#FFFDFC] via-[#FFF5F0] to-[#FFEAE5] text-left shadow-xs overflow-hidden">
             <div className="w-full h-full flex relative">
                 <div className="flex-1 space-y-3 z-10">
                     <div>

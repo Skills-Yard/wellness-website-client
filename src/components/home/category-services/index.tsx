@@ -12,7 +12,6 @@ import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
 import { DynamicService } from "@/src/utils/types/spabooking";
 import SubDetailPopUp from "@/src/components/detail/[slug]/LazySubDetailPopUp";
-import AddonIcons from "@/src/components/detail/[slug]/AddonIcons";
 
 type CategoryServicesProps = {
   category: HomeCategory;
@@ -35,7 +34,14 @@ const formatRating = (rating: ServiceItem["averageRating"] | ServiceItem["rating
 
 // Real bookings count (distinct from totalReviews, the rating count) —
 // always shown, defaulting to 0 whether it's genuinely 0 or just missing.
-const formatBookings = (bookings: ServiceItem["totalBookingsCount"]) => bookings ?? 0;
+// Compact past 1000 ("12k+ bookings") to match the card's reference design;
+// below that the raw count reads fine on its own ("5 bookings").
+const formatBookingsLabel = (bookings: ServiceItem["totalBookingsCount"]) => {
+  const count = bookings ?? 0;
+  return count >= 1000
+    ? `${Math.floor(count / 1000)}k+ bookings`
+    : `${count} bookings`;
+};
 
 const getLowestDurationPrice = (service: ServiceItem) => {
   const prices = (service.durations ?? [])
@@ -68,7 +74,6 @@ const toDynamicService = (service: ServiceItem, categoryName: string): DynamicSe
   tag: service.tag,
   isSpotlight: service.isSpotlight,
   features: service.features ?? [],
-  addOns: service.addOns ?? [],
   overview: service.overview,
   procedureSteps: service.procedureSteps,
   itemsUsed: service.itemsUsed,
@@ -168,13 +173,13 @@ export default function CategoryServices({
           <span className="block text-xs font-bold uppercase tracking-wide text-green-700 sm:text-sm">
             {category.name}
           </span>
-          <h2 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-black sm:text-3xl">
+          <h2 className="mt-1 text-xl font-semibold leading-6 tracking-tight text-black sm:text-2xl md:text-3xl">
             {category.title ?? category.name}
           </h2>
         </div>
         <Link
           href={`/detail/${category.slug}?categoryId=${encodeURIComponent(category.id)}`}
-          className="mt-1 shrink-0 text-sm font-medium text-[#76501c] hover:underline sm:text-base"
+          className="mt-1 shrink-0 text-xs font-normal leading-[129%] text-[#6B4B22] hover:underline sm:text-sm"
         >
           See all
         </Link>
@@ -241,20 +246,31 @@ export default function CategoryServices({
                       </span>
                     )}
                   </div>
-                  <h3 className="line-clamp-2 min-h-[32px] text-[14px] font-medium leading-[116%] text-black transition-colors group-hover:text-amber-600">
-                    {service.cardTitle ?? service.title ?? service.name ?? "Wellness service"}
-                  </h3>
-                  <div className="mt-[6px] flex flex-col gap-[2px] text-[12px] leading-[116%] text-[#666]">
-                    {/* totalBookingsCount — the real bookings field, same
-                        one SectionHero.tsx reads once this service's popup
-                        is open (distinct from totalReviews, the rating
-                        count). Always rendered, no >0 gate — 0 shows as
-                        "0 bookings" rather than the line disappearing. */}
-                    <span>{formatBookings(service.totalBookingsCount)} bookings</span>
-                    <span className="flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-[#ffb318] text-[#ff9d00]" />
+                  {/* min-h reserves 2 lines so the rating row below lands
+                      at the same height across every card in the row
+                      regardless of title length — items-end bottom-aligns
+                      the title inside that reserved box so a one-line
+                      title sits right against the rating row instead of
+                      leaving a gap under it (the empty half-line goes
+                      above the title, against the image, instead). */}
+                  <div className="flex min-h-[32px] items-end">
+                    <h3 className="line-clamp-2 text-[14px] font-medium leading-[116%] text-black transition-colors group-hover:text-amber-600">
+                      {service.cardTitle ?? service.title ?? service.name ?? "Wellness service"}
+                    </h3>
+                  </div>
+                  {/* One row — star, rating, then bookings in parens — not
+                      two stacked lines. totalBookingsCount is the real
+                      bookings field, same one SectionHero.tsx reads once
+                      this service's popup is open (distinct from
+                      totalReviews, the rating count). Always rendered, no
+                      >0 gate — 0 shows as "(0 bookings)" rather than the
+                      line disappearing. */}
+                  <div className="mt-[6px] flex items-center gap-1 text-[12px] leading-[116%] text-[#666]">
+                    <Star className="h-3.5 w-3.5 shrink-0 fill-[#ffb318] text-[#ff9d00]" />
+                    <span className="font-medium text-black">
                       {formatRating(service.averageRating ?? service.rating)}
                     </span>
+                    <span>({formatBookingsLabel(service.totalBookingsCount)})</span>
                   </div>
                   <div className="mt-[6px] flex items-center gap-1 text-[14px] font-medium leading-[116%] text-black">
                     <span>Starts at {formatPrice(lowestDurationPrice)}</span>
@@ -262,7 +278,6 @@ export default function CategoryServices({
                       {formatPrice(service.originalPrice)}
                     </span>
                   </div>
-                  <AddonIcons addOns={service.addOns} className="mt-[6px]" />
                 </div>
               </SwiperSlide>
             );
