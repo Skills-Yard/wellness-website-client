@@ -212,7 +212,21 @@ export default function Navbar() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
         {/* Left Section: Logo & Desktop Links */}
         <div className="flex items-center gap-6 lg:gap-8">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 shrink-0 group"
+            onClick={(e) => {
+              // Already home — Link's own navigation is a no-op here (same
+              // URL), so it wouldn't otherwise scroll anywhere. Smooth-scroll
+              // to top ourselves instead of leaving the click feeling dead.
+              // Navigating in from another page already lands at the top on
+              // its own, so this only needs to handle the same-page case.
+              if (pathname === "/") {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+          >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shadow-[0_2px_12px_rgba(251,191,36,0.4)] group-hover:shadow-[0_2px_18px_rgba(251,191,36,0.6)] transition-shadow">
               <Sparkles className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
