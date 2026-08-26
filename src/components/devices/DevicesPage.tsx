@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, LogOut, MonitorSmartphone } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
@@ -10,23 +10,20 @@ import { unregisterPushToken } from "@/src/lib/notifications/push";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
 import DeviceRow from "./DeviceRow";
 import type { DeviceItem } from "@/src/types/auth";
+import { useRequireAuth } from "@/src/hooks/useRequireAuth";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
 export default function DevicesPage() {
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isMounted, isLoggedIn, showAuthModal, setShowAuthModal, handleAuthComplete } =
+    useRequireAuth();
   const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
 
   const { data: devices = [], isLoading } = useDevices();
   const revokeDevice = useRevokeDevice();
-
-  useEffect(() => {
-    setIsMounted(true);
-    setIsLoggedIn(localStorage.getItem("isUserLoggedIn") === "true");
-  }, []);
 
   if (!isMounted) return null;
 
@@ -39,11 +36,18 @@ export default function DevicesPage() {
           See every device signed in to your account and sign any of them out.
         </p>
         <button
-          onClick={() => router.push("/profile")}
+          onClick={() => setShowAuthModal(true)}
           className="rounded-2xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-white cursor-pointer hover:bg-amber-500/90"
         >
-          Go to profile
+          Log in
         </button>
+        {showAuthModal && (
+          <LazyAuthModal
+            onClose={() => setShowAuthModal(false)}
+            onComplete={handleAuthComplete}
+            redirectToProfile={false}
+          />
+        )}
       </div>
     );
   }

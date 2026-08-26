@@ -26,6 +26,7 @@ import { useAddresses, useCreateAddress, useUpdateAddress, useRemoveAddress } fr
 import type { Address } from "@/src/services/addressApi";
 import type { UserProfile } from "@/src/types/auth";
 import { AddressPicker, type AddressInput } from "@/src/components/addresses/AddressPicker";
+import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -443,11 +444,20 @@ const AboutSection = ({
 export default function ProfilePage() {
   const router = useRouter();
 
-  const [isLogin, setIsLogin] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  // Gates this whole page on a present *and* unexpired access token (not
+  // just the `isUserLoggedIn` flag, which outlives an actually-expired
+  // token) — showAuthModal starts true the moment that check comes back
+  // negative, so a visitor lands straight on the login prompt instead of
+  // needing to find and click "Login to continue" first.
+  const {
+    isMounted,
+    isLoggedIn: isLogin,
+    setIsLoggedIn: setIsLogin,
+    showAuthModal,
+    setShowAuthModal,
+    handleAuthComplete,
+  } = useRequireAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  // Prevents Next.js hydration mismatch errors
-  const [isMounted, setIsMounted] = useState(false);
   // Which accordion section opens first — read from ?section= below so
   // links like the navbar's "Account Settings" can land directly on it,
   // same `new URLSearchParams(window.location.search)` convention
@@ -461,28 +471,19 @@ export default function ProfilePage() {
   const updateAddress = useUpdateAddress();
   const removeAddress = useRemoveAddress();
 
-  // This function is called when the user successfully finishes the AuthModal flow
-  // 1. Check local storage when the component loads
   useEffect(() => {
-    setIsMounted(true);
-    const storedLoginState = localStorage.getItem("isUserLoggedIn");
-    if (storedLoginState === "true") {
-      setIsLogin(true);
-    }
     const section = new URLSearchParams(window.location.search).get("section");
     if (section === "settings") {
       setOpenSection("settings");
     }
   }, []);
 
-  // 2. Update state AND local storage on successful login
+  // Called when the user successfully finishes the AuthModal flow.
   const handleLoginSuccess = () => {
-    setShowAuthModal(false);
-    setIsLogin(true);
-
-    // Save to local storage so it survives a refresh!
+    handleAuthComplete();
+    // Kept alongside the token check for the other places that still read
+    // this flag directly (e.g. Navbar, BottomNav badges).
     localStorage.setItem("isUserLoggedIn", "true");
-
     toast.success("Successfully logged in!");
   };
 

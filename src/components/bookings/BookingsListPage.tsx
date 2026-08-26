@@ -15,8 +15,9 @@ import {
   getStatusMeta,
   resolveImageSrc,
 } from "./bookingStatus";
-import { useIsLoggedIn } from "./useIsLoggedIn";
+import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 
 type Tab = "upcoming" | "past";
 
@@ -75,7 +76,8 @@ function BookingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void
 
 export default function BookingsListPage() {
   const router = useRouter();
-  const { isMounted, isLoggedIn } = useIsLoggedIn();
+  const { isMounted, isLoggedIn, showAuthModal, setShowAuthModal, handleAuthComplete } =
+    useRequireAuth();
   const [tab, setTab] = useState<Tab>("upcoming");
 
   // scope maps the tab directly to the backend's status-group filter (see
@@ -108,11 +110,18 @@ export default function BookingsListPage() {
           Your upcoming and past appointments will show up here once you&apos;re logged in.
         </p>
         <button
-          onClick={() => router.push("/profile")}
+          onClick={() => setShowAuthModal(true)}
           className="rounded-2xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-white cursor-pointer hover:bg-amber-500/90"
         >
-          Go to profile
+          Log in
         </button>
+        {showAuthModal && (
+          <LazyAuthModal
+            onClose={() => setShowAuthModal(false)}
+            onComplete={handleAuthComplete}
+            redirectToProfile={false}
+          />
+        )}
       </div>
     );
   }

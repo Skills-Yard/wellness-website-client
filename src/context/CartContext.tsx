@@ -5,6 +5,8 @@ import { CartItem, CartContextType } from "@/src/utils/types";
 import { cartApi, type CartApiItem } from "@/src/services/cartApi";
 import { getCartItemPricing } from "@/src/utils/pricing";
 import { useZones } from "@/src/hooks/queries/useZones";
+import { hasValidAccessToken } from "@/src/utils/auth/token";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 import React, {
   createContext,
   useContext,
@@ -123,6 +125,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [updatingSlotItemIds, setUpdatingSlotItemIds] = useState<Set<string>>(
     new Set(),
   );
+  // The item addToCart was asked to add while there was no valid session —
+  // held here so the login modal below can add it for real once
+  // authentication actually completes, instead of the click just being lost.
+  const [pendingCartItem, setPendingCartItem] = useState<Omit<
+    CartItem,
+    "quantity"
+  > | null>(null);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
   // Resolves the device's GPS position — but only once, and only when no
   // location was manually picked/persisted (checked below via isHydrated,
@@ -404,7 +414,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addToCart = (item: Omit<CartItem, "quantity">) => {
+  const performAddToCart = (item: Omit<CartItem, "quantity">) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       const next = existing
@@ -416,6 +426,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     setIsCartOpen(true);
+  };
+
+  // Every cart mutation syncs straight to the server (see syncCart above),
+  // which silently no-ops without an access token — so adding to cart
+  // while logged out (or with an expired token) would otherwise look like
+  // it worked locally and then quietly vanish on the next load/sync.
+  // Gate on a present *and* unexpired token instead, and prompt login;
+  // the item is added for real once that login actually completes (see
+  // the LazyAuthModal below).
+  const addToCart = (item: Omit<CartItem, "quantity">) => {
+    if (!hasValidAccessToken()) {
+      setPendingCartItem(item);
+      setIsAuthPromptOpen(true);
+      return;
+    }
+    performAddToCart(item);
   };
 
   const removeFromCart = (id: string) => {
@@ -726,6 +752,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      {isAuthPromptOpen && (
+        <LazyAuthModal
+          onClose={() => {
+            setIsAuthPromptOpen(false);
+            setPendingCartItem(null);
+          }}
+          onComplete={() => {
+            setIsAuthPromptOpen(false);
+            if (pendingCartItem) performAddToCart(pendingCartItem);
+            setPendingCartItem(null);
+          }}
+          // The visitor was mid-add-to-cart, not intentionally navigating to
+          // their profile — land them back where they were (with the item
+          // now actually in the cart) instead of on /profile.
+          redirectToProfile={false}
+        />
+      )}
     </CartContext.Provider>
   );
 }

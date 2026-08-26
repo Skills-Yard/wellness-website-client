@@ -44,7 +44,8 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
-import { useIsLoggedIn } from "./useIsLoggedIn";
+import { useRequireAuth } from "@/src/hooks/useRequireAuth";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 
 const STEP_ORDER: BookingStatus[] = [
   "CONFIRMED",
@@ -163,7 +164,8 @@ function OtpCard({ otp }: { otp: string }) {
 export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { isMounted, isLoggedIn } = useIsLoggedIn();
+  const { isMounted, isLoggedIn, showAuthModal, setShowAuthModal, handleAuthComplete } =
+    useRequireAuth();
 
   const { data: booking, isLoading } = useBooking(id);
   const cancelMutation = useCancelBooking();
@@ -186,11 +188,18 @@ export default function BookingDetailPage() {
         <ClipboardList className="mb-4 h-10 w-10 text-stone-300" strokeWidth={1.5} />
         <h2 className="mb-2 text-xl font-bold text-slate-900">Log in to see this booking</h2>
         <button
-          onClick={() => router.push("/profile")}
+          onClick={() => setShowAuthModal(true)}
           className="rounded-2xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-white cursor-pointer hover:bg-amber-500/90"
         >
-          Go to profile
+          Log in
         </button>
+        {showAuthModal && (
+          <LazyAuthModal
+            onClose={() => setShowAuthModal(false)}
+            onComplete={handleAuthComplete}
+            redirectToProfile={false}
+          />
+        )}
       </div>
     );
   }
