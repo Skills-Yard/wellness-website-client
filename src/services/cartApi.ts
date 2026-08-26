@@ -38,14 +38,13 @@ export type CartApiItem = {
     pricePerSession?: number | string;
   };
   addOns?: { name?: string; price?: number | string; extraMinutes?: number }[];
-  // Attached server-side by CartService.attachPricing, computed fresh from
-  // the cart's zone on every read — this is the one authoritative per-unit
-  // price (package/duration price plus every selected add-on's price), and
-  // should be preferred over deriving price from package/duration alone
-  // (see toCartItem in CartContext), which silently drops add-ons.
+  // Attached server-side (see CartService.attachPricing) from the cart's
+  // current zoneId — the zone/duration/surge-adjusted per-unit price,
+  // add-ons already folded in. Prefer this over serviceItem/package.price
+  // when reading a display price; those are the raw, zone-blind base rates.
   unitPrice?: number | null;
   totalPrice?: number | null;
-  addOnsTotal?: number | null;
+  addOnsTotal?: number;
 };
 
 // Body for PATCH /cart/items/{itemId} — a full item representation (not a
@@ -93,56 +92,44 @@ export type CartData = {
 };
 export type CartResponse = ApiSuccess<CartData>;
 
-// zoneId travels as the `x-zone-id` header on every call below, never as a
-// body/query field — same convention as serviceItemApi/homeApi/paymentApi/
-// campaignApi/bookingApi (see bookingApi.ts's getAvailableSlots for the full
-// story). This module was the one holdout that never sent it at all: the
-// backend couldn't resolve which zone to operate a cart write against, which
-// is what actually caused a freshly-added item to never reconcile a real id
-// (PATCH /cart would fail or come back without the item's zone-dependent
-// fields) — the item then looked "stuck" until a page refresh's plain
-// GET /cart (no zone needed just to read back what's already stored) pulled
-// the real, already-persisted item down.
-const zoneHeader = (zoneId?: string | null) =>
-  zoneId ? { headers: { "x-zone-id": zoneId } } : {};
+// The client's currently browsed/selected zone, sent as x-zone-id so the
+// backend pins the cart to it (see CartService.updateCart) instead of
+// falling back to a saved default address / IP geolocation / global
+// default — none of which reflect what the user actually has selected.
+// Same rationale as categoryApi.ts's zoneHeaders.
+const zoneHeaders = (zoneId?: string | null) =>
+  zoneId ? { headers: { "x-zone-id": zoneId } } : undefined;
 
 export const cartApi = {
   get(accessToken: string, zoneId?: string | null) {
-    return apiClient.get<CartResponse>("/cart", {
-      accessToken,
-      ...zoneHeader(zoneId),
-    });
+    return apiClient.get<CartResponse>("/cart", { accessToken, ...zoneHeaders(zoneId) });
   },
   // Cart-wide fields only (address/schedule/coupon) — item quantities/slots
   // go through updateItem below instead, which targets one real item id.
   update(body: UpdateCartBody, accessToken: string, zoneId?: string | null) {
     return apiClient.patch<UpdateCartBody, CartResponse>("/cart", body, {
       accessToken,
-      ...zoneHeader(zoneId),
+      ...zoneHeaders(zoneId),
     });
   },
-  updateItem(
-    itemId: string,
-    body: CartItemUpdateBody,
-    accessToken: string,
-    zoneId?: string | null,
-  ) {
+  updateItem(itemId: string, body: CartItemUpdateBody, accessToken: string, zoneId?: string | null) {
     return apiClient.patch<CartItemUpdateBody, CartResponse>(
       `/cart/items/${itemId}`,
       body,
-      { accessToken, ...zoneHeader(zoneId) },
+      { accessToken, ...zoneHeaders(zoneId) },
     );
   },
   deleteItem(itemId: string, accessToken: string, zoneId?: string | null) {
     return apiClient.delete<CartResponse>(`/cart/items/${itemId}`, {
       accessToken,
-      ...zoneHeader(zoneId),
+      ...zoneHeaders(zoneId),
     });
   },
   clearItems(accessToken: string, zoneId?: string | null) {
-    return apiClient.delete<CartResponse>("/cart", {
-      accessToken,
-      ...zoneHeader(zoneId),
-    });
+    return apiClient.delete<CartResponse>("/cart", { accessToken, ...zoneHeaders(zoneId) });
   },
 };
+
+
+
+

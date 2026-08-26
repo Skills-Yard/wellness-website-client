@@ -70,20 +70,11 @@ const toCartItem = (item: CartApiItem): CartItem => ({
         item.duration?.title ??
         item.duration?.duration ??
         "Selected duration",
-    // item.unitPrice (attached server-side by CartService.attachPricing) is
-    // the one price that actually includes selected add-ons — package/
-    // duration price alone (the fallback below, for local/not-yet-synced
-    // items that never carry unitPrice) silently drops them. Mirrors
-    // PricingService.priceCartLines' own precedence otherwise: package
-    // beats duration, discountedPrice beats price. ServiceItem itself
-    // carries no price field of its own to fall back to.
-    price: Number(
-        item.unitPrice ??
-        item.package?.price ??
-        item.duration?.discountedPrice ??
-        item.duration?.price ??
-        0,
-    ),
+    // unitPrice is the zone/duration/surge-adjusted price CartService
+    // attaches server-side (add-ons already folded in) — prefer it so a
+    // zone switch or a duration-only item (no package) reprices correctly.
+    // Falls back to the raw base rates only if the server ever omits it.
+    price: Number(item.unitPrice ?? item.package?.price ?? item.serviceItem?.price ?? 0),
     slotDate: item.slotDate,
     slotStartTime: item.slotStartTime,
   });
@@ -545,12 +536,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     beginSync();
     cartApi
       .updateItem(
-        // {itemId} in PATCH /cart/items/{itemId} is the service's
-        // own id (serviceItemId), not this cart row's own `id`
-        // field — same as updateItemSlot below.
+        // {itemId} in PATCH /cart/items/{itemId} is this cart row's own
+        // `id` field, same as updateItemSlot below — serviceItemId (a
+        // different id, the service being purchased) only ever belongs
+        // in the body.
         item.id,
         {
-          serviceItemId: item.id,
+          serviceItemId: item.serviceItemId,
           durationId: item.durationId,
           packageId: item.packageId,
           addOnIds: item.addOnIds ?? [],
@@ -825,3 +817,4 @@ export function useCart() {
   }
   return context;
 }
+

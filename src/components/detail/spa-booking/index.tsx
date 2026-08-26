@@ -69,7 +69,7 @@ const EMPTY_SUB_CATEGORIES: SubCategory[] = [];
 export default function SpaBookingLayout() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
-  const { isCartOpen, addToCart, zoneId, zoneExists, isZoneLoading, zoneError } = useCart();
+  const { isCartOpen, zoneId, zoneExists, isZoneLoading, zoneError } = useCart();
   const {
     isLoading: categoriesLoading,
     error: categoriesError,
@@ -315,19 +315,6 @@ export default function SpaBookingLayout() {
     });
   }, []);
 
-  const handleAddToCart = useCallback(
-    (service: DynamicService) => {
-      addToCart({
-        id: service.id,
-        title: service.title,
-        price: Number.parseInt(service.price.replace(/[^\d]/g, ""), 10) || 0,
-        image: service.media,
-        duration: service.duration,
-      });
-    },
-    [addToCart],
-  );
-
   const preselectedServiceId = searchParams.get("id");
 
   // `null` once the auto-opened modal for this id has been closed — without
@@ -449,7 +436,6 @@ export default function SpaBookingLayout() {
                 categories={serviceCategories}
                 services={services}
                 onDetailClick={setSelectedService}
-                onAddToCart={handleAddToCart}
               />
               <EezitPPromiseBox />
             </div>

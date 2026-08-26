@@ -18,7 +18,10 @@ import { BookingDetails, BookingStep } from "@/src/utils/types/booking";
 
 declare global {
   interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+    Razorpay?: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: "payment.failed", handler: (response: { error?: { description?: string } }) => void) => void;
+    };
   }
 }
 
@@ -149,6 +152,39 @@ export default function CartSheet() {
     if (!selectedAddress) { setIsAddressFormOpen(true); setAddressError("Add or select an address before checkout."); return; }
     const token = localStorage.getItem("accessToken");
     if (!token) { setAddressError("Please log in before checkout."); return; }
+
+    // Set once checkout() has actually created a booking + Razorpay order —
+    // everything from here on (a failed attempt, the user dismissing the
+    // modal, or even the browser tab closing) leaves that booking sitting
+    // PENDING_PAYMENT with slots held until BOOKING_TIMEOUT expires it.
+    // Reporting the failure immediately via /payment/verify (same endpoint
+    // the success handler already used, just with outcome: "failed") runs
+    // the backend's existing confirmPaymentFailure path right away instead
+    // of waiting on that timeout — releasing the held slot and notifying the
+    // user without a delay.
+    let orderId: string | undefined;
+    // Guards against reporting a failure after the success handler has
+    // already settled this same checkout (Razorpay doesn't fire ondismiss
+    // after a successful handler, but payment.failed + ondismiss can both
+    // fire for one abandoned attempt — this keeps that a single report).
+    let settled = false;
+
+    const reportFailure = async (message: string) => {
+      if (settled) return;
+      settled = true;
+      setPaymentError(message);
+      setIsCheckingOut(false);
+      if (!orderId) return;
+      try {
+        await paymentApi.verify({ gateway: "razorpay", gatewayOrderId: orderId, outcome: "failed" }, token);
+      } catch (error) {
+        // The booking still self-expires via BOOKING_TIMEOUT either way —
+        // this call is just for a faster release, so a failure here isn't
+        // worth surfacing over the message already shown above.
+        console.error("Failed to report payment failure to server", error);
+      }
+    };
+
     try {
       setIsCheckingOut(true);
       setPaymentError(null);
@@ -171,10 +207,15 @@ export default function CartSheet() {
       }
       const idempotencyKey = crypto.randomUUID();
       const checkout = await paymentApi.checkout({ gateway: "razorpay", idempotencyKey }, token, resolvedZoneId);
-      const orderId = checkout.data.gatewayOrderId ?? checkout.data.orderId;
+      orderId = checkout.data.gatewayOrderId ?? checkout.data.orderId;
       const key = checkout.data.keyId ?? checkout.data.key ?? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       if (!orderId || !key || !checkout.data.amount) throw new Error("Payment configuration is incomplete. Please try again shortly.");
       if (!(await loadRazorpay()) || !window.Razorpay) throw new Error("Unable to load Razorpay checkout. Please try again.");
+      // Narrows to `string` for the closures below — `orderId` itself stays
+      // `string | undefined` at the outer scope (see reportFailure above),
+      // since TS can't see that those closures only ever run after this
+      // guard has already passed.
+      const confirmedOrderId = orderId;
       const razorpay = new window.Razorpay({
         key,
         amount: checkout.data.amount,
@@ -182,8 +223,9 @@ export default function CartSheet() {
         name: "Eezit",
         order_id: orderId,
         handler: async (response: { razorpay_payment_id: string; razorpay_signature: string; razorpay_order_id?: string }) => {
+          settled = true;
           try {
-            await paymentApi.verify({ gateway: "razorpay", gatewayOrderId: response.razorpay_order_id ?? orderId, gatewayPaymentId: response.razorpay_payment_id, gatewaySignature: response.razorpay_signature, outcome: "success" }, token);
+            await paymentApi.verify({ gateway: "razorpay", gatewayOrderId: response.razorpay_order_id ?? confirmedOrderId, gatewayPaymentId: response.razorpay_payment_id, gatewaySignature: response.razorpay_signature, outcome: "success" }, token);
             setBooking({ id: generateBookingId(), dateTime: getTomorrowDateTime(), address: formatAddress(selectedAddress), items: cartItems });
             clearCart();
             setStep("confirmation");
@@ -191,12 +233,30 @@ export default function CartSheet() {
             setPaymentError(error instanceof Error ? error.message : "Payment verification failed. Please contact support if you were charged.");
           } finally { setIsCheckingOut(false); }
         },
-        modal: { ondismiss: () => setIsCheckingOut(false) },
+        modal: {
+          // Fires when the user closes the checkout modal themselves —
+          // either before attempting a charge, or after Razorpay's own
+          // in-modal retry UI following a failed attempt. Either way,
+          // nothing was captured, so this is the point the abandoned
+          // booking should actually be reported as failed.
+          ondismiss: () => {
+            void reportFailure("Payment was not completed. Your slot has been released — feel free to try again.");
+          },
+        },
       });
+
+      // Fires when a charge attempt is declined (e.g. insufficient funds,
+      // bank decline) while Razorpay keeps its own modal open for the user
+      // to retry with another method. Reports the decline immediately with
+      // Razorpay's own reason instead of waiting for the user to give up
+      // and dismiss the modal.
+      razorpay.on("payment.failed", (response: { error?: { description?: string } }) => {
+        void reportFailure(response?.error?.description || "Payment failed. Please try again.");
+      });
+
       razorpay.open();
     } catch (error) {
-      setPaymentError(error instanceof Error ? error.message : "Unable to start checkout.");
-      setIsCheckingOut(false);
+      await reportFailure(error instanceof Error ? error.message : "Unable to start checkout.");
     }
   };
 

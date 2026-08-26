@@ -6,14 +6,12 @@ interface SpotlightServiceCardProps {
   service: DynamicService;
   layout: "mobile" | "desktop";
   onDetailClick: (service: DynamicService) => void;
-  onAddToCart: (service: DynamicService) => void;
 }
 
 export default function SpotlightServiceCard({
   service,
   layout,
   onDetailClick,
-  onAddToCart,
 }: SpotlightServiceCardProps) {
   const hasDiscount = !!(
     service.originalPrice && service.originalPrice !== service.price
@@ -42,7 +40,7 @@ export default function SpotlightServiceCard({
           <h3 className="max-w-[calc(100%-92px)] truncate text-base leading-[116%] font-medium text-black">{service.title}</h3>
           <p className="mt-2 flex h-3.5 items-center gap-1.5 text-xs leading-[116%] text-[#666666]"><span className="flex items-center gap-[5px]"><Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB818] text-[#FFB818]" /><span>{service.rating}</span></span><span>({service.reviews})</span><span className="truncate">• {service.totalBookingsCount ?? 0} bookings</span></p>
           <p className="mt-2 flex h-4 items-center gap-1 text-sm leading-[116%] font-medium text-black"><span>Starting at {service.price}</span>{hasDiscount && <span className="text-xs leading-[116%] text-[#666666] line-through">{service.originalPrice}</span>}</p>
-          <button onClick={(e) => { e.stopPropagation(); onAddToCart(service); }} className="absolute right-0 top-[15px] h-[35px] w-[68px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform">Book</button>
+          <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="absolute right-0 top-[15px] h-[35px] w-[68px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform">Book</button>
           <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="mt-[18px] h-3.5 text-xs leading-[116%] font-medium text-[#D38516]">View details</button>
           {features.length > 0 && <ul className="mt-2 space-y-[3px] text-sm leading-[116%] font-medium text-[#666666]">{features.slice(0, 3).map((feat, i) => <li key={i} className="flex items-start gap-[9px]"><span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#666666]" /><span className="line-clamp-1">{feat}</span></li>)}</ul>}
         </div>
@@ -94,7 +92,7 @@ export default function SpotlightServiceCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onAddToCart(service);
+            onDetailClick(service);
           }}
           className="rounded-xl border border-[#E8CCBE] bg-[#FEF6F3] px-8 py-2.5 font-bold text-xs text-[#D38516] shadow-xs transition-all hover:bg-[#FDE9DD] cursor-pointer active:scale-95 shrink-0"
         >
