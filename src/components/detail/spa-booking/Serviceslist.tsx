@@ -7,14 +7,12 @@ interface ServicesListProps {
   categories: Category[];
   services: DynamicService[];
   onDetailClick: (service: DynamicService) => void;
-  onAddToCart: (service: DynamicService) => void;
 }
 
 export default function ServicesList({
   categories,
   services,
   onDetailClick,
-  onAddToCart,
 }: ServicesListProps) {
   return (
     <div className="space-y-8 xs:space-y-10 md:space-y-12 flex-1">
@@ -50,9 +48,9 @@ export default function ServicesList({
                     {/* MOBILE LAYOUT */}
                     <div className="flex flex-col lg:hidden w-full">
                       {isSpotlightMobile ? (
-                        <SpotlightServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} onAddToCart={onAddToCart} />
+                        <SpotlightServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} />
                       ) : (
-                        <StandardServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} onAddToCart={onAddToCart} />
+                        <StandardServiceCard service={service} layout="mobile" onDetailClick={onDetailClick} />
                       )}
                     </div>
 
@@ -63,14 +61,12 @@ export default function ServicesList({
                           service={service}
                           layout="desktop"
                           onDetailClick={onDetailClick}
-                          onAddToCart={onAddToCart}
                         />
                       ) : (
                         <StandardServiceCard
                           service={service}
                           layout="desktop"
                           onDetailClick={onDetailClick}
-                          onAddToCart={onAddToCart}
                         />
                       )}
                     </div>

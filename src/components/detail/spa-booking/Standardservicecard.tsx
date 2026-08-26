@@ -6,14 +6,12 @@ interface StandardServiceCardProps {
   service: DynamicService;
   layout: "mobile" | "desktop";
   onDetailClick: (service: DynamicService) => void;
-  onAddToCart: (service: DynamicService) => void;
 }
 
 export default function StandardServiceCard({
   service,
   layout,
   onDetailClick,
-  onAddToCart,
 }: StandardServiceCardProps) {
   const hasDiscount = !!(
     service.originalPrice && service.originalPrice !== service.price
@@ -68,7 +66,7 @@ export default function StandardServiceCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onAddToCart(service);
+                onDetailClick(service);
               }}
               className="h-[35px] w-[76px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform"
             >
@@ -96,7 +94,7 @@ export default function StandardServiceCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onAddToCart(service);
+              onDetailClick(service);
             }}
             className="absolute -bottom-4 left-1/2 flex w-10/12 -translate-x-1/2 items-center justify-center rounded-xl border border-[#E8CCBE] bg-white py-2 text-xs font-bold text-[#D38516] shadow-md transition-all hover:bg-[#FEF6F3] cursor-pointer active:scale-95"
           >
