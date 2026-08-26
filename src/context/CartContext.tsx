@@ -134,6 +134,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   > | null>(null);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
+  // Counts cart-mutating requests currently in flight (bulk PATCH /cart via
+  // syncCart, plus the per-item delete/update/clear calls that bypass it) —
+  // a counter rather than a plain boolean since e.g. a quantity bump and a
+  // slot pick can overlap, and the lock must stay on until the *last* one
+  // settles, not whichever settles first. `isCartSyncing` (derived below)
+  // is what callers actually read; every public cart mutator also checks it
+  // before starting a new one, so a second edit fired while the first is
+  // still in flight is dropped instead of racing it — the exact
+  // "PATCH /cart still in flight when Checkout reads a stale zone" class of
+  // bug CartSheet's handleCheckout otherwise has to work around after the
+  // fact. CartView reads it too, to disable its controls and show a busy
+  // state instead of just silently swallowing the click.
+  const [syncingCount, setSyncingCount] = useState(0);
+  const isCartSyncing = syncingCount > 0;
+  const beginSync = useCallback(() => setSyncingCount((count) => count + 1), []);
+  const endSync = useCallback(
+    () => setSyncingCount((count) => Math.max(0, count - 1)),
+    [],
+  );
+
   // Resolves the device's GPS position — but only once, and only when no
   // location was manually picked/persisted (checked below via isHydrated,
   // so this doesn't fire, and prompt for permission, before the
@@ -360,6 +380,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const resolvedScheduledTime = details.scheduledTime ?? scheduledTime;
     const resolvedCouponCode = details.couponCode ?? couponCode;
 
+    beginSync();
     try {
       const response = await cartApi.update(
         {
@@ -411,6 +432,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       // The cart remains available locally if the server update fails.
       console.error("Failed to sync cart with the server", error);
+    } finally {
+      endSync();
     }
   };
 
@@ -435,7 +458,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Gate on a present *and* unexpired token instead, and prompt login;
   // the item is added for real once that login actually completes (see
   // the LazyAuthModal below).
+  //
+  // Also dropped outright while another cart mutation is still syncing
+  // (isCartSyncing) — two edits in flight at once is exactly what lets the
+  // cart end up inconsistent (e.g. Checkout reading a zone the previous
+  // edit hasn't finished writing yet). The UI disables its buttons for the
+  // same reason; this is the backstop for whatever slips past that.
   const addToCart = (item: Omit<CartItem, "quantity">) => {
+    if (isCartSyncing) return;
     if (!hasValidAccessToken()) {
       setPendingCartItem(item);
       setIsAuthPromptOpen(true);
@@ -445,6 +475,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromCart = (id: string) => {
+    if (isCartSyncing) return;
     const item = cartItems.find((i) => i.id === id);
     setCartItems((prev) => prev.filter((i) => i.id !== id));
 
@@ -469,13 +500,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // which silently did nothing to remove anything server-side.
     // DELETE /cart/items/{itemId} — {itemId} is the service's own id
     // (serviceItemId), not this cart row's own `id` field.
+    beginSync();
     void cartApi
       .deleteItem(item.id, accessToken, cartZoneId ?? zoneId)
       .catch((error) => {
         // Local removal stands either way, but log this — a failed
         // delete here means the item comes back on the next cart load.
         console.error("Failed to delete cart item", id, error);
-      });
+      })
+      .finally(endSync);
   };
 
   // Shared by increase/decreaseQuantity below. Targets this one item via
@@ -486,6 +519,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // does: this needs the current item's slotDate/slotStartTime to carry
   // along, and a functional updater's callback can't see that.
   const updateQuantity = (id: string, nextQuantity: number) => {
+    if (isCartSyncing) return;
     const updatedItems = cartItems.map((item) =>
       item.id === id ? { ...item, quantity: nextQuantity } : item,
     );
@@ -508,6 +542,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    beginSync();
     cartApi
       .updateItem(
         // {itemId} in PATCH /cart/items/{itemId} is the service's
@@ -546,7 +581,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Local quantity change stands either way, but log this — a
         // failed update here means it isn't actually saved.
         console.error("Failed to update cart item quantity", id, error);
-      });
+      })
+      .finally(endSync);
   };
 
   const increaseQuantity = (id: string) => {
@@ -562,17 +598,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearCart = () => {
+    if (isCartSyncing) return;
     setCartItems([]);
 
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) return;
+    beginSync();
     void cartApi
       .clearItems(accessToken, cartZoneId ?? zoneId)
       .catch((error) => {
         // Local clear stands either way, but log this — a failed clear
         // here means the items come back on the next cart load.
         console.error("Failed to clear cart items", error);
-      });
+      })
+      .finally(endSync);
   };
 
   const updateItemSlot = (
@@ -580,6 +619,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     slotDate: string,
     slotStartTime: string,
   ) => {
+    if (isCartSyncing) return;
     // Computed explicitly, not read back from the cartItems state
     // variable — this function calls syncCart (via the cart-wide
     // schedule sync below) in the same tick as the setCartItems call
@@ -641,6 +681,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // state on its slot button until the request below settles —
     // cleared in .finally() regardless of outcome.
     setUpdatingSlotItemIds((prev) => new Set(prev).add(id));
+    beginSync();
 
     cartApi
       .updateItem(
@@ -681,6 +722,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           next.delete(id);
           return next;
         });
+        endSync();
       });
   };
 
@@ -690,6 +732,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateCartAddress = (nextAddressId: string) => {
+    if (isCartSyncing) return;
     setAddressId(nextAddressId);
     void syncCart(cartItems, nextAddressId, {}, true);
   };
@@ -700,6 +743,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     isOnDemand?: boolean;
     couponCode?: string;
   }) => {
+    if (isCartSyncing) return;
     if (details.scheduledDate !== undefined)
       setScheduledDate(details.scheduledDate);
     if (details.scheduledTime !== undefined)
@@ -749,6 +793,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateCartSchedule,
         updateItemSlot,
         isUpdatingSlot,
+        isCartSyncing,
       }}
     >
       {children}

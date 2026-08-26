@@ -45,7 +45,15 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
 });
 
 export default function CartSheet() {
-  const { isCartOpen, setIsCartOpen, cartItems, clearCart, addressId, updateCartAddress } = useCart();
+  const {
+    isCartOpen,
+    setIsCartOpen,
+    cartItems,
+    clearCart,
+    addressId,
+    updateCartAddress,
+    isCartSyncing,
+  } = useCart();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<BookingStep>("cart");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
@@ -132,6 +140,12 @@ export default function CartSheet() {
   };
 
   const handleCheckout = async () => {
+    // A cart edit (quantity, slot, address, schedule) can still have its
+    // PATCH /cart in flight here — checking out against that stale state is
+    // exactly what used to trip the backend's "Cart zone does not match the
+    // selected address zone" check below. The button is disabled for this
+    // too (see CartView), but guard the handler itself as well.
+    if (isCartSyncing) return;
     if (!selectedAddress) { setIsAddressFormOpen(true); setAddressError("Add or select an address before checkout."); return; }
     const token = localStorage.getItem("accessToken");
     if (!token) { setAddressError("Please log in before checkout."); return; }

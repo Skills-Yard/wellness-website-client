@@ -83,6 +83,7 @@ export default function CartView({
     cartZoneId,
     updateItemSlot,
     isUpdatingSlot,
+    isCartSyncing,
   } = useCart();
   // Slot discovery must be scoped to the selected address's zone — that's
   // the server-side cart's zone (cartZoneId), not the ambient browsing
@@ -114,14 +115,22 @@ export default function CartView({
           </div>
           <div>
             <h2 className="text-[17px] font-bold text-gray-900">My Cart</h2>
-            <p className="text-xs text-gray-400">
-              {cartCount} {cartCount === 1 ? "item" : "items"} selected
+            <p className="flex items-center gap-1 text-xs text-gray-400">
+              {isCartSyncing ? (
+                <>
+                  <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                  Updating cart…
+                </>
+              ) : (
+                `${cartCount} ${cartCount === 1 ? "item" : "items"} selected`
+              )}
             </p>
           </div>
         </div>
         <button
           onClick={clearCart}
-          className="flex items-center gap-1.5 rounded-xl border border-red-100 px-2.5 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-red-50"
+          disabled={isCartSyncing}
+          className="flex items-center gap-1.5 rounded-xl border border-red-100 px-2.5 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2 className="h-3 w-3" />
           Clear all
@@ -148,7 +157,8 @@ export default function CartView({
                 </h4>
                 <button
                   onClick={() => removeFromCart(item.id)}
-                  className="p-1 text-gray-300 hover:text-red-400"
+                  disabled={isCartSyncing}
+                  className="p-1 text-gray-300 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -164,7 +174,7 @@ export default function CartView({
                 <div className="flex items-center gap-2 rounded-md bg-gray-100 px-1 py-0.5">
                   <button
                     onClick={() => decreaseQuantity(item.id)}
-                    disabled={item.quantity <= 1}
+                    disabled={item.quantity <= 1 || isCartSyncing}
                     className="flex h-5 w-5 items-center justify-center rounded bg-white disabled:opacity-40"
                   >
                     <Minus className="h-3 w-3" />
@@ -174,7 +184,8 @@ export default function CartView({
                   </span>
                   <button
                     onClick={() => increaseQuantity(item.id)}
-                    className="flex h-5 w-5 items-center justify-center rounded bg-white"
+                    disabled={isCartSyncing}
+                    className="flex h-5 w-5 items-center justify-center rounded bg-white disabled:opacity-40"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
@@ -183,7 +194,7 @@ export default function CartView({
               <button
                 type="button"
                 onClick={() => setSlotPickerItemId(item.id)}
-                disabled={isUpdatingSlot(item.id)}
+                disabled={isUpdatingSlot(item.id) || isCartSyncing}
                 className="mt-1.5 flex w-full items-center gap-1 text-[11px] font-semibold text-amber-600 disabled:opacity-60"
               >
                 {isUpdatingSlot(item.id) ? (
@@ -222,7 +233,8 @@ export default function CartView({
             <button
               type="button"
               onClick={onToggleAddressForm}
-              className="flex shrink-0 items-center text-[12px] font-semibold text-amber-600"
+              disabled={isCartSyncing}
+              className="flex shrink-0 items-center text-[12px] font-semibold text-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {address ? "Change" : "Add address"}
               <ChevronRight className="h-3 w-3" />
@@ -257,10 +269,11 @@ export default function CartView({
             <input
               type="checkbox"
               checked={isOnDemand}
+              disabled={isCartSyncing}
               onChange={(event) =>
                 updateCartSchedule({ isOnDemand: event.target.checked })
               }
-              className="h-4 w-4 accent-amber-500"
+              className="h-4 w-4 accent-amber-500 disabled:cursor-not-allowed disabled:opacity-40"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -269,7 +282,7 @@ export default function CartView({
               <input
                 type="date"
                 min={today}
-                disabled={isOnDemand}
+                disabled={isOnDemand || isCartSyncing}
                 value={scheduledDate}
                 onChange={(event) =>
                   updateCartSchedule({
@@ -283,7 +296,12 @@ export default function CartView({
             <label className="text-[11px] font-medium text-gray-500">
               Time
               <select
-                disabled={isOnDemand || !scheduledDate || timeSlots.length === 0}
+                disabled={
+                  isOnDemand ||
+                  !scheduledDate ||
+                  timeSlots.length === 0 ||
+                  isCartSyncing
+                }
                 value={scheduledTime}
                 onChange={(event) =>
                   updateCartSchedule({ scheduledTime: event.target.value })
@@ -305,11 +323,12 @@ export default function CartView({
             Coupon code
             <input
               value={couponCode}
+              disabled={isCartSyncing}
               onChange={(event) =>
                 updateCartSchedule({ couponCode: event.target.value })
               }
               placeholder="WELCOME20"
-              className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs"
+              className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs disabled:bg-gray-50"
             />
           </label>
         </div>
@@ -330,14 +349,16 @@ export default function CartView({
         </div>
         <Button
           onClick={onContinue}
-          disabled={isCheckingOut}
+          disabled={isCheckingOut || isCartSyncing}
           className="h-12 w-full rounded-2xl border-none bg-[#25180F] text-[15px] font-bold text-white hover:bg-[#3a2518] disabled:opacity-60"
         >
           {isCheckingOut
             ? "Opening payment…"
-            : address
-              ? "Checkout"
-              : "Add an address to checkout"}
+            : isCartSyncing
+              ? "Updating cart…"
+              : address
+                ? "Checkout"
+                : "Add an address to checkout"}
         </Button>
       </div>
 
