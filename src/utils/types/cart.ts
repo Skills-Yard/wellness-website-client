@@ -86,4 +86,12 @@ export interface CartContextType {
    *  applied optimistically, but callers can use this to show a loading
    *  state until the server has actually confirmed it. */
   isUpdatingSlot: (id: string) => boolean;
+  /** True while any cart-mutating request is in flight — the bulk PATCH
+   *  /cart sync, or a per-item delete/update/clear call. Every public cart
+   *  mutator (addToCart, removeFromCart, updateQuantity, clearCart,
+   *  updateItemSlot, updateCartAddress, updateCartSchedule) already drops
+   *  a call made while this is true rather than racing it; callers should
+   *  still disable their own controls and show a busy state while it's set
+   *  instead of relying solely on that silent drop. */
+  isCartSyncing: boolean;
 }

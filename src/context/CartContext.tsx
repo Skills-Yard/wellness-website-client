@@ -5,6 +5,8 @@ import { CartItem, CartContextType } from "@/src/utils/types";
 import { cartApi, type CartApiItem } from "@/src/services/cartApi";
 import { getCartItemPricing } from "@/src/utils/pricing";
 import { useZones } from "@/src/hooks/queries/useZones";
+import { hasValidAccessToken } from "@/src/utils/auth/token";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 import React, {
   createContext,
   useContext,
@@ -114,9 +116,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [updatingSlotItemIds, setUpdatingSlotItemIds] = useState<Set<string>>(
     new Set(),
   );
-  const isUpdatingSlot = useCallback(
-    (id: string) => updatingSlotItemIds.has(id),
-    [updatingSlotItemIds],
+  // The item addToCart was asked to add while there was no valid session —
+  // held here so the login modal below can add it for real once
+  // authentication actually completes, instead of the click just being lost.
+  const [pendingCartItem, setPendingCartItem] = useState<Omit<
+    CartItem,
+    "quantity"
+  > | null>(null);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+
+  // Counts cart-mutating requests currently in flight (bulk PATCH /cart via
+  // syncCart, plus the per-item delete/update/clear calls that bypass it) —
+  // a counter rather than a plain boolean since e.g. a quantity bump and a
+  // slot pick can overlap, and the lock must stay on until the *last* one
+  // settles, not whichever settles first. `isCartSyncing` (derived below)
+  // is what callers actually read; every public cart mutator also checks it
+  // before starting a new one, so a second edit fired while the first is
+  // still in flight is dropped instead of racing it — the exact
+  // "PATCH /cart still in flight when Checkout reads a stale zone" class of
+  // bug CartSheet's handleCheckout otherwise has to work around after the
+  // fact. CartView reads it too, to disable its controls and show a busy
+  // state instead of just silently swallowing the click.
+  const [syncingCount, setSyncingCount] = useState(0);
+  const isCartSyncing = syncingCount > 0;
+  const beginSync = useCallback(() => setSyncingCount((count) => count + 1), []);
+  const endSync = useCallback(
+    () => setSyncingCount((count) => Math.max(0, count - 1)),
+    [],
   );
 
   // Resolves the device's GPS position — but only once, and only when no
@@ -345,53 +371,64 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const resolvedScheduledTime = details.scheduledTime ?? scheduledTime;
     const resolvedCouponCode = details.couponCode ?? couponCode;
 
-        try {
-            const response = await cartApi.update({
-                items: apiItems,
-                ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
-                ...(resolvedScheduledDate ? { scheduledDate: resolvedScheduledDate } : {}),
-                ...(resolvedScheduledTime ? { scheduledTime: resolvedScheduledTime } : {}),
-                isOnDemand: details.isOnDemand ?? isOnDemand,
-                ...(resolvedCouponCode ? { couponCode: resolvedCouponCode } : {}),
-            }, accessToken, zoneId);
-            // Reconcile with the server's real item ids. addToCart etc. set a
-            // client-generated composite id optimistically (see toCartItem) —
-            // deleteItem/updateItem target a real backend id, so without this
-            // a freshly-added item's id would never match and removing it
-            // (or picking a slot for it) would silently fail against the API.
-            if (response?.data?.items) {
-                setCartItems(response.data.items.map(toCartItem));
-                // Keep in sync every time — this is the source of truth for
-                // which zone slot reservation will check capacity against,
-                // and it can change out from under us (e.g. updateCartAddress
-                // switching to an address in a different zone).
-                setCartZoneId(response.data.zoneId ?? null);
-                // Only when this sync was triggered by an explicit address
-                // change (see updateCartAddress) — not on every quantity
-                // bump/slot pick — also point the ambient browsing zone at
-                // wherever the newly selected address actually is, so the
-                // home/detail catalog (keyed by zoneId) refetches for it.
-                if (propagateZoneToAmbient && response.data.zoneId) {
-                    setZoneId(response.data.zoneId);
-                }
-            } else {
-                // If this fires, PATCH /cart's response doesn't actually
-                // carry data.items the way CartResponse assumes — item ids
-                // never get reconciled with the server's real ones, and
-                // every later delete/slot-update call will 404 against a
-                // client-generated id that was never real to begin with.
-                console.warn(
-                    "cartApi.update response had no data.items — cart item ids will not be reconciled with the server.",
-                    response,
-                );
-            }
-        } catch (error) {
-            // The cart remains available locally if the server update fails.
-            console.error("Failed to sync cart with the server", error);
+    beginSync();
+    try {
+      const response = await cartApi.update(
+        {
+          items: apiItems,
+          ...(selectedAddressId ? { addressId: selectedAddressId } : {}),
+          ...(resolvedScheduledDate
+            ? { scheduledDate: resolvedScheduledDate }
+            : {}),
+          ...(resolvedScheduledTime
+            ? { scheduledTime: resolvedScheduledTime }
+            : {}),
+          isOnDemand: details.isOnDemand ?? isOnDemand,
+          ...(resolvedCouponCode ? { couponCode: resolvedCouponCode } : {}),
+        },
+        accessToken,
+        cartZoneId ?? zoneId,
+      );
+      // Reconcile with the server's real item ids. addToCart etc. set a
+      // client-generated composite id optimistically (see toCartItem) —
+      // deleteItem/updateItem target a real backend id, so without this
+      // a freshly-added item's id would never match and removing it
+      // (or picking a slot for it) would silently fail against the API.
+      if (response?.data?.items) {
+        setCartItems(response.data.items.map(toCartItem));
+        // Keep in sync every time — this is the source of truth for
+        // which zone slot reservation will check capacity against,
+        // and it can change out from under us (e.g. updateCartAddress
+        // switching to an address in a different zone).
+        setCartZoneId(response.data.zoneId ?? null);
+        // Only when this sync was triggered by an explicit address
+        // change (see updateCartAddress) — not on every quantity
+        // bump/slot pick — also point the ambient browsing zone at
+        // wherever the newly selected address actually is, so the
+        // home/detail catalog (keyed by zoneId) refetches for it.
+        if (propagateZoneToAmbient && response.data.zoneId) {
+          setZoneId(response.data.zoneId);
         }
-    };
+      } else {
+        // If this fires, PATCH /cart's response doesn't actually
+        // carry data.items the way CartResponse assumes — item ids
+        // never get reconciled with the server's real ones, and
+        // every later delete/slot-update call will 404 against a
+        // client-generated id that was never real to begin with.
+        console.warn(
+          "cartApi.update response had no data.items — cart item ids will not be reconciled with the server.",
+          response,
+        );
+      }
+    } catch (error) {
+      // The cart remains available locally if the server update fails.
+      console.error("Failed to sync cart with the server", error);
+    } finally {
+      endSync();
+    }
+  };
 
-  const addToCart = (item: Omit<CartItem, "quantity">) => {
+  const performAddToCart = (item: Omit<CartItem, "quantity">) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       const next = existing
@@ -405,37 +442,65 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartOpen(true);
   };
 
+  // Every cart mutation syncs straight to the server (see syncCart above),
+  // which silently no-ops without an access token — so adding to cart
+  // while logged out (or with an expired token) would otherwise look like
+  // it worked locally and then quietly vanish on the next load/sync.
+  // Gate on a present *and* unexpired token instead, and prompt login;
+  // the item is added for real once that login actually completes (see
+  // the LazyAuthModal below).
+  //
+  // Also dropped outright while another cart mutation is still syncing
+  // (isCartSyncing) — two edits in flight at once is exactly what lets the
+  // cart end up inconsistent (e.g. Checkout reading a zone the previous
+  // edit hasn't finished writing yet). The UI disables its buttons for the
+  // same reason; this is the backstop for whatever slips past that.
+  const addToCart = (item: Omit<CartItem, "quantity">) => {
+    if (isCartSyncing) return;
+    if (!hasValidAccessToken()) {
+      setPendingCartItem(item);
+      setIsAuthPromptOpen(true);
+      return;
+    }
+    performAddToCart(item);
+  };
+
   const removeFromCart = (id: string) => {
+    if (isCartSyncing) return;
     const item = cartItems.find((i) => i.id === id);
     setCartItems((prev) => prev.filter((i) => i.id !== id));
 
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) return;
-        if (item && isPendingSync(item)) {
-            // Nothing to delete server-side yet — the add hasn't synced (or
-            // is still in flight), so there's no real id for DELETE
-            // /cart/items/{id} to target. Local removal above covers it.
-            console.warn(
-                "Skipped cart item delete — item hasn't synced with the server yet",
-                id,
-            );
-            return;
-        }
-        // Real delete, not the bulk PATCH /cart other mutations use here —
-        // that only ever sent the trimmed items array along for the ride,
-        // which silently did nothing to remove anything server-side.
-        // Must resolve against the cart's actual pinned zone (cartZoneId),
-        // not the ambient browsing zoneId — they can diverge (e.g. after
-        // updateCartAddress points the cart at a different zone), and
-        // sending the wrong x-zone-id here makes the backend resolve a
-        // different cart, which 403s with "You do not have access to this
-        // cart item" for an id that's perfectly valid in the real one.
-        void cartApi.deleteItem(id, accessToken, cartZoneId ?? zoneId).catch((error) => {
-            // Local removal stands either way, but log this — a failed
-            // delete here means the item comes back on the next cart load.
-            console.error("Failed to delete cart item", id, error);
-        });
-    };
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
+    if (!item || isPendingSync(item)) {
+      // Nothing to delete server-side yet — the add hasn't synced (or
+      // is still in flight), so this item was never created in the
+      // cart the server knows about. Local removal above covers it.
+      console.warn(
+        "Skipped cart item delete — item hasn't synced with the server yet",
+        id,
+      );
+      return;
+    }
+    if (!item.serviceItemId) {
+      console.warn("Skipped cart item delete — item has no serviceItemId", id);
+      return;
+    }
+    // Real delete, not the bulk PATCH /cart other mutations use here —
+    // that only ever sent the trimmed items array along for the ride,
+    // which silently did nothing to remove anything server-side.
+    // DELETE /cart/items/{itemId} — {itemId} is the service's own id
+    // (serviceItemId), not this cart row's own `id` field.
+    beginSync();
+    void cartApi
+      .deleteItem(item.id, accessToken, cartZoneId ?? zoneId)
+      .catch((error) => {
+        // Local removal stands either way, but log this — a failed
+        // delete here means the item comes back on the next cart load.
+        console.error("Failed to delete cart item", id, error);
+      })
+      .finally(endSync);
+  };
 
   // Shared by increase/decreaseQuantity below. Targets this one item via
   // PATCH /cart/items/{itemId} (cartApi.updateItem) instead of the bulk
@@ -445,6 +510,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // does: this needs the current item's slotDate/slotStartTime to carry
   // along, and a functional updater's callback can't see that.
   const updateQuantity = (id: string, nextQuantity: number) => {
+    if (isCartSyncing) return;
     const updatedItems = cartItems.map((item) =>
       item.id === id ? { ...item, quantity: nextQuantity } : item,
     );
@@ -467,6 +533,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    beginSync();
     cartApi
       .updateItem(
         // {itemId} in PATCH /cart/items/{itemId} is this cart row's own
@@ -506,7 +573,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Local quantity change stands either way, but log this — a
         // failed update here means it isn't actually saved.
         console.error("Failed to update cart item quantity", id, error);
-      });
+      })
+      .finally(endSync);
   };
 
   const increaseQuantity = (id: string) => {
@@ -522,23 +590,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearCart = () => {
+    if (isCartSyncing) return;
     setCartItems([]);
 
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) return;
-        // Same cartZoneId-over-zoneId reasoning as removeFromCart above.
-        void cartApi.clearItems(accessToken, cartZoneId ?? zoneId).catch((error) => {
-            // Local clear stands either way, but log this — a failed clear
-            // here means the items come back on the next cart load.
-            console.error("Failed to clear cart items", error);
-        });
-    };
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
+    beginSync();
+    void cartApi
+      .clearItems(accessToken, cartZoneId ?? zoneId)
+      .catch((error) => {
+        // Local clear stands either way, but log this — a failed clear
+        // here means the items come back on the next cart load.
+        console.error("Failed to clear cart items", error);
+      })
+      .finally(endSync);
+  };
 
   const updateItemSlot = (
     id: string,
     slotDate: string,
     slotStartTime: string,
   ) => {
+    if (isCartSyncing) return;
     // Computed explicitly, not read back from the cartItems state
     // variable — this function calls syncCart (via the cart-wide
     // schedule sync below) in the same tick as the setCartItems call
@@ -600,43 +673,58 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // state on its slot button until the request below settles —
     // cleared in .finally() regardless of outcome.
     setUpdatingSlotItemIds((prev) => new Set(prev).add(id));
+    beginSync();
 
-        cartApi
-            .updateItem(
-                id,
-                {
-                    serviceItemId: item.serviceItemId,
-                    durationId: item.durationId,
-                    packageId: item.packageId,
-                    addOnIds: item.addOnIds ?? [],
-                    quantity: item.quantity,
-                    slotDate,
-                    slotStartTime,
-                },
-                accessToken,
-                // cartZoneId over zoneId — see removeFromCart above for why.
-                cartZoneId ?? zoneId,
-            )
-            .then((response) => {
-                if (response?.data?.items) {
-                    setCartItems(response.data.items.map(toCartItem));
-                }
-            })
-            .catch((error) => {
-                // Local slot selection stands either way, but log this — a
-                // failed update here means the slot isn't actually saved.
-                console.error("Failed to update cart item slot", id, error);
-            })
-            .finally(() => {
-                setUpdatingSlotItemIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(id);
-                    return next;
-                });
-            });
-    };
+    cartApi
+      .updateItem(
+        // {itemId} in PATCH /cart/items/{itemId} is the service's
+        // own id (serviceItemId) — the id of the service this cart
+        // item was added for — not this cart row's own `id` field.
+        item.id,
+        {
+          serviceItemId: item.serviceItemId,
+          durationId: item.durationId,
+          packageId: item.packageId,
+          addOnIds: item.addOnIds ?? [],
+          quantity: item.quantity,
+          slotDate,
+          slotStartTime,
+          // Client-computed (see getCartItemPricing) — resent on every
+          // write since GET /cart always reports these as 0 itself.
+          unitPrice: item.price,
+          addOnsTotal: item.addOnsTotal ?? 0,
+          totalPrice: item.price * item.quantity,
+        },
+        accessToken,
+        cartZoneId ?? zoneId,
+      )
+      .then((response) => {
+        if (response?.data?.items) {
+          setCartItems(response.data.items.map(toCartItem));
+        }
+      })
+      .catch((error) => {
+        // Local slot selection stands either way, but log this — a
+        // failed update here means the slot isn't actually saved.
+        console.error("Failed to update cart item slot", id, error);
+      })
+      .finally(() => {
+        setUpdatingSlotItemIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        endSync();
+      });
+  };
+
+  const isUpdatingSlot = useCallback(
+    (id: string) => updatingSlotItemIds.has(id),
+    [updatingSlotItemIds],
+  );
 
   const updateCartAddress = (nextAddressId: string) => {
+    if (isCartSyncing) return;
     setAddressId(nextAddressId);
     void syncCart(cartItems, nextAddressId, {}, true);
   };
@@ -647,6 +735,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     isOnDemand?: boolean;
     couponCode?: string;
   }) => {
+    if (isCartSyncing) return;
     if (details.scheduledDate !== undefined)
       setScheduledDate(details.scheduledDate);
     if (details.scheduledTime !== undefined)
@@ -696,9 +785,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateCartSchedule,
         updateItemSlot,
         isUpdatingSlot,
+        isCartSyncing,
       }}
     >
       {children}
+      {isAuthPromptOpen && (
+        <LazyAuthModal
+          onClose={() => {
+            setIsAuthPromptOpen(false);
+            setPendingCartItem(null);
+          }}
+          onComplete={() => {
+            setIsAuthPromptOpen(false);
+            if (pendingCartItem) performAddToCart(pendingCartItem);
+            setPendingCartItem(null);
+          }}
+          // The visitor was mid-add-to-cart, not intentionally navigating to
+          // their profile — land them back where they were (with the item
+          // now actually in the cart) instead of on /profile.
+          redirectToProfile={false}
+        />
+      )}
     </CartContext.Provider>
   );
 }

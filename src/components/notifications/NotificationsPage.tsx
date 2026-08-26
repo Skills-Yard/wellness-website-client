@@ -6,22 +6,19 @@ import { ArrowLeft, Bell, BellOff } from "lucide-react";
 import { useNotifications, useMarkAllNotificationsRead } from "@/src/hooks/queries/useNotifications";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
 import NotificationRow from "./NotificationRow";
+import { useRequireAuth } from "@/src/hooks/useRequireAuth";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 
 const PAGE_SIZE = 20;
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isMounted, isLoggedIn, showAuthModal, setShowAuthModal, handleAuthComplete } =
+    useRequireAuth();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const { data: notifications = [], isLoading } = useNotifications(visibleCount);
   const markAllRead = useMarkAllNotificationsRead();
-
-  useEffect(() => {
-    setIsMounted(true);
-    setIsLoggedIn(localStorage.getItem("isUserLoggedIn") === "true");
-  }, []);
 
   // Visiting this page directly (not via the bell dropdown) is also "seeing"
   // your notifications — same as opening the dropdown, it clears the highlight.
@@ -41,11 +38,18 @@ export default function NotificationsPage() {
           Booking updates, offers, and reminders will show up here once you&apos;re logged in.
         </p>
         <button
-          onClick={() => router.push("/profile")}
+          onClick={() => setShowAuthModal(true)}
           className="rounded-2xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-white cursor-pointer hover:bg-amber-500/90"
         >
-          Go to profile
+          Log in
         </button>
+        {showAuthModal && (
+          <LazyAuthModal
+            onClose={() => setShowAuthModal(false)}
+            onComplete={handleAuthComplete}
+            redirectToProfile={false}
+          />
+        )}
       </div>
     );
   }

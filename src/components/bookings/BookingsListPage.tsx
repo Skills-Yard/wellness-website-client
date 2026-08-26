@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, CalendarClock, ChevronRight, ClipboardList } from "lucide-react";
-import { useBookings } from "@/src/hooks/queries/useBookings";
-import { UPCOMING_BOOKING_STATUSES, type Booking } from "@/src/types/booking";
+import { bookingApi } from "@/src/services/bookingApi";
+import { usePaginatedList } from "@/src/hooks/usePaginatedList";
+import { LoadMoreButton } from "@/src/components/ui/load-more-button";
+import type { Booking } from "@/src/types/booking";
 import {
   formatBookingAmount,
   formatBookingDate,
@@ -13,12 +15,14 @@ import {
   getStatusMeta,
   resolveImageSrc,
 } from "./bookingStatus";
-import { useIsLoggedIn } from "./useIsLoggedIn";
+import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
+import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 
 type Tab = "upcoming" | "past";
 
-const isUpcoming = (booking: Booking) => UPCOMING_BOOKING_STATUSES.includes(booking.status);
+const getAccessToken = () =>
+  typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
 function BookingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void }) {
   const status = getStatusMeta(booking.status);
@@ -72,20 +76,28 @@ function BookingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void
 
 export default function BookingsListPage() {
   const router = useRouter();
-  const { isMounted, isLoggedIn } = useIsLoggedIn();
+  const { isMounted, isLoggedIn, showAuthModal, setShowAuthModal, handleAuthComplete } =
+    useRequireAuth();
   const [tab, setTab] = useState<Tab>("upcoming");
 
-  const { data: bookings = [], isLoading } = useBookings();
+  // scope maps the tab directly to the backend's status-group filter (see
+  // BOOKING_SCOPE_STATUSES on the backend) instead of fetching every
+  // booking and filtering a multi-status group client-side — the old
+  // approach made a tab's shown count wrong/incomplete for as long as any
+  // page remained unloaded, once this became a real paginated fetch instead
+  // of always walking every page up front.
+  const scope = tab === "upcoming" ? "UPCOMING" : "PAST";
 
-  const { upcoming, past } = useMemo(() => {
-    const sorted = [...bookings].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  const { items: bookings, isLoading, isFetchingNextPage, hasMore, loadMore } =
+    usePaginatedList<Booking>(
+      ["bookings", scope],
+      (page, limit) => {
+        const accessToken = getAccessToken();
+        if (!accessToken) return Promise.resolve({ data: [] });
+        return bookingApi.findAllPage(accessToken, page, limit, { scope });
+      },
+      { limit: 20, enabled: isLoggedIn },
     );
-    return {
-      upcoming: sorted.filter(isUpcoming),
-      past: sorted.filter((booking) => !isUpcoming(booking)),
-    };
-  }, [bookings]);
 
   if (!isMounted) return null;
 
@@ -98,16 +110,21 @@ export default function BookingsListPage() {
           Your upcoming and past appointments will show up here once you&apos;re logged in.
         </p>
         <button
-          onClick={() => router.push("/profile")}
+          onClick={() => setShowAuthModal(true)}
           className="rounded-2xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-white cursor-pointer hover:bg-amber-500/90"
         >
-          Go to profile
+          Log in
         </button>
+        {showAuthModal && (
+          <LazyAuthModal
+            onClose={() => setShowAuthModal(false)}
+            onComplete={handleAuthComplete}
+            redirectToProfile={false}
+          />
+        )}
       </div>
     );
   }
-
-  const activeList = tab === "upcoming" ? upcoming : past;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-10">
@@ -132,14 +149,14 @@ export default function BookingsListPage() {
                 tab === value ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
               }`}
             >
-              {value} {value === "upcoming" ? `(${upcoming.length})` : `(${past.length})`}
+              {value}
             </button>
           ))}
         </div>
 
-        {isLoading && bookings.length === 0 ? (
+        {isLoading ? (
           <p className="px-4 py-10 text-center text-sm text-slate-400">Loading…</p>
-        ) : activeList.length === 0 ? (
+        ) : bookings.length === 0 ? (
           <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center">
             <ClipboardList className="mb-3 h-8 w-8 text-slate-300" strokeWidth={1.5} />
             <p className="text-sm text-slate-500">
@@ -150,7 +167,7 @@ export default function BookingsListPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {activeList.map((booking) => (
+            {bookings.map((booking) => (
               <BookingCard
                 key={booking.id}
                 booking={booking}
@@ -159,6 +176,8 @@ export default function BookingsListPage() {
             ))}
           </div>
         )}
+
+        {hasMore && <LoadMoreButton onClick={loadMore} loading={isFetchingNextPage} />}
       </div>
 
       <div className="block md:hidden">

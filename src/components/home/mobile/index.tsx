@@ -39,13 +39,15 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
     setSearchQuery,
     searchFocused,
     setSearchFocused,
+    onSearchFocus,
+    searchResults,
+    isSearchIndexLoading,
     activeTab,
     isMounted,
     headerScrolled,
     scrollToSection,
-    filteredSuggestions,
     handleSuggestionClick,
-  } = useMobileHome(homeDetails.serviceItems);
+  } = useMobileHome(zoneId);
 
   return (
     <div className="bg-stone-50/50 min-h-screen">
@@ -60,7 +62,9 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
         setSearchQuery={setSearchQuery}
         searchFocused={searchFocused}
         setSearchFocused={setSearchFocused}
-        filteredSuggestions={filteredSuggestions}
+        onSearchFocus={onSearchFocus}
+        searchResults={searchResults}
+        isSearchIndexLoading={isSearchIndexLoading}
         onSuggestionClick={handleSuggestionClick}
       />
 
@@ -99,7 +103,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
           </div>
           );
         })}
-        <ServiceFaq categoryFaqs={categoryFaqs} />
+        <ServiceFaq categoryFaqs={categoryFaqs} limit={5} />
       </div>
       <EezitPromiseCard />
 

@@ -4,8 +4,16 @@ export type ZonesQuery = {
   long: number;
 };
 
+export type PaginationMeta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 export type ApiResponse<T> = {
   data: T;
+  pagination?: PaginationMeta;
 };
 
 export type ZoneDetails = {

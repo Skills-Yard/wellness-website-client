@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { onForegroundPushMessage } from "@/src/lib/firebase/messaging";
+import {
+  onForegroundPushMessage,
+  onServiceWorkerDelivery,
+} from "@/src/lib/firebase/messaging";
 import { syncPushTokenSilently } from "@/src/lib/notifications/push";
+import { acknowledgeDelivery } from "@/src/lib/notifications/deliveryAck";
 import { queryKeys } from "./queries/queryKeys";
 
 const TOAST_LIFETIME_MS = 6000;
@@ -46,11 +50,20 @@ export function usePushRegistration() {
     if (accessToken) void syncPushTokenSilently(accessToken);
   }, []);
 
+  // A push that lands while this tab is open but unfocused goes to the service
+  // worker, which can't authenticate an ack itself — it relays the id here
+  // instead.
+  useEffect(() => onServiceWorkerDelivery(acknowledgeDelivery), []);
+
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
 
-    onForegroundPushMessage((title, body, deeplink) => {
+    onForegroundPushMessage((title, body, deeplink, data) => {
+      // First thing, before any of the work below: the backend is waiting on
+      // this receipt and starts escalating to another channel without it.
+      acknowledgeDelivery(data.notificationId);
+
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadNotificationCount() });
 

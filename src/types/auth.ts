@@ -1,6 +1,9 @@
+import type { PaginationMeta } from "./serviceTypes";
+
 export type ApiSuccess<TData> = {
   success: true;
   data: TData;
+  pagination?: PaginationMeta;
 };
 
 export type OtpRequestBody = {

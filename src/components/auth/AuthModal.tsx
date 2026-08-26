@@ -20,9 +20,17 @@ type StoredProfile = {
 export default function AuthModal({
   onClose,
   onComplete,
+  redirectToProfile = true,
 }: {
   onClose: () => void;
   onComplete?: () => void;
+  /** Whether to navigate to /profile once login completes. Defaults to true
+   *  (the original behavior, still right for an intentional "Log in" click
+   *  from the navbar/profile page). Callers that pop this modal up as a
+   *  gate in front of content the visitor was already trying to reach
+   *  (a booking, the cart, devices, notifications) should pass `false` so
+   *  login lands them back where they were instead of on /profile. */
+  redirectToProfile?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<AuthStep>("PHONE");
@@ -79,7 +87,7 @@ export default function AuthModal({
     void requestPushNotifications(accessToken);
     onComplete?.();
     onClose();
-    router.push("/profile");
+    if (redirectToProfile) router.push("/profile");
   };
 
   const verifyOtp = async () => {

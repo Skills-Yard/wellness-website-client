@@ -36,6 +36,24 @@ messaging?.onBackgroundMessage((payload) => {
     icon: "/icon/Profile.png",
     data: { deeplink },
   });
+
+  // Relay the delivery receipt to any open tab, which acks it with the access
+  // token held in page storage. A service worker cannot read localStorage, so
+  // it cannot make an authenticated call itself.
+  //
+  // When no tab is open there is deliberately no ack: the backend then treats
+  // the push as missed and escalates to another channel, which is the correct
+  // outcome — nothing in this browser is in a position to act on it.
+  const notificationId = payload.data?.notificationId;
+  if (notificationId) {
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientsArr) => {
+        clientsArr.forEach((client) =>
+          client.postMessage({ type: "PUSH_DELIVERED", notificationId }),
+        );
+      });
+  }
 });
 
 self.addEventListener("notificationclick", (event) => {

@@ -16,12 +16,23 @@ export type NotificationItem = {
   isSent: boolean;
   sentAt?: string | null;
   createdAt: string;
+  // isSent means "a provider accepted the message"; these mean "a device
+  // actually received it", reported back by this client (see deliveryAck.ts).
+  // Until a receipt lands the backend assumes the push was missed and climbs
+  // its escalation ladder to another channel.
+  deliveredAt?: string | null;
+  deliveredVia?: NotificationItem["channel"] | null;
+  escalationStage?: number;
 };
 
 export type NotificationListResponse = ApiSuccess<NotificationItem[]>;
 export type UnreadCountResponse = ApiSuccess<{ count: number }>;
 export type MarkReadResponse = ApiSuccess<{ success: boolean }>;
 export type MarkAllReadResponse = ApiSuccess<{ updated: number }>;
+export type AcknowledgeDeliveryResponse = ApiSuccess<{
+  success: boolean;
+  firstReceipt: boolean;
+}>;
 
 export type RegisterDeviceTokenBody = {
   fcmToken: string;

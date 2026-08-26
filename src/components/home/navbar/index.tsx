@@ -18,10 +18,17 @@ import { NavLinkType } from "@/src/utils/types";
 import {
   LOCATIONS,
   NAV_LINKS,
-  SERVICE_SUGGESTIONS,
+  NAV_LINK_LABELS,
+  NAV_LINK_SECTION_IDS,
   UNSUPPORTED_LOCATIONS,
 } from "@/src/utils/data";
 import { cn } from "@/src/lib/utils";
+import { getVisibleElementById } from "@/src/utils/scroll";
+import {
+  useServiceSearchIndex,
+  SearchableService,
+} from "@/src/hooks/queries/useServiceSearchIndex";
+import { useServiceSearch } from "@/src/hooks/useServiceSearch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +44,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/src/components/ui/sheet";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import AuthModal from "@/src/components/auth/LazyAuthModal";
 import { authApi } from "@/src/services/authApi";
@@ -61,6 +68,7 @@ export default function Navbar() {
     setLocation,
     addressId,
     updateCartAddress,
+    zoneId,
   } = useCart();
 
   // Saved delivery addresses (only fetched when logged in — see
@@ -72,7 +80,6 @@ export default function Navbar() {
   const selectedSavedAddress = addresses.find((address) => address.id === addressId) ?? null;
 
   const [active, setActive] = useState<NavLinkType>("Massage");
-  const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -80,7 +87,20 @@ export default function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // The full-catalog search index (categories → sub-categories → service
+  // items) is only ever fetched once the search field is actually used —
+  // see useServiceSearchIndex — so a visitor who never searches never
+  // triggers those extra requests. Stays true once flipped so the index
+  // (and its React Query cache entries) persists across searchOpen
+  // toggling closed on blur/outside-click.
+  const [searchEverOpened, setSearchEverOpened] = useState(false);
+  const { items: searchIndex, isLoading: isSearchIndexLoading } =
+    useServiceSearchIndex(zoneId, { enabled: searchEverOpened });
+  const { query, setQuery, results: searchResults } =
+    useServiceSearch(searchIndex);
+
   const router = useRouter();
+  const pathname = usePathname();
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -105,7 +125,7 @@ export default function Navbar() {
   }, []);
 
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
+    const element = getVisibleElementById(id);
     if (element) {
       const yOffset = -80; // height of navbar offset
       const y =
@@ -114,64 +134,50 @@ export default function Navbar() {
     }
   };
 
+  // Navbar renders on every page (see app/layout.tsx), but the
+  // Massage/Spa/Physiotherapy sections only exist on the home page —
+  // scrollToSection above would silently no-op from anywhere else. Off the
+  // home page, navigate there with `?tab=<id>` instead; Home (page.tsx)
+  // and MobileHome (useMobileHome) both already pick that param up once
+  // the catalog has loaded and scroll to it themselves.
   const handleNavChange = (link: NavLinkType) => {
     setActive(link);
     setQuery("");
     setSearchOpen(false);
-    scrollToSection(link.toLowerCase());
+    const id = NAV_LINK_SECTION_IDS[link];
+    if (pathname === "/") {
+      scrollToSection(id);
+    } else {
+      router.push(`/?tab=${id}`);
+    }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion);
+  // Selecting a result navigates straight to its service — same
+  // `/detail/{categorySlug}?categoryId=...&id=...` deep-link shape used by
+  // in-spotlight/wall-panel/category-services, which the detail page reads
+  // (see spa-booking's `preselectedService`) to auto-open that service's
+  // modal on load, from any page in the app, not just the current one.
+  const handleResultClick = (result: SearchableService) => {
+    setQuery("");
     setSearchOpen(false);
     setMobileMenuOpen(false);
+    router.push(
+      `/detail/${result.categorySlug}?categoryId=${encodeURIComponent(result.categoryId)}&id=${encodeURIComponent(result.id)}`,
+    );
+  };
 
-    // Map suggestion to corresponding section and scroll
-    let targetId = "";
-    if (SERVICE_SUGGESTIONS.Massage.includes(suggestion)) {
-      targetId = "massage";
-      setActive("Massage");
-    } else if (SERVICE_SUGGESTIONS.Wellness.includes(suggestion)) {
-      targetId = "wellness";
-      setActive("Wellness");
-    } else if (SERVICE_SUGGESTIONS.Physiotherapy.includes(suggestion)) {
-      targetId = "physiotherapy";
-      setActive("Physiotherapy");
-    }
-
-    if (targetId) {
-      scrollToSection(targetId);
-    }
+  const handleSearchFocus = () => {
+    setSearchEverOpened(true);
+    setSearchOpen(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const allSuggestions = [
-        ...SERVICE_SUGGESTIONS.Massage,
-        ...SERVICE_SUGGESTIONS.Wellness,
-        ...SERVICE_SUGGESTIONS.Physiotherapy,
-      ];
-      const match =
-        allSuggestions.find((s) => s.toLowerCase() === query.toLowerCase()) ||
-        allSuggestions.find((s) =>
-          s.toLowerCase().includes(query.toLowerCase()),
-        );
-      if (match) {
-        handleSuggestionClick(match);
-      }
+    if (e.key === "Enter" && searchResults[0]) {
+      handleResultClick(searchResults[0]);
     }
   };
 
-  const currentSuggestions = SERVICE_SUGGESTIONS[active];
-  const filtered = currentSuggestions.filter((s) =>
-    s.toLowerCase().includes(query.toLowerCase()),
-  );
-
-  const searchPlaceholder: Record<NavLinkType, string> = {
-    Massage: "Search massage types…",
-    Wellness: "Search wellness services…",
-    Physiotherapy: "Search physio treatments…",
-  };
+  const searchPlaceholder = "Search services…";
 
   const handleRedirect = () => {
     router.push("/profile");
@@ -228,7 +234,7 @@ export default function Navbar() {
                     : "text-gray-400 hover:text-gray-700",
                 )}
               >
-                {link}
+                {NAV_LINK_LABELS[link]}
                 {active === link && (
                   <span className="absolute bottom-[-18px] left-1/2 -translate-x-1/2 w-4 h-0.5 bg-amber-400 rounded-full" />
                 )}
@@ -334,13 +340,14 @@ export default function Navbar() {
             >
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <Input
-                placeholder={searchPlaceholder[active]}
+                placeholder={searchPlaceholder}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
+                  setSearchEverOpened(true);
                   setSearchOpen(true);
                 }}
-                onFocus={() => setSearchOpen(true)}
+                onFocus={handleSearchFocus}
                 onKeyDown={handleKeyDown}
                 className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 min-w-0"
               />
@@ -357,18 +364,31 @@ export default function Navbar() {
 
             {searchOpen && (
               <div className="absolute top-[calc(100%+8px)] left-0 w-full rounded-2xl border border-gray-100 bg-white shadow-[0_8px_40px_rgba(0,0,0,0.12)] overflow-hidden z-50 p-1.5">
-                {(query ? filtered : currentSuggestions).map((s) => (
+                {!query && (
+                  <p className="text-sm text-gray-400 px-3 py-3 text-center">
+                    Start typing to search services…
+                  </p>
+                )}
+                {query && isSearchIndexLoading && searchResults.length === 0 && (
+                  <p className="text-sm text-gray-400 px-3 py-3 text-center">
+                    Searching…
+                  </p>
+                )}
+                {searchResults.map((result) => (
                   <button
-                    key={s}
+                    key={result.id}
                     type="button"
-                    onClick={() => handleSuggestionClick(s)}
+                    onClick={() => handleResultClick(result)}
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-left text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer"
                   >
                     <Search className="w-3.5 h-3.5 opacity-40 shrink-0" />
-                    <span className="truncate">{s}</span>
+                    <span className="truncate flex-1">{result.name}</span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {result.categoryName}
+                    </span>
                   </button>
                 ))}
-                {query && filtered.length === 0 && (
+                {query && !isSearchIndexLoading && searchResults.length === 0 && (
                   <p className="text-sm text-gray-400 px-3 py-3 text-center">
                     No results for "{query}"
                   </p>
@@ -550,7 +570,7 @@ export default function Navbar() {
                           : "text-gray-500",
                       )}
                     >
-                      {link}
+                      {NAV_LINK_LABELS[link]}
                     </button>
                   ))}
                 </div>
@@ -564,27 +584,45 @@ export default function Navbar() {
                 <div className="flex items-center h-10 px-3 gap-2 rounded-xl border border-gray-200 bg-gray-50 focus-within:border-amber-400 focus-within:bg-white mb-3 shrink-0">
                   <Search className="w-4 h-4 text-gray-400 shrink-0" />
                   <Input
-                    placeholder={searchPlaceholder[active]}
+                    placeholder={searchPlaceholder}
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setSearchEverOpened(true);
+                    }}
+                    onFocus={() => setSearchEverOpened(true)}
+                    onKeyDown={handleKeyDown}
                     className="flex-1 bg-transparent text-sm text-gray-800 outline-none border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
                   />
                 </div>
 
                 {/* Sub-Suggestion Result List Box Container */}
                 <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-                  {(query ? filtered : currentSuggestions).map((s) => (
+                  {!query && (
+                    <p className="text-xs text-gray-400 py-4 text-center">
+                      Start typing to search services…
+                    </p>
+                  )}
+                  {query && isSearchIndexLoading && searchResults.length === 0 && (
+                    <p className="text-xs text-gray-400 py-4 text-center">
+                      Searching…
+                    </p>
+                  )}
+                  {searchResults.map((result) => (
                     <button
-                      key={s}
+                      key={result.id}
                       type="button"
-                      onClick={() => handleSuggestionClick(s)}
+                      onClick={() => handleResultClick(result)}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left text-gray-600 hover:bg-amber-50/50 hover:text-amber-700 transition-colors cursor-pointer"
                     >
                       <Search className="w-3 h-3 text-gray-300 shrink-0" />
-                      <span className="truncate">{s}</span>
+                      <span className="truncate flex-1">{result.name}</span>
+                      <span className="shrink-0 text-[10px] text-gray-400">
+                        {result.categoryName}
+                      </span>
                     </button>
                   ))}
-                  {query && filtered.length === 0 && (
+                  {query && !isSearchIndexLoading && searchResults.length === 0 && (
                     <p className="text-xs text-gray-400 py-4 text-center">
                       No services found.
                     </p>
