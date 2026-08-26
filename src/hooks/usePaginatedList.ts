@@ -5,6 +5,10 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 export interface PaginatedListPage<T> {
   data: T[] | null | undefined;
   pagination?: { total: number; page: number; limit: number; totalPages: number };
+  /** Aggregate counts independent of the current page/filter (e.g. tab
+   *  badge counts) — see ApiSuccess.counts. Only the first page's value is
+   *  kept, same as `total` below. */
+  counts?: Record<string, number>;
 }
 
 /**
@@ -42,10 +46,12 @@ export function usePaginatedList<T>(
 
   const items = query.data?.pages.flatMap((page) => page.data ?? []) ?? [];
   const total = query.data?.pages[0]?.pagination?.total;
+  const counts = query.data?.pages[0]?.counts;
 
   return {
     items,
     total,
+    counts,
     isLoading: query.isLoading,
     isFetchingNextPage: query.isFetchingNextPage,
     hasMore: !!query.hasNextPage,

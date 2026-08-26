@@ -8,17 +8,30 @@ const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
 /** Recent notifications for the logged-in user. Disabled entirely for a
- *  logged-out visitor, matching useAddresses(). */
+ *  logged-out visitor, matching useAddresses().
+ *
+ *  Keeps `data` as the plain notification array (existing callers destructure
+ *  `data: notifications = []` and never touched this shape), but also
+ *  surfaces `pagination`/`counts` from the backend's `{ data, pagination,
+ *  counts }` envelope — see NotificationsPage's real "load more" check,
+ *  which used to guess from `notifications.length >= take` because the
+ *  backend had no total count at all. */
 export function useNotifications(take = 20) {
   const accessToken = getAccessToken();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.notifications(),
-    queryFn: () =>
-      notificationApi.list(accessToken as string, { take }).then((r) => r.data),
+    queryFn: () => notificationApi.list(accessToken as string, { take }),
     enabled: !!accessToken,
     staleTime: 30 * 1000,
   });
+
+  return {
+    ...query,
+    data: query.data?.data ?? [],
+    pagination: query.data?.pagination,
+    counts: query.data?.counts,
+  };
 }
 
 /** Drives the bell's unread highlight. Polls on a slow interval so the badge

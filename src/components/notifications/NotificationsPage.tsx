@@ -17,7 +17,7 @@ export default function NotificationsPage() {
     useRequireAuth();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const { data: notifications = [], isLoading } = useNotifications(visibleCount);
+  const { data: notifications = [], pagination, isLoading } = useNotifications(visibleCount);
   const markAllRead = useMarkAllNotificationsRead();
 
   // Visiting this page directly (not via the bell dropdown) is also "seeing"
@@ -54,10 +54,10 @@ export default function NotificationsPage() {
     );
   }
 
-  // Was still `take`-limited going in, so a full page of results likely means
-  // there's more — an approximation (the backend has no total count today),
-  // good enough for a "Load more" affordance.
-  const canLoadMore = notifications.length >= visibleCount;
+  // The backend now returns a real total (pagination.total) alongside this
+  // `take`-limited list — use it directly instead of guessing "a full page
+  // probably means there's more" from length vs. requested count.
+  const canLoadMore = pagination ? notifications.length < pagination.total : false;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-10">

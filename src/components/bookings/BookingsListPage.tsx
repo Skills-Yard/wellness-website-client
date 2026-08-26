@@ -88,7 +88,7 @@ export default function BookingsListPage() {
   // of always walking every page up front.
   const scope = tab === "upcoming" ? "UPCOMING" : "PAST";
 
-  const { items: bookings, isLoading, isFetchingNextPage, hasMore, loadMore } =
+  const { items: bookings, counts, isLoading, isFetchingNextPage, hasMore, loadMore } =
     usePaginatedList<Booking>(
       ["bookings", scope],
       (page, limit) => {
@@ -98,6 +98,14 @@ export default function BookingsListPage() {
       },
       { limit: 20, enabled: isLoggedIn },
     );
+
+  // `counts.upcoming`/`counts.past` come back from the backend regardless of
+  // which `scope` was requested (they're computed over the same
+  // userId+q+scheduledDate scope, just without the scope/status filter
+  // itself) — so whichever tab is currently loaded already carries both
+  // tabs' totals, no second request needed.
+  const upcomingCount = counts?.upcoming;
+  const pastCount = counts?.past;
 
   if (!isMounted) return null;
 
@@ -141,17 +149,21 @@ export default function BookingsListPage() {
         </div>
 
         <div className="mb-4 flex gap-1 rounded-xl bg-slate-100 p-1">
-          {(["upcoming", "past"] as const).map((value) => (
-            <button
-              key={value}
-              onClick={() => setTab(value)}
-              className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition-colors cursor-pointer ${
-                tab === value ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
-              }`}
-            >
-              {value}
-            </button>
-          ))}
+          {(["upcoming", "past"] as const).map((value) => {
+            const count = value === "upcoming" ? upcomingCount : pastCount;
+            return (
+              <button
+                key={value}
+                onClick={() => setTab(value)}
+                className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition-colors cursor-pointer ${
+                  tab === value ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
+                }`}
+              >
+                {value}
+                {count !== undefined && <span className="ml-1 tabular-nums">({count})</span>}
+              </button>
+            );
+          })}
         </div>
 
         {isLoading ? (

@@ -4,6 +4,11 @@ export type ApiSuccess<TData> = {
   success: true;
   data: TData;
   pagination?: PaginationMeta;
+  /** Aggregate counts alongside a paginated list, independent of the
+   *  current page/filter — e.g. `{ upcoming: 3, past: 12 }` for bookings,
+   *  or `{ unread: 2, read: 40 }` for notifications — so tabs/badges don't
+   *  need a second request. See the backend's `paginateWithCounts()`. */
+  counts?: Record<string, number>;
 };
 
 export type OtpRequestBody = {
@@ -13,6 +18,11 @@ export type OtpRequestBody = {
 
 export type OtpRequestResponse = ApiSuccess<{
   requestId?: string;
+  /** DEV-ONLY: the backend currently echoes the generated code back in this
+   *  response while OTP delivery isn't wired up in non-prod environments.
+   *  Remove this field (and its display in AuthModal) once real SMS delivery
+   *  is live everywhere. */
+  otp?: string;
 }>;
 
 export type OtpVerifyBody = OtpRequestBody & {

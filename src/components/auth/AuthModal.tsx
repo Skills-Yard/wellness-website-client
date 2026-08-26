@@ -38,6 +38,10 @@ export default function AuthModal({
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [timer, setTimer] = useState(26);
   const [signupToken, setSignupToken] = useState("");
+  // DEV-ONLY: populated from the OTP request response while the backend
+  // echoes the code back instead of actually delivering it. Remove once
+  // real SMS delivery is live everywhere (see OtpRequestResponse.data.otp).
+  const [devOtp, setDevOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,8 +67,9 @@ export default function AuthModal({
     if (phone.length !== 10 || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await authApi.requestOtp({ countryCode: "+91", phone });
+      const response = await authApi.requestOtp({ countryCode: "+91", phone });
       setOtp(Array(6).fill(""));
+      setDevOtp(response.data.otp ?? "");
       setTimer(26);
       setStep("OTP");
       showMessage("Verification code sent.");
@@ -185,10 +190,15 @@ export default function AuthModal({
 
         {step === "OTP" && (
           <div className="flex flex-col px-5 py-5">
-            <button onClick={() => setStep("PHONE")} className="mb-4 w-fit p-1"><ArrowLeft className="h-4 w-4 text-stone-700" /></button>
+            <button onClick={() => { setDevOtp(""); setStep("PHONE"); }} className="mb-4 w-fit p-1"><ArrowLeft className="h-4 w-4 text-stone-700" /></button>
             <div className="mb-4 h-10 w-10 rounded-xl bg-amber-50 p-2.5 text-amber-500"><MessageSquare className="h-5 w-5" /></div>
             <h2 className="text-lg font-bold text-stone-900">Enter verification code</h2>
             <p className="mt-1 text-xs text-stone-500">A 6-digit code was sent to +91 {phone}.</p>
+            {devOtp && (
+              <p className="mt-2 w-fit rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-600">
+                Dev mode — OTP: {devOtp}
+              </p>
+            )}
             <div className="mt-5 flex justify-between gap-1.5">
               {otp.map((digit, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element; }} inputMode="numeric" maxLength={1} value={digit} onChange={(event) => updateOtp(index, event.target.value)} onKeyDown={(event) => { if (event.key === "Backspace" && !digit) otpRefs.current[index - 1]?.focus(); }} className="h-10 w-9 rounded-lg border border-stone-200 text-center text-sm font-semibold outline-none focus:border-amber-500" />)}
             </div>
