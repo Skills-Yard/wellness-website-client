@@ -1,4 +1,10 @@
-import type { ImageCardItem, ReviewItem } from "@/src/types/serviceDetailTypes";
+import type {
+  ImageCardItem,
+  ReviewItem,
+  ServiceAddOn,
+  ServiceDuration,
+  ServicePackage,
+} from "@/src/types/serviceDetailTypes";
 import type { ServiceFaq } from "@/src/types/serviceItemTypes";
 
 export interface DynamicService {
@@ -18,6 +24,19 @@ export interface DynamicService {
   tag?: string;
   isSpotlight?: boolean;
   features?: string[];
+  // The service's own durations/packages/add-ons, embedded as-is from the
+  // raw ServiceItem (see GET /catalog/service-items) — kept on the card
+  // itself, not just re-derived in the popup, since add-ons in particular
+  // come back with no serviceItemId/serviceId of their own to re-match
+  // against (unlike durations/packages), so re-deriving them by filtering
+  // a flattened cross-service list (see spa-booking/index.tsx's old
+  // belongsToService-based selectedServiceDetails) silently drops every
+  // add-on. Reading them straight off the service avoids that entirely,
+  // and lets outer preview cards render AddonIcons the same way the inner
+  // popup's Add-ons section does.
+  durations?: ServiceDuration[];
+  packages?: ServicePackage[];
+  addOns?: ServiceAddOn[];
   // Passed straight through from the raw ServiceItem API response (see
   // ServiceItem in serviceItemTypes.ts) — same shapes, same "no admin editor,
   // don't map" caveat.

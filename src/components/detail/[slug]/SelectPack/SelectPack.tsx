@@ -9,6 +9,7 @@ import { DynamicService } from "@/src/utils/types/spabooking";
 import { ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import StepsSection from "../StepSection/SectionSteps";
+import { isResolvedUrl } from "../AddonIcons";
 import { useCart } from "@/src/context/CartContext";
 import {
   getAddOnsTotal,
@@ -391,11 +392,20 @@ export default function RequirementSelector({
                               : "border-slate-200 bg-white hover:bg-slate-50"
                           }`}
                         >
-                          <span className="text-sm sm:text-base font-medium text-slate-700">
-                            {addon.name ?? addon.title}
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            {isResolvedUrl(addon.imageKey) && (
+                              <img
+                                src={addon.imageKey}
+                                alt=""
+                                className="h-7 w-7 shrink-0 rounded-full object-cover sm:h-8 sm:w-8"
+                              />
+                            )}
+                            <span className="truncate text-sm sm:text-base font-medium text-slate-700">
+                              {addon.name ?? addon.title}
+                            </span>
                           </span>
 
-                          <span className="text-xs sm:text-sm font-semibold text-slate-800">
+                          <span className="shrink-0 text-xs sm:text-sm font-semibold text-slate-800">
                             +₹{Number(addon.price ?? 0).toLocaleString("en-IN")}
                           </span>
                         </button>

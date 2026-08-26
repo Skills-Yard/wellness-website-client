@@ -12,6 +12,7 @@ import { HomeCategory } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
 import { DynamicService } from "@/src/utils/types/spabooking";
 import SubDetailPopUp from "@/src/components/detail/[slug]/LazySubDetailPopUp";
+import AddonIcons from "@/src/components/detail/[slug]/AddonIcons";
 
 type CategoryServicesProps = {
   category: HomeCategory;
@@ -67,6 +68,7 @@ const toDynamicService = (service: ServiceItem, categoryName: string): DynamicSe
   tag: service.tag,
   isSpotlight: service.isSpotlight,
   features: service.features ?? [],
+  addOns: service.addOns ?? [],
   overview: service.overview,
   procedureSteps: service.procedureSteps,
   itemsUsed: service.itemsUsed,
@@ -260,6 +262,7 @@ export default function CategoryServices({
                       {formatPrice(service.originalPrice)}
                     </span>
                   </div>
+                  <AddonIcons addOns={service.addOns} className="mt-[6px]" />
                 </div>
               </SwiperSlide>
             );

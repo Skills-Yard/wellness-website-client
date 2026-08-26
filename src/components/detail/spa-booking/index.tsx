@@ -172,16 +172,17 @@ export default function SpaBookingLayout() {
 
   // The catalog API already embeds each service item's own durations/packages/addOns
   // (see GET /catalog/service-items) — no need for separate, catalog-wide fetches.
+  // Only durations are flattened cross-service here — they're the one option
+  // type the API actually stamps with a serviceItemId (see belongsToService
+  // below), and this flattened form + durationById is what the card price/
+  // duration display needs. Packages and add-ons don't get that treatment:
+  // add-ons in particular come back with no serviceItemId/serviceId at all
+  // when embedded under a service item, so filtering a flattened list by
+  // that field would just always drop every add-on (see
+  // selectedServiceDetails below, which reads them straight off the
+  // service instead).
   const serviceDurations = useMemo(
     () => serviceItems.flatMap((item) => item.durations ?? []),
-    [serviceItems],
-  );
-  const servicePackages = useMemo(
-    () => serviceItems.flatMap((item) => item.packages ?? []),
-    [serviceItems],
-  );
-  const serviceAddOns = useMemo(
-    () => serviceItems.flatMap((item) => item.addOns ?? []),
     [serviceItems],
   );
 
@@ -230,6 +231,14 @@ export default function SpaBookingLayout() {
       // Real content only — packages/add-ons already get their own dedicated
       // sections in SelectPack, they don't belong mixed into "features" too.
       features: service.features ?? [],
+      // Kept as-is from the raw ServiceItem (already present via the
+      // ...service spread above) — declared explicitly so
+      // selectedServiceDetails below can read them straight off
+      // activeModalService instead of re-deriving them. See the
+      // DynamicService.addOns comment in utils/types/spabooking.ts.
+      durations: service.durations ?? [],
+      packages: service.packages ?? [],
+      addOns: service.addOns ?? [],
       };
     });
     // subCategories comes from the zone-derived (but suite/gender-agnostic)
@@ -261,10 +270,8 @@ export default function SpaBookingLayout() {
   }, [
     categoryDetails,
     genderId,
-    serviceAddOns,
     serviceDurations,
     serviceItems,
-    servicePackages,
     subCategories,
     suiteId,
   ]);
@@ -331,23 +338,19 @@ export default function SpaBookingLayout() {
 
   const activeModalService = selectedService ?? preselectedService;
 
+  // Read straight off the service instead of re-deriving via
+  // belongsToService (see the serviceDurations comment above for why that
+  // silently dropped every add-on) — same approach category-services/
+  // index.tsx already uses for the home-page popup.
   const selectedServiceDetails = useMemo(() => {
     if (!activeModalService) return null;
 
     return {
-      durations: serviceDurations.filter((duration) =>
-        belongsToService(duration, activeModalService.id),
-      ),
-
-      packages: servicePackages.filter((servicePackage) =>
-        belongsToService(servicePackage, activeModalService.id),
-      ),
-
-      addOns: serviceAddOns.filter((addOn) =>
-        belongsToService(addOn, activeModalService.id),
-      ),
+      durations: activeModalService.durations ?? [],
+      packages: activeModalService.packages ?? [],
+      addOns: activeModalService.addOns ?? [],
     };
-  }, [activeModalService, serviceDurations, servicePackages, serviceAddOns]);
+  }, [activeModalService]);
 
   if (
     categoriesLoading ||

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { DynamicService } from "@/src/utils/types/spabooking";
+import AddonIcons from "@/src/components/detail/[slug]/AddonIcons";
 
 interface StandardServiceCardProps {
   service: DynamicService;
@@ -61,6 +62,8 @@ export default function StandardServiceCard({
               </span>
             )}
           </p>
+
+          <AddonIcons addOns={service.addOns} size={18} />
 
           <div className="flex flex-col items-start gap-[18px]">
             <button
@@ -134,6 +137,7 @@ export default function StandardServiceCard({
               {features[0]}
             </p>
           )}
+          <AddonIcons addOns={service.addOns} size={18} className="mt-2" />
           <div className="mt-1 flex pt-0">
             <button
               onClick={(e) => {

@@ -14,8 +14,11 @@ export default function StepsSection({ steps }: StepsSectionProps) {
   const activeSteps = steps ?? [];
   if (activeSteps.length === 0) return null;
 
+  // max-w caps stay under the service-detail popup's own max-w-3xl (~768px,
+  // see mainfile.tsx) — this section only ever renders inside that popup,
+  // so a wider assumption here just gets silently clipped.
   return (
-    <section className="w-full max-w-[359px] md:max-w-[700px] lg:max-w-[1000px] md:mx-auto bg-white font-sans">
+    <section className="w-full max-w-[359px] md:max-w-[700px] lg:max-w-[700px] md:mx-auto bg-white font-sans">
       {/* Heading */}
       <div className="mb-5 md:mb-8 lg:mb-10 text-left">
         <h2 className="text-[16px] md:text-[22px] lg:text-[28px] font-bold text-[#1A1A1A]">
@@ -56,18 +59,27 @@ export default function StepsSection({ steps }: StepsSectionProps) {
                   </h3>
                 </div>
 
-                {/* Step Image & Description */}
-                <div className="flex flex-col items-center lg:flex-row flex-1 gap-2 md:gap-4 lg:gap-4 lg:items-baseline">
-                  <div className="relative w-full lg:w-[400px] h-[177px] md:h-[300px] lg:h-[240px] shrink-0 overflow-hidden rounded-[8px] bg-slate-100">
+                {/* Step Image & Description — image on top, description
+                    below, at every breakpoint (see the reference design).
+                    This also keeps the row's width to whatever this
+                    section's own column gets, instead of a fixed image
+                    width demanding more than the service-detail popup
+                    (max-w-3xl, ~768px, see mainfile.tsx) actually has to
+                    give — a side-by-side lg layout with a rigid image
+                    width previously left the description squeezed into a
+                    sliver pushed past the popup's clipped edge, making it
+                    invisible at lg. */}
+                <div className="flex flex-col flex-1 gap-2 md:gap-4 lg:gap-5">
+                  <div className="relative w-full h-[177px] md:h-[280px] lg:h-[320px] shrink-0 overflow-hidden rounded-[8px] bg-slate-100">
                     <Image
                       src={step.image}
                       alt={step.title}
                       fill
-                      sizes="(max-width: 768px) 220px, (max-width: 1024px) 500px, 400px"
+                      sizes="(max-width: 768px) 220px, (max-width: 1024px) 500px, 700px"
                       className="object-cover"
                     />
                   </div>
-                  <p className="text-[14px] md:text-[16px] lg:text-[18px] font-medium leading-[1.4] text-[#666666] lg:flex-1">
+                  <p className="text-[14px] md:text-[16px] lg:text-[18px] font-medium leading-[1.4] text-[#666666]">
                     {step.description}
                   </p>
                 </div>
