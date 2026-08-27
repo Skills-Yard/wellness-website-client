@@ -1,76 +1,207 @@
 "use client";
 
-import { useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, CalendarClock, ChevronRight, ClipboardList } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  CalendarOff,
+  ChevronRight,
+  ClipboardList,
+  Clock,
+  History,
+  MapPin,
+  RefreshCw,
+  type LucideIcon,
+} from "lucide-react";
 import { bookingApi } from "@/src/services/bookingApi";
 import { usePaginatedList } from "@/src/hooks/usePaginatedList";
 import { LoadMoreButton } from "@/src/components/ui/load-more-button";
 import type { Booking } from "@/src/types/booking";
 import {
-  formatBookingAmount,
-  formatBookingDate,
+  formatBookingDateLong,
   formatBookingTime,
   getStatusMeta,
+  isRescheduleStatus,
   resolveImageSrc,
 } from "./bookingStatus";
 import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
 import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 
-type Tab = "upcoming" | "past";
-
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
-function BookingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void }) {
+const bookingTitle = (booking: Booking) =>
+  booking.items.length === 1
+    ? booking.items[0].serviceItemName
+    : `${booking.items[0]?.serviceItemName ?? "Service"} + ${booking.items.length - 1} more`;
+
+const bookingLocality = (booking: Booking) =>
+  [booking.address.customLabel, booking.address.line1, booking.address.city]
+    .filter(Boolean)
+    .join(", ");
+
+function SectionLabel({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center gap-1.5 text-[#D38516]">
+      <Icon className="h-3.5 w-3.5" />
+      <span className="text-sm font-medium">{children}</span>
+    </div>
+  );
+}
+
+function BookingThumb({
+  src,
+  alt,
+  className,
+}: {
+  src: string | null;
+  alt: string;
+  className: string;
+}) {
+  return (
+    <div className={`relative shrink-0 overflow-hidden rounded-lg bg-stone-100 ${className}`}>
+      {src ? (
+        <Image src={src} alt={alt} fill className="object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-stone-300">
+          <ClipboardList className="h-6 w-6" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The prominent card at the top — the soonest upcoming booking. */
+function ActiveBookingCard({
+  booking,
+  onOpen,
+  onReschedule,
+}: {
+  booking: Booking;
+  onOpen: () => void;
+  onReschedule: () => void;
+}) {
   const status = getStatusMeta(booking.status);
   const thumbnail = resolveImageSrc(booking.items[0]?.serviceItem?.thumbnailKey);
-  const title =
-    booking.items.length === 1
-      ? booking.items[0].serviceItemName
-      : `${booking.items[0]?.serviceItemName ?? "Service"} + ${booking.items.length - 1} more`;
+  const title = bookingTitle(booking);
+  const canReschedule =
+    isRescheduleStatus(booking.status) && booking.bookingType !== "ON_DEMAND";
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-colors hover:bg-slate-50 cursor-pointer"
-    >
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-        {thumbnail ? (
-          <Image src={thumbnail} alt={title} fill className="object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-slate-300">
-            <ClipboardList className="h-6 w-6" />
-          </div>
-        )}
-      </div>
+    <div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full gap-3 rounded-xl border border-black/8 bg-white p-3 text-left"
+      >
+        <BookingThumb src={thumbnail} alt={title} className="h-[152px] w-[120px]" />
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-bold text-slate-900">{title}</p>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className}`}>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 py-0.5">
+          <p className="line-clamp-2 text-base font-medium text-slate-900">{title}</p>
+
+          <div className="flex items-center gap-1.5 text-xs text-[#25180F]">
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-[#D38516]" />
+            <span className="truncate">{formatBookingDateLong(booking.scheduledDate)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-[#25180F]">
+            <Clock className="h-3.5 w-3.5 shrink-0 text-[#D38516]" />
+            <span className="truncate">
+              {formatBookingTime(booking.scheduledTime)} -{" "}
+              {formatBookingTime(booking.estimatedEndTime)}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-[#25180F]">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#D38516]" />
+            <span className="truncate">{bookingLocality(booking)}</span>
+          </div>
+
+          <span className={`w-fit rounded-lg px-3 py-1 text-xs font-medium ${status.className}`}>
             {status.label}
           </span>
         </div>
-        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-          <CalendarClock className="h-3 w-3" />
-          {formatBookingDate(booking.scheduledDate)} • {formatBookingTime(booking.scheduledTime)}
-        </p>
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-xs text-slate-400">
-            {booking.partner?.name ? `Partner: ${booking.partner.name}` : "Partner not assigned yet"}
-          </span>
-          <span className="text-xs font-bold text-slate-800">
-            {formatBookingAmount(booking.totalAmount)}
-          </span>
-        </div>
-      </div>
+      </button>
 
-      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
-    </button>
+      <div className="mt-3 flex gap-3">
+        {canReschedule && (
+          <button
+            type="button"
+            onClick={onReschedule}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-black/8 bg-[#F9EEE3] py-3.5 text-sm font-medium text-[#25180F] cursor-pointer"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Reschedule
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#25180F] py-3.5 text-sm font-medium text-white cursor-pointer"
+        >
+          View Details
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NoActiveBooking({ onBook }: { onBook: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-black/8 bg-white px-4 py-6 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F9EEE3] text-[#D38516]">
+        <CalendarOff className="h-7 w-7" strokeWidth={1.5} />
+      </div>
+      <p className="text-[15px] font-medium text-slate-900">No Active Bookings</p>
+      <p className="text-xs text-slate-500">You don&apos;t have any upcoming appointments.</p>
+      <button
+        type="button"
+        onClick={onBook}
+        className="mt-1 flex items-center gap-1 rounded-lg bg-[#25180F] px-6 py-3.5 text-sm font-medium text-white cursor-pointer"
+      >
+        Book a Service
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+/** Compact row used for booking history and any extra upcoming bookings. */
+function CompactBookingCard({ booking, onOpen }: { booking: Booking; onOpen: () => void }) {
+  const status = getStatusMeta(booking.status);
+  const thumbnail = resolveImageSrc(booking.items[0]?.serviceItem?.thumbnailKey);
+  const title = bookingTitle(booking);
+
+  return (
+    <div className="flex items-stretch gap-3">
+      <BookingThumb src={thumbnail} alt={title} className="h-[83px] w-[120px]" />
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 flex-col items-start gap-2 py-0.5 text-left"
+      >
+        <p className="line-clamp-1 text-sm font-medium text-slate-900">{title}</p>
+        <p className="text-xs text-slate-500">
+          {formatBookingDateLong(booking.scheduledDate)} -{" "}
+          {formatBookingTime(booking.scheduledTime)}
+        </p>
+        <span className={`rounded-lg px-3 py-1 text-xs font-medium ${status.className}`}>
+          {status.label}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label="View booking"
+        className="flex w-9 shrink-0 items-center justify-center rounded-lg bg-[#F9EEE3] text-[#25180F] cursor-pointer"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
+    </div>
   );
 }
 
@@ -78,34 +209,30 @@ export default function BookingsListPage() {
   const router = useRouter();
   const { isMounted, isLoggedIn, showAuthModal, setShowAuthModal, handleAuthComplete } =
     useRequireAuth();
-  const [tab, setTab] = useState<Tab>("upcoming");
 
-  // scope maps the tab directly to the backend's status-group filter (see
-  // BOOKING_SCOPE_STATUSES on the backend) instead of fetching every
-  // booking and filtering a multi-status group client-side — the old
-  // approach made a tab's shown count wrong/incomplete for as long as any
-  // page remained unloaded, once this became a real paginated fetch instead
-  // of always walking every page up front.
-  const scope = tab === "upcoming" ? "UPCOMING" : "PAST";
+  // Two independent scoped fetches now that the tab switcher is gone: the
+  // soonest UPCOMING booking is featured at the top, PAST fills the history
+  // list. `scope` still maps straight to the backend's status-group filter
+  // (see BOOKING_SCOPE_STATUSES) so each list's paging stays exact.
+  const upcoming = usePaginatedList<Booking>(
+    ["bookings", "UPCOMING"],
+    (page, limit) => {
+      const accessToken = getAccessToken();
+      if (!accessToken) return Promise.resolve({ data: [] });
+      return bookingApi.findAllPage(accessToken, page, limit, { scope: "UPCOMING" });
+    },
+    { limit: 20, enabled: isLoggedIn },
+  );
 
-  const { items: bookings, counts, isLoading, isFetchingNextPage, hasMore, loadMore } =
-    usePaginatedList<Booking>(
-      ["bookings", scope],
-      (page, limit) => {
-        const accessToken = getAccessToken();
-        if (!accessToken) return Promise.resolve({ data: [] });
-        return bookingApi.findAllPage(accessToken, page, limit, { scope });
-      },
-      { limit: 20, enabled: isLoggedIn },
-    );
-
-  // `counts.upcoming`/`counts.past` come back from the backend regardless of
-  // which `scope` was requested (they're computed over the same
-  // userId+q+scheduledDate scope, just without the scope/status filter
-  // itself) — so whichever tab is currently loaded already carries both
-  // tabs' totals, no second request needed.
-  const upcomingCount = counts?.upcoming;
-  const pastCount = counts?.past;
+  const past = usePaginatedList<Booking>(
+    ["bookings", "PAST"],
+    (page, limit) => {
+      const accessToken = getAccessToken();
+      if (!accessToken) return Promise.resolve({ data: [] });
+      return bookingApi.findAllPage(accessToken, page, limit, { scope: "PAST" });
+    },
+    { limit: 20, enabled: isLoggedIn },
+  );
 
   if (!isMounted) return null;
 
@@ -134,62 +261,85 @@ export default function BookingsListPage() {
     );
   }
 
+  const [activeBooking, ...otherUpcoming] = upcoming.items;
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-10">
       <div className="mx-auto max-w-2xl bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-3">
           <button
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push("/")}
             className="rounded-full p-1.5 hover:bg-slate-100 cursor-pointer"
-            aria-label="Back to profile"
+            aria-label="Back to home"
           >
             <ArrowLeft className="h-5 w-5 text-slate-700" />
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">My Bookings</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Bookings</h1>
         </div>
 
-        <div className="mb-4 flex gap-1 rounded-xl bg-slate-100 p-1">
-          {(["upcoming", "past"] as const).map((value) => {
-            const count = value === "upcoming" ? upcomingCount : pastCount;
-            return (
-              <button
-                key={value}
-                onClick={() => setTab(value)}
-                className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition-colors cursor-pointer ${
-                  tab === value ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
-                }`}
-              >
-                {value}
-                {count !== undefined && <span className="ml-1 tabular-nums">({count})</span>}
-              </button>
-            );
-          })}
-        </div>
+        <section className="mb-8">
+          <SectionLabel icon={Calendar}>Active Booking</SectionLabel>
 
-        {isLoading ? (
-          <p className="px-4 py-10 text-center text-sm text-slate-400">Loading…</p>
-        ) : bookings.length === 0 ? (
-          <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center">
-            <ClipboardList className="mb-3 h-8 w-8 text-slate-300" strokeWidth={1.5} />
-            <p className="text-sm text-slate-500">
-              {tab === "upcoming"
-                ? "No upcoming bookings — go book a service you'll love."
-                : "No past bookings yet."}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {bookings.map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                onOpen={() => router.push(`/bookings/${booking.id}`)}
-              />
-            ))}
-          </div>
-        )}
+          {upcoming.isLoading ? (
+            <p className="py-6 text-center text-sm text-slate-400">Loading…</p>
+          ) : activeBooking ? (
+            <ActiveBookingCard
+              booking={activeBooking}
+              onOpen={() => router.push(`/bookings/${activeBooking.id}`)}
+              onReschedule={() =>
+                router.push(`/bookings/${activeBooking.id}?action=reschedule`)
+              }
+            />
+          ) : (
+            <NoActiveBooking onBook={() => router.push("/")} />
+          )}
 
-        {hasMore && <LoadMoreButton onClick={loadMore} loading={isFetchingNextPage} />}
+          {otherUpcoming.length > 0 && (
+            <div className="mt-4 space-y-4">
+              {otherUpcoming.map((booking) => (
+                <CompactBookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onOpen={() => router.push(`/bookings/${booking.id}`)}
+                />
+              ))}
+              {upcoming.hasMore && (
+                <LoadMoreButton
+                  onClick={upcoming.loadMore}
+                  loading={upcoming.isFetchingNextPage}
+                />
+              )}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <SectionLabel icon={History}>Booking History</SectionLabel>
+
+          {past.isLoading ? (
+            <p className="py-6 text-center text-sm text-slate-400">Loading…</p>
+          ) : past.items.length === 0 ? (
+            <div className="rounded-lg border border-black/8 bg-white px-4 py-10 text-center text-sm text-slate-500">
+              No past bookings yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {past.items.map((booking) => (
+                <CompactBookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onOpen={() => router.push(`/bookings/${booking.id}`)}
+                />
+              ))}
+            </div>
+          )}
+
+          {past.hasMore && (
+            <div className="mt-4">
+              <LoadMoreButton onClick={past.loadMore} loading={past.isFetchingNextPage} />
+            </div>
+          )}
+        </section>
       </div>
 
       <div className="block md:hidden">

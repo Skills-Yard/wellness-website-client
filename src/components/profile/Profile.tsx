@@ -589,11 +589,14 @@ export default function ProfilePage() {
                 the persistent top Navbar for that, and reaching /profile
                 from the mobile header's new profile icon (BottomNav no
                 longer has a Profile tab to fall back on) otherwise left no
-                way back except "Home". */}
+                way back except "Home". Goes straight to "/" rather than
+                router.back() — profile is reachable from several places
+                now, and "back" should mean "home", not whatever happens to
+                be on the history stack. */}
             <div className="mb-6 flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => router.push("/")}
                 className="flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50 md:hidden"
                 aria-label="Back"
               >

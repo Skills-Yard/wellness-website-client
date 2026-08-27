@@ -174,9 +174,18 @@ export default function BookingDetailPage() {
   const submitReviewMutation = useSubmitReview();
   const updateReviewMutation = useUpdateReview();
 
+  // The bookings list "Reschedule" button links here with ?action=reschedule.
+  // Read it once as the initial dialog state so the reschedule dialog is open
+  // on arrival — no post-mount effect needed (the page is gated behind
+  // `isMounted` below, so this only ever takes effect client-side).
   const [activeDialog, setActiveDialog] = useState<
     null | "cancel" | "dispute" | "reschedule" | "review" | "editReview"
-  >(null);
+  >(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("action") === "reschedule"
+      ? "reschedule"
+      : null,
+  );
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
 

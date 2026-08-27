@@ -36,7 +36,7 @@ interface CheckoutOverlayProps {
 export default function CheckoutOverlay({ steps }: CheckoutOverlayProps) {
   return (
     <div
-      className="fixed inset-0 z-100 flex items-center justify-center bg-white px-6"
+      className="pointer-events-auto fixed inset-0 z-100 flex items-center justify-center bg-white px-6"
       role="status"
       aria-live="polite"
     >
