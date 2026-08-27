@@ -493,13 +493,7 @@ export default function BookingDetailPage() {
       </div>
 
       <div className="block md:hidden">
-        <BottomNav
-          activeTab="profile"
-          onTabClick={(tabId) => {
-            if (tabId === "top" || tabId === "home") router.push("/");
-            else router.push(`/?tab=${tabId}`);
-          }}
-        />
+        <BottomNav activeTab="bookings" onHomeClick={() => router.push("/")} />
       </div>
 
       <ReasonDialog

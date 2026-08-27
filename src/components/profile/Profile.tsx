@@ -9,6 +9,7 @@ import {
 } from "@/src/components/ui/accordion";
 import { Switch } from "@/src/components/ui/switch";
 import {
+  ArrowLeft,
   ShieldCheck,
   UserCircle2,
   MonitorSmartphone,
@@ -584,8 +585,20 @@ export default function ProfilePage() {
       ) : (
         <div className="min-h-screen bg-white">
           <div className="mx-auto max-w-2xl bg-white px-4 py-8 sm:px-6 lg:px-8">
-            {/* Header */}
-            <div className="mb-6">
+            {/* Header — the back button is mobile-only: desktop already has
+                the persistent top Navbar for that, and reaching /profile
+                from the mobile header's new profile icon (BottomNav no
+                longer has a Profile tab to fall back on) otherwise left no
+                way back except "Home". */}
+            <div className="mb-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50 md:hidden"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
               <h1 className="text-3xl font-bold tracking-tight text-slate-900">
                 Profile
               </h1>
@@ -627,16 +640,7 @@ export default function ProfilePage() {
 
       {/* ── Bottom Navigation Bar (mobile only) ──────────── */}
       <div className="block md:hidden">
-        <BottomNav
-          activeTab="profile"
-          onTabClick={(tabId) => {
-            if (tabId === "top" || tabId === "home") {
-              router.push("/");
-            } else {
-              router.push(`/?tab=${tabId}`);
-            }
-          }}
-        />
+        <BottomNav onHomeClick={() => router.push("/")} />
       </div>
 
       {/* ==========================================

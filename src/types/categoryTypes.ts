@@ -39,6 +39,9 @@ export type ServiceGender = {
   slug: string;
   title: string;
   subtitle?: string | null;
+  /** The real per-gender illustration (e.g. CategorySelectModal's option
+   *  cards) — optional since older data/categories may not have one set. */
+  iconKey?: string | null;
 };
 
 /** GET /catalog/service-suites — zone-scoped (ZoneSuiteConfig). An empty
@@ -51,4 +54,7 @@ export type ServiceSuite = {
   slug: string;
   title: string;
   subtitle?: string | null;
+  /** The tier's own thumbnail (e.g. the suite-selection screen's row
+   *  image) — optional since not every suite has one set. */
+  iconKey?: string | null;
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { DynamicService } from "@/src/utils/types/spabooking";
 import SectionHero from "./SectionHero/SectionHero";
@@ -47,7 +48,15 @@ export default function SubDetailPopUp({
     window.setTimeout(onClose, 300);
   };
 
-  return (
+  // Portaled to <body> rather than rendered inline where the two callers
+  // mount it (CategoryServices/spa-booking) — a `fixed`/`z-70` descendant
+  // only competes for stacking order within its nearest stacking-context
+  // ancestor, and either caller's tree can end up wrapped in one (e.g.
+  // CategorySelectModal's identical pattern was getting trapped by
+  // CategoryGrid's `relative z-20`, rendering it behind BottomNav's
+  // root-level z-50 — same fix applied there). Portaling to body sidesteps
+  // that regardless of which ancestor tree this is opened from.
+  return createPortal(
     <div
       className={`fixed inset-0 z-70 flex items-end justify-center bg-black/80 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${mounted ? "opacity-100" : "opacity-0"}`}
       onClick={close}
@@ -78,6 +87,7 @@ export default function SubDetailPopUp({
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

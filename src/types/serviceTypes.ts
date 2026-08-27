@@ -30,6 +30,11 @@ export type HomeCategory = {
   iconKey?: string | null;
   homeBannerKey?: string | null;
   homeBannerType?: CampaignMediaType | null;
+  /** Marketing copy for a full-bleed banner (e.g. the suite-selection
+   *  screen's hero) — distinct from title/subtitle, which are the plain
+   *  category name/tagline used elsewhere (home page grid, headings). */
+  sectionHeading?: string | null;
+  sectionSubheading?: string | null;
 };
 
 export type CampaignType =

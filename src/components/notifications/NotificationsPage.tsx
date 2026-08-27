@@ -101,13 +101,7 @@ export default function NotificationsPage() {
       </div>
 
       <div className="block md:hidden">
-        <BottomNav
-          activeTab="profile"
-          onTabClick={(tabId) => {
-            if (tabId === "top" || tabId === "home") router.push("/");
-            else router.push(`/?tab=${tabId}`);
-          }}
-        />
+        <BottomNav onHomeClick={() => router.push("/")} />
       </div>
     </div>
   );

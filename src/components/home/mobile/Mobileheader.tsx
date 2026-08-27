@@ -1,13 +1,13 @@
 "use client";
 
-import { MapPin, ChevronDown, ShoppingCart, Search, X } from "lucide-react";
+import Link from "next/link";
+import { MapPin, ChevronDown, User, Search, X } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
-import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { cn } from "@/src/lib/utils";
 import { LOCATIONS, UNSUPPORTED_LOCATIONS } from "@/src/utils/data";
@@ -20,8 +20,6 @@ import NotificationBell from "@/src/components/notifications/NotificationBell";
 interface MobileHeaderProps {
     location: string;
     setLocation: (loc: string) => void;
-    cartCount: number;
-    setIsCartOpen: (open: boolean) => void;
     isMounted: boolean;
     headerScrolled: boolean;
     searchQuery: string;
@@ -37,8 +35,6 @@ interface MobileHeaderProps {
 export default function MobileHeader({
     location,
     setLocation,
-    cartCount,
-    setIsCartOpen,
     isMounted,
     headerScrolled,
     searchQuery,
@@ -155,24 +151,29 @@ export default function MobileHeader({
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Cart Button */}
-                <Button
-                    onClick={() => setIsCartOpen(true)}
-                    variant="outline"
-                    size="icon"
-                    className="relative w-9 h-9 rounded-full bg-white hover:bg-stone-50 border-none text-gray-900 cursor-pointer shadow-sm shrink-0 flex items-center justify-center"
-                >
-                    <ShoppingCart className="w-4 h-4 text-stone-900" />
-                    {isMounted && cartCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-[10px] font-extrabold text-white flex items-center justify-center shadow-sm">
-                            {cartCount}
-                        </span>
-                    )}
-                </Button>
+                {/* Grouped in their own flex container with a tight gap —
+                    the parent row is justify-between, which would otherwise
+                    space these two as far apart as the location content on
+                    the left leaves room for, instead of keeping them
+                    together as one pair pushed to the edge. */}
+                <div className="flex shrink-0 items-center gap-2">
+                    {/* Profile — cart moved to BottomNav (Home/Bookings/
+                        Cart), but notifications stay here alongside it,
+                        same as before. NotificationBell tracks its own
+                        unread count/login-gating internally, so no extra
+                        badge wiring here. */}
+                    <Link
+                        href="/profile"
+                        className="flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50"
+                        aria-label="Profile"
+                    >
+                        <User className="h-4.5 w-4.5" strokeWidth={1.5} />
+                    </Link>
 
-                {isMounted && (
-                    <NotificationBell className="rounded-full bg-white shadow-sm border-none" />
-                )}
+                    {isMounted && (
+                        <NotificationBell className="rounded-full bg-white shadow-sm border-none" />
+                    )}
+                </div>
             </div>
 
             {/* Search Row */}

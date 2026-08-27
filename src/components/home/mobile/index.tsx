@@ -21,7 +21,7 @@ interface MobileHomeProps {
 }
 
 export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
-  const { location, setLocation, cartCount, setIsCartOpen } = useCart();
+  const { location, setLocation } = useCart();
   const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
 
   const handleFaqsChange = useCallback(
@@ -42,7 +42,6 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
     onSearchFocus,
     searchResults,
     isSearchIndexLoading,
-    activeTab,
     isMounted,
     headerScrolled,
     scrollToSection,
@@ -54,8 +53,6 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
       <MobileHeader
         location={location}
         setLocation={setLocation}
-        cartCount={cartCount}
-        setIsCartOpen={setIsCartOpen}
         isMounted={isMounted}
         headerScrolled={headerScrolled}
         searchQuery={searchQuery}
@@ -107,7 +104,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
       </div>
       <EezitPromiseCard />
 
-      <BottomNav activeTab={activeTab} onTabClick={scrollToSection} />
+      <BottomNav activeTab="home" onHomeClick={() => scrollToSection("top")} />
     </div>
   );
 }
