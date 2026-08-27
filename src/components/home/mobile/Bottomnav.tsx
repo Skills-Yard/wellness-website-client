@@ -23,7 +23,7 @@ export default function BottomNav({ activeTab, onHomeClick }: BottomNavProps) {
   const { cartCount, setIsCartOpen } = useCart();
 
   return (
-    <nav className="fixed bottom-4 left-0 right-0 z-50 mx-auto flex w-[95%] max-w-[358px] items-center justify-center gap-16 rounded-[38px] border border-black/12 bg-white px-4 py-1.5 shadow-lg">
+    <nav className="fixed bottom-4 left-0 right-0 z-50 mx-auto flex w-[90%] max-w-[700px] items-center justify-around gap-4 rounded-[38px] border border-black/12 bg-white px-6 py-1.5 shadow-lg">
       <button
         type="button"
         onClick={onHomeClick}
