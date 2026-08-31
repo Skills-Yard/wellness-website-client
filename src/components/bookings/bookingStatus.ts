@@ -53,6 +53,19 @@ export const formatBookingDate = (isoDate: string) => {
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 };
 
+/** Longer variant with weekday, e.g. "Sat, 01 June 2026" — used on the
+ *  bookings list where the card has room for it. */
+export const formatBookingDateLong = (isoDate: string) => {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  return date.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 /** `scheduledTime` comes back as a bare "HH:mm" string, not a full
  *  timestamp — format it into a friendly 12-hour label without going
  *  through Date parsing (which would need a fabricated date component). */

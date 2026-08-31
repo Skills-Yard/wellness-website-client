@@ -1,4 +1,6 @@
 // Shared service types for the application
+import type { ServiceItem } from "./serviceItemTypes";
+
 export type ZonesQuery = {
   lat: number;
   long: number;
@@ -66,12 +68,18 @@ export type HomeCampaign = {
   endsAt?: string;
 };
 
-export type HomeServiceItem = {
-  id: string;
-  subCategoryId: string;
+/**
+ * A service item as embedded in the `/catalog/home` response. This is the
+ * full catalog shape (durations, packages, add-ons, content columns —
+ * everything `/catalog/service-items` returns), so the home page renders
+ * its category rows and opens the service detail popup straight from this
+ * one response. `categoryId` is denormalized on by the backend so the flat
+ * list can be grouped under its category without any extra fetch.
+ */
+export type HomeServiceItem = ServiceItem & {
+  categoryId: string;
   name: string;
   slug: string;
-  thumbnailKey?: string | null;
 };
 
 export type HomeDetails = {

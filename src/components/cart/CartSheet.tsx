@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { useCart } from "@/src/context/CartContext";
-import { addressApi, formatAddressLabel, type Address, type CreateAddressBody } from "@/src/services/addressApi";
+import { addressApi, type Address, type CreateAddressBody } from "@/src/services/addressApi";
 import { useAddresses } from "@/src/hooks/queries/useAddresses";
 import { queryKeys } from "@/src/hooks/queries/queryKeys";
 import { cartApi } from "@/src/services/cartApi";
@@ -14,11 +15,8 @@ import { bookingApi } from "@/src/services/bookingApi";
 import type { Booking } from "@/src/types/booking";
 import EmptyCart from "./Emptycart";
 import CartView from "./CartView";
-import BookingConfirmation from "./Bookingconfirmation";
-import TrackBooking from "./Trackbooking";
+import BookingConfirmation, { type PaymentResult } from "./Bookingconfirmation";
 import CheckoutOverlay, { type CheckoutOverlayStep } from "./CheckoutOverlay";
-import { generateBookingId, getTomorrowDateTime } from "@/src/utils/data/Booking";
-import { BookingDetails, BookingStep } from "@/src/utils/types/booking";
 
 // Every real, sequential milestone handleCheckout passes through, in
 // order — CheckoutOverlay's steps list is always all six, with each row's
@@ -100,8 +98,6 @@ declare global {
   }
 }
 
-const formatAddress = formatAddressLabel;
-
 const getUserIdFromToken = (token: string) => {
   try {
     const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { userId?: string; sub?: string; id?: string };
@@ -134,8 +130,9 @@ export default function CartSheet() {
   } = useCart();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<BookingStep>("cart");
-  const [booking, setBooking] = useState<BookingDetails | null>(null);
+  // Non-null once checkout settles — drives the full-screen payment-result
+  // takeover (BookingConfirmation), rendered as a sibling of <Sheet> below.
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
@@ -193,10 +190,31 @@ export default function CartSheet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCartOpen, addressesData, addressesQueryError, addressId]);
 
+  // Radix's modal <Sheet> parks `document.body` at `pointer-events: none`
+  // while open and restores it on close — but that restore is unreliable
+  // when the drawer is closed programmatically mid-checkout (Razorpay
+  // handler) with `modal` toggling around the payment window: the page
+  // underneath can stay click-frozen after the confirmation screen goes
+  // away. Once nothing of ours is on screen, force it back — twice, since
+  // Radix's own (buggy) restore can fire after the Sheet's exit animation.
+  useEffect(() => {
+    if (isCartOpen || paymentResult || checkoutStage !== "idle") return;
+    const unlock = () => {
+      if (document.body.style.pointerEvents === "none") {
+        document.body.style.pointerEvents = "";
+      }
+      if (document.body.style.overflow === "hidden") {
+        document.body.style.overflow = "";
+      }
+    };
+    unlock();
+    const timer = window.setTimeout(unlock, 400);
+    return () => window.clearTimeout(timer);
+  }, [isCartOpen, paymentResult, checkoutStage]);
+
   function handleOpenChange(open: boolean) {
     setIsCartOpen(open);
     if (!open) {
-      window.setTimeout(() => setStep("cart"), 300);
       // Defensive reset — normally already restored by reportFailure/the
       // checkout success handler, but if the user closes the drawer via
       // some other path mid-checkout, don't leave the next open() modal-less.
@@ -278,9 +296,19 @@ export default function CartSheet() {
       settled = true;
       setSheetModal(true);
       setCheckoutStage("idle");
-      setPaymentError(message);
       setIsCheckingOut(false);
-      if (!orderId) return;
+      if (!orderId) {
+        // Failed before a Razorpay order even existed (cart/zone/config
+        // problem) — the user never left the cart, so surface it inline
+        // there rather than taking over the screen with a result page.
+        setPaymentError(message);
+        return;
+      }
+      // A real payment attempt was made and didn't go through (declined, or
+      // the user dismissed the Razorpay modal). Take over full-screen with
+      // the failed result, the mirror image of a success.
+      setIsCartOpen(false);
+      setPaymentResult({ status: "failed", message });
       try {
         await paymentApi.verify({ gateway: "razorpay", gatewayOrderId: orderId, outcome: "failed" }, token);
       } catch (error) {
@@ -347,21 +375,18 @@ export default function CartSheet() {
           setCheckoutStage("confirming_booking");
           try {
             await paymentApi.verify({ gateway: "razorpay", gatewayOrderId: response.razorpay_order_id ?? confirmedOrderId, gatewayPaymentId: response.razorpay_payment_id, gatewaySignature: response.razorpay_signature, outcome: "success" }, token);
-            setBooking({ id: generateBookingId(), dateTime: getTomorrowDateTime(), address: formatAddress(selectedAddress), items: cartItems });
             clearCart();
-            setStep("confirmation");
             setCheckoutStage("fetching_details");
             // The booking is created/confirmed on the backend as part of
             // checkout/verify, but GET /bookings reflecting that can lag a
-            // beat behind — jumping straight to /bookings without this
-            // wait is exactly what used to make the page look like the
-            // booking never went through. The overlay (checkoutStage
+            // beat behind — the result screen shows a "being set up"
+            // fallback if this poll times out. The overlay (checkoutStage
             // above) stays up for this entire wait, per design — it only
             // comes down once this actually resolves, below.
             const confirmedBooking = await waitForConfirmedBooking(token, checkoutStartedAt);
             queryClient.invalidateQueries({ queryKey: queryKeys.bookings() });
             setCheckoutStage("idle");
-            router.push(confirmedBooking ? `/bookings/${confirmedBooking.id}` : "/bookings");
+            setPaymentResult({ status: "success", booking: confirmedBooking });
           } catch (error) {
             setCheckoutStage("idle");
             // The cart was already closed above (payment did succeed at
@@ -410,20 +435,55 @@ export default function CartSheet() {
     }
   };
 
-  const handleTrack = () => setStep("tracking");
-  // Now that a completed checkout redirects the page underneath to
-  // /bookings (see the success handler above), "Back to Home" needs its
-  // own explicit navigation — closing the drawer alone would leave the
-  // user looking at /bookings, not home.
-  const handleHome = () => { clearCart(); setIsCartOpen(false); router.push("/"); };
-  const handleDone = () => { clearCart(); setIsCartOpen(false); };
+  // "Track Booking" (success) → the real booking page, which has the live
+  // step tracker; falls back to the list if the poll never resolved an id.
+  const handleResultPrimary = () => {
+    const target =
+      paymentResult?.status === "success"
+        ? paymentResult.booking
+          ? `/bookings/${paymentResult.booking.id}`
+          : "/bookings"
+        : null;
+    setPaymentResult(null);
+    if (target) {
+      router.push(target);
+    } else {
+      // Failed → straight back to the cart to try again (items are intact).
+      setIsCartOpen(true);
+    }
+  };
+
+  const handleResultHome = () => {
+    setPaymentResult(null);
+    setIsCartOpen(false);
+    router.push("/");
+  };
 
   return <>
-    <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>{step === "cart" ? "Your Cart" : step === "confirmation" ? "Booking Confirmation" : "Track Booking"}</SheetTitle></SheetHeader>{step === "cart" ? (cartItems.length === 0 ? <EmptyCart /> : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onContinue={() => void handleCheckout()} />) : step === "confirmation" && booking ? <BookingConfirmation booking={booking} onTrack={handleTrack} onHome={handleHome} onBack={() => setStep("cart")} onClose={() => setIsCartOpen(false)} /> : step === "tracking" && booking ? <TrackBooking booking={booking} onBack={() => setStep("confirmation")} onClose={handleDone} /> : null}</SheetContent></Sheet>
-    {/* Sibling of Sheet, not inside it — spans the entire checkout
-        regardless of the cart drawer's own open/closed state (see
-        checkoutStage's declaration above), and has no dismiss control of
-        its own by design — only handleCheckout ever hides it. */}
-    {checkoutStage !== "idle" && <CheckoutOverlay steps={buildCheckoutSteps(checkoutStage)} />}
+    <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>Your Cart</SheetTitle></SheetHeader>{cartItems.length === 0 ? <EmptyCart /> : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onContinue={() => void handleCheckout()} />}</SheetContent></Sheet>
+    {/* Portaled to <body>: CartSheet is mounted inside the desktop navbar,
+        which is `display:none` on mobile — rendering these inline would
+        make the checkout overlay and the post-payment confirmation
+        invisible on mobile (the <Sheet> only shows there because Radix
+        portals it out itself). They still span the whole checkout
+        regardless of the drawer's open/closed state. The overlay has no
+        dismiss control by design; the result screen is only ever cleared
+        by its own two buttons. */}
+    {typeof document !== "undefined" &&
+      createPortal(
+        <>
+          {checkoutStage !== "idle" && (
+            <CheckoutOverlay steps={buildCheckoutSteps(checkoutStage)} />
+          )}
+          {paymentResult && (
+            <BookingConfirmation
+              result={paymentResult}
+              onPrimary={handleResultPrimary}
+              onHome={handleResultHome}
+            />
+          )}
+        </>,
+        document.body,
+      )}
   </>;
 }

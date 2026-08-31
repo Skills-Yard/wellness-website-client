@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import { useSubCategories } from "@/src/hooks/queries/useSubCategories";
-import { useServiceItemsForSubCategories } from "@/src/hooks/queries/useServiceItems";
-import { HomeCategory } from "@/src/types/serviceTypes";
+import { HomeCategory, HomeServiceItem } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
 import { DynamicService } from "@/src/utils/types/spabooking";
 import SubDetailPopUp from "@/src/components/detail/[slug]/LazySubDetailPopUp";
 
 type CategoryServicesProps = {
   category: HomeCategory;
-  zoneId: string;
+  // Already resolved from the single `/catalog/home` response (grouped by
+  // useServicesByCategory) — this row no longer fetches anything itself.
+  services: HomeServiceItem[];
   onFaqsChange?: (
     category: HomeCategory,
     faqs: HomeFaq[],
@@ -88,57 +88,14 @@ const toDynamicService = (service: ServiceItem, categoryName: string): DynamicSe
 
 export default function CategoryServices({
   category,
-  zoneId,
+  services,
   onFaqsChange,
 }: CategoryServicesProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [isActive, setIsActive] = useState(false);
   // Clicking a card opens the same detail popup the category page uses,
   // instead of navigating there — see the card's onClick below.
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(
     null,
   );
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section || isActive) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsActive(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "300px 0px" },
-    );
-
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, [isActive]);
-
-  // Fetches every sub-category's services in parallel (same pattern as the
-  // full category page — see spa-booking/index.tsx), gated behind
-  // scrolling close enough to trigger the fetch (isActive → enabled).
-  // Keyed by [subCategoryId, zoneId] via React Query, so clicking "See
-  // all" into this same category's detail page reuses this cache instead
-  // of refetching identical data.
-  const { data: subCategoriesData, isLoading: isSubCategoriesLoading, isError: isSubCategoriesError } =
-    useSubCategories(category.id, zoneId, { enabled: isActive });
-  const subCategoryIds = useMemo(
-    () => (subCategoriesData ?? []).map((subCategory) => subCategory.id),
-    [subCategoriesData],
-  );
-  const {
-    services,
-    isLoading: isServicesLoading,
-    isError: isServicesError,
-  } = useServiceItemsForSubCategories(subCategoryIds, zoneId, {
-    enabled: isActive && !!subCategoriesData,
-  });
-
-  const isLoading = isSubCategoriesLoading || isServicesLoading;
-  const error = isSubCategoriesError || isServicesError;
 
   const categoryFaqs = useMemo(() => {
     const uniqueFaqs = new Map<string, HomeFaq>();
@@ -164,7 +121,6 @@ export default function CategoryServices({
 
   return (
     <section
-      ref={sectionRef}
       id={category.slug}
       className="w-full max-w-7xl mx-auto overflow-hidden border-b border-stone-100 bg-white px-4 py-8 font-sans sm:px-6 sm:py-10 md:px-8 md:py-12 lg:px-8"
     >
@@ -185,21 +141,7 @@ export default function CategoryServices({
         </Link>
       </div>
 
-      {!isActive || (isLoading && services.length === 0) ? (
-        <div className="flex gap-2 overflow-hidden">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="w-[168px] shrink-0 animate-pulse sm:w-[calc((100%-16px)/3)] lg:w-[calc((100%-32px)/5)]">
-              <div className="aspect-[168/97] rounded-[7px] bg-stone-100" />
-              <div className="mt-2 h-4 w-3/4 rounded bg-stone-100" />
-              <div className="mt-2 h-3 w-1/2 rounded bg-stone-100" />
-            </div>
-          ))}
-        </div>
-      ) : error ? (
-        <p className="py-4 text-sm font-medium text-stone-500">
-          Services for this category are unavailable right now.
-        </p>
-      ) : services.length === 0 ? (
+      {services.length === 0 ? (
         <p className="py-4 text-sm font-medium text-stone-500">
           No services are available in this category yet.
         </p>

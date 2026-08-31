@@ -22,6 +22,7 @@ const LocationUnavailableModal = dynamic(
 );
 
 import { useHomeDetails } from "@/src/hooks/queries/useHomeDetails";
+import { useServicesByCategory } from "@/src/hooks/useServicesByCategory";
 
 export default function Home() {
   const router = useRouter();
@@ -33,6 +34,10 @@ export default function Home() {
     isError: homeError,
     refetch: refetchHomeDetails,
   } = useHomeDetails(zoneId, { enabled: !!zoneId });
+
+  // Every category row's services come from the single call above, grouped
+  // by categoryId — no per-category fetching anymore.
+  const servicesForCategory = useServicesByCategory(homeDetails);
 
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
@@ -192,7 +197,7 @@ export default function Home() {
               )}
               <CategoryServices
                 category={category}
-                zoneId={zoneId}
+                services={servicesForCategory(category.id)}
                 onFaqsChange={handleFaqsChange}
               />
             </div>
