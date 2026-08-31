@@ -7,6 +7,7 @@ import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordio
 import Inspotlight from "@/src/components/home/in-spotlight";
 import CategoryServices from "@/src/components/home/category-services";
 import WallPanel from "../wall-panel";
+import { useServicesByCategory } from "@/src/hooks/useServicesByCategory";
 import { useMobileHome } from "./Usemobilehome";
 import MobileHeader from "./Mobileheader";
 import CategoryGrid from "./Categorygrid";
@@ -23,6 +24,7 @@ interface MobileHomeProps {
 export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
   const { location, setLocation } = useCart();
   const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
+  const servicesForCategory = useServicesByCategory(homeDetails);
 
   const handleFaqsChange = useCallback(
     (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
@@ -94,7 +96,7 @@ export default function MobileHome({ homeDetails, zoneId }: MobileHomeProps) {
             )}
             <CategoryServices
               category={category}
-              zoneId={zoneId}
+              services={servicesForCategory(category.id)}
               onFaqsChange={handleFaqsChange}
             />
           </div>
