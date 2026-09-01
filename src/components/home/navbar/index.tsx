@@ -50,6 +50,8 @@ import AuthModal from "@/src/components/auth/LazyAuthModal";
 import { authApi } from "@/src/services/authApi";
 import { unregisterPushToken } from "@/src/lib/notifications/push";
 import NotificationBell from "@/src/components/notifications/NotificationBell";
+import { useAuthStatus } from "@/src/hooks/useAuthStatus";
+import { notifyAuthChanged } from "@/src/utils/auth/authEvents";
 
 // Only ever rendered once the cart icon is clicked — no reason to ship its
 // JS (address forms, Razorpay glue, etc.) in the navbar's initial bundle.
@@ -83,9 +85,13 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Reactive app-wide login state (see useAuthStatus) — recomputes the
+  // instant login/logout happens anywhere in the app, not just when this
+  // navbar's own login modal completes, which is why the "Log in"/"Profile"
+  // label used to stay stale after e.g. logging in from the cart's inline
+  // auth prompt.
+  const { isMounted, isLoggedIn } = useAuthStatus();
 
   // The full-catalog search index (categories → sub-categories → service
   // items) is only ever fetched once the search field is actually used —
@@ -101,14 +107,17 @@ export default function Navbar() {
 
   const router = useRouter();
   const pathname = usePathname();
+  // `active` only ever gets set by an explicit nav-link click
+  // (handleNavChange) — there's no scroll-spy keeping it in sync with
+  // which section is actually on screen, so it just holds whatever was
+  // last clicked (or its "Massage" default) forever. That's fine while
+  // still on "/", but on every other route (a booking's own page,
+  // profile, a detail page, ...) it left that link glowing as "active"
+  // even though the visitor is nowhere near a home-page section. Off "/",
+  // nothing should show as active.
+  const activeLink = pathname === "/" ? active : null;
 
   const searchRef = useRef<HTMLDivElement>(null);
-
-  // Mount hydration checks
-  useEffect(() => {
-    setIsMounted(true);
-    setIsLoggedIn(localStorage.getItem("isUserLoggedIn") === "true");
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -197,7 +206,7 @@ export default function Navbar() {
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("userProfile");
       localStorage.removeItem("isUserLoggedIn");
-      setIsLoggedIn(false);
+      notifyAuthChanged();
       router.replace("/");
     }
   };
@@ -243,13 +252,13 @@ export default function Navbar() {
                 onClick={() => handleNavChange(link)}
                 className={cn(
                   "relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus-visible:outline-none cursor-pointer",
-                  active === link
+                  activeLink === link
                     ? "text-amber-500"
                     : "text-gray-400 hover:text-gray-700",
                 )}
               >
                 {NAV_LINK_LABELS[link]}
-                {active === link && (
+                {activeLink === link && (
                   <span className="absolute bottom-[-18px] left-1/2 -translate-x-1/2 w-4 h-0.5 bg-amber-400 rounded-full" />
                 )}
               </button>
@@ -579,7 +588,7 @@ export default function Navbar() {
                       onClick={() => handleNavChange(link)}
                       className={cn(
                         "py-1.5 text-xs font-medium rounded-lg text-center transition-colors truncate px-1 cursor-pointer",
-                        active === link
+                        activeLink === link
                           ? "bg-white text-amber-600 shadow-xs font-semibold"
                           : "text-gray-500",
                       )}
@@ -687,10 +696,11 @@ export default function Navbar() {
       {/* Global Booking Flow Cart Drawer */}
       <CartSheet />
       {loginOpen && (
-        <AuthModal
-          onClose={() => setLoginOpen(false)}
-          onComplete={() => setIsLoggedIn(true)}
-        />
+        // No onComplete needed — AuthModal already calls onClose() itself
+        // once login finishes, and isLoggedIn above updates on its own
+        // (AuthModal's completeAuthentication calls notifyAuthChanged,
+        // which useAuthStatus is listening for).
+        <AuthModal onClose={() => setLoginOpen(false)} />
       )}
     </nav>
   );

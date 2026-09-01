@@ -1,14 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Sparkles, Star } from "lucide-react";
 import { useState } from "react";
 
 interface SectionHeroProps {
   service: any;
+  /** Category name (e.g. "Spa") — rendered as a badge overlaid on the hero
+   *  image itself, in the same visual row as the popup's close button
+   *  (mainfile.tsx), rather than in a separate strip above the image. */
+  categoryLabel?: string;
 }
 
-export default function SectionHero({ service }: SectionHeroProps) {
+export default function SectionHero({ service, categoryLabel }: SectionHeroProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   if (!service) return null;
@@ -26,13 +30,20 @@ export default function SectionHero({ service }: SectionHeroProps) {
 
   return (
     <section className="mx-auto w-full border-b border-slate-100 bg-white px-0 py-0">
-      {/* Hero Image */}
-      <div className="relative w-full bg-slate-100 aspect-video">
+      {/* Hero Image — a fixed, capped height (not aspect-video, which at
+          this popup's own max-w-4xl/~896px width was rendering ~500px
+          tall, taller than a hero image needs to be inside a compact
+          popup) so it stays a reasonable size instead of growing with
+          width. */}
+      <div className="relative h-56 w-full bg-slate-100 xs:h-64 sm:h-72 md:h-80">
         <Image
           src={service.media || "/images/hero-fallback.jpg"}
           alt={service.title}
           fill
-          sizes="(max-width: 639px) 232px, 390px" // Image fills container; sizes prop optimizes for mobile (100vw) and desktop (max-width of modal)
+          // Matches how wide this image can actually render — this popup
+          // is capped at max-w-4xl (~896px) from sm: up, full viewport
+          // width below that.
+          sizes="(max-width: 639px) 100vw, 896px"
           priority
           className="object-cover transition-transform duration-500"
           onLoadingComplete={() => setImageLoaded(true)}
@@ -41,7 +52,12 @@ export default function SectionHero({ service }: SectionHeroProps) {
         {!imageLoaded && (
           <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 animate-pulse" />
         )}
-        
+        {categoryLabel && (
+          <span className="absolute left-4 top-4 z-30 inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm shadow-amber-500/30">
+            <Sparkles className="h-3.5 w-3.5" />
+            {categoryLabel}
+          </span>
+        )}
       </div>
 
       {/* Info Section */}

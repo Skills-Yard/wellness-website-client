@@ -40,6 +40,14 @@
 }
 
 @theme inline {
+  /* Used all over the app (xs:px-4, xs:h-[280px], ...) as the step between
+     the unprefixed mobile styles and sm: (640px) — but Tailwind v4 only
+     recognizes a screen name once it has a --breakpoint-* token, so without
+     this every `xs:` utility in the codebase was silently dropped (no CSS
+     generated at all), leaving those elements stuck on their base mobile
+     sizing all the way from 0 up to 640px instead of the intermediate value
+     that was actually authored for this range. */
+  --breakpoint-xs: 30rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

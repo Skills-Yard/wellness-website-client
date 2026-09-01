@@ -64,22 +64,28 @@ export default function SubDetailPopUp({
       aria-modal="true"
     >
       <div
-        className={`relative flex h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl transition-transform duration-300 sm:h-auto sm:max-h-[85vh] sm:rounded-3xl ${mounted ? "translate-y-0" : "translate-y-full"}`}
+        // Centered-dialog shape (rounded on every corner from sm: up), a
+        // little wider than before — max-w-4xl (~896px) instead of
+        // max-w-3xl (~768px). Individual image sizes below (hero, Procedure
+        // steps, gallery) stay exactly as they were; only column counts
+        // change (see SectionSteps.tsx's md:grid-cols-3) so the extra room
+        // goes into showing more per row, not bigger images.
+        className={`relative flex h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl transition-transform duration-300 sm:h-auto sm:max-h-[85vh] sm:rounded-3xl ${mounted ? "translate-y-0" : "translate-y-full"}`}
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={close}
-          className="absolute right-4 top-4 z-60 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-md hover:bg-slate-50"
+          className="absolute right-4 top-4 z-60 inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-md transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:shadow-lg active:scale-95"
           aria-label="Close popup"
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="flex-1 overflow-y-auto overscroll-contain">
-          <p className="px-5 pt-5 text-xs font-semibold uppercase tracking-wider text-amber-600">
-            {categoryName}
-          </p>
-          <SectionHero service={service} />
+        <div className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+          {/* categoryLabel renders as a badge overlaid on the hero image
+              itself (see SectionHero) rather than a separate strip above
+              it, so it stays lined up with the close button. */}
+          <SectionHero service={service} categoryLabel={categoryName} />
           <RequirementSelector
             service={service}
             serviceDetails={serviceDetails}

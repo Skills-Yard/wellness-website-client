@@ -392,7 +392,13 @@ export default function SpaBookingLayout() {
   const heroMediaType = heroCampaign?.cdnUrl ? heroCampaign.mediaType : "IMAGE";
 
   return (
-    <div className="relative w-full bg-white pb-20">
+    // overflow-x-hidden — same guard page.tsx's <main> already has. This
+    // page mixes a lot of independently-sized rows (hero carousels, the
+    // duration/pack scrollers inside SubDetailPopUp's SelectPack, category
+    // icon grids) across md/lg breakpoints; any one of them running a
+    // fraction of a pixel wider than its container turns into a page-level
+    // horizontal scrollbar on tablet/desktop with nothing here to clip it.
+    <div className="relative w-full overflow-x-hidden bg-white pb-20">
       <MobileStickyNavbar
         title={title}
         isScrolled={isScrolled}

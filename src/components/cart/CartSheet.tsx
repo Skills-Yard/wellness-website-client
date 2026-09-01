@@ -46,13 +46,38 @@ const CHECKOUT_STAGE_LABELS: Record<CheckoutStage, string> = {
   fetching_details: "Getting your booking details",
 };
 
-const buildCheckoutSteps = (stage: CheckoutStage | "idle"): CheckoutOverlayStep[] => {
+const CHECKOUT_STAGE_DESCRIPTIONS: Record<CheckoutStage, string> = {
+  checking_cart: "All items verified",
+  creating_order: "Order is being prepared",
+  opening_payment: "Redirecting to payment gateway",
+  payment_confirmed: "Payment verified successfully",
+  confirming_booking: "Just a few seconds more",
+  fetching_details: "Almost done!",
+};
+
+const formatStageTime = (ms: number) =>
+  new Date(ms).toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+const buildCheckoutSteps = (
+  stage: CheckoutStage | "idle",
+  stageTimestamps: Partial<Record<CheckoutStage, number>>,
+): CheckoutOverlayStep[] => {
   if (stage === "idle") return [];
   const currentIndex = CHECKOUT_STAGES.indexOf(stage);
-  return CHECKOUT_STAGES.map((s, index) => ({
-    label: CHECKOUT_STAGE_LABELS[s],
-    state: index < currentIndex ? "done" : index === currentIndex ? "active" : "pending",
-  }));
+  return CHECKOUT_STAGES.map((s, index) => {
+    const ms = stageTimestamps[s];
+    return {
+      label: CHECKOUT_STAGE_LABELS[s],
+      description: CHECKOUT_STAGE_DESCRIPTIONS[s],
+      state: index < currentIndex ? "done" : index === currentIndex ? "active" : "pending",
+      time: ms ? formatStageTime(ms) : undefined,
+    };
+  });
 };
 
 // The booking behind a successful payment is created/confirmed on the
@@ -157,6 +182,34 @@ export default function CartSheet() {
   // once a real outcome is known: waitForConfirmedBooking resolving, or a
   // failure at any point sending the user back to the cart.
   const [checkoutStage, setCheckoutStage] = useState<CheckoutStage | "idle">("idle");
+  // When each stage was first reached — shown as a timestamp next to that
+  // step (see CheckoutOverlay). Filled in for every stage up to and
+  // including the current one on each change, not just the current one:
+  // "payment_confirmed" is never itself assigned to checkoutStage (see the
+  // CHECKOUT_STAGES comment above), so without backfilling it here it
+  // would never get a timestamp of its own — it picks up the same moment
+  // "confirming_booking" (the next real stage) does instead. Reset once
+  // checkout goes back to idle so the next checkout starts fresh.
+  const [stageTimestamps, setStageTimestamps] = useState<Partial<Record<CheckoutStage, number>>>({});
+  useEffect(() => {
+    if (checkoutStage === "idle") {
+      setStageTimestamps({});
+      return;
+    }
+    setStageTimestamps((prev) => {
+      const currentIndex = CHECKOUT_STAGES.indexOf(checkoutStage);
+      const next = { ...prev };
+      let changed = false;
+      for (let i = 0; i <= currentIndex; i++) {
+        const stage = CHECKOUT_STAGES[i];
+        if (next[stage] === undefined) {
+          next[stage] = Date.now();
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [checkoutStage]);
 
   const { data: addressesData, error: addressesQueryError } = useAddresses();
   const addresses = addressesData ?? [];
@@ -459,6 +512,12 @@ export default function CartSheet() {
     router.push("/");
   };
 
+  // The popup's own × — just closes it and leaves the visitor exactly
+  // where they already were, unlike onPrimary/onHome which both navigate.
+  const handleResultDismiss = () => {
+    setPaymentResult(null);
+  };
+
   return <>
     <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>Your Cart</SheetTitle></SheetHeader>{cartItems.length === 0 ? <EmptyCart /> : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onContinue={() => void handleCheckout()} />}</SheetContent></Sheet>
     {/* Portaled to <body>: CartSheet is mounted inside the desktop navbar,
@@ -466,20 +525,21 @@ export default function CartSheet() {
         make the checkout overlay and the post-payment confirmation
         invisible on mobile (the <Sheet> only shows there because Radix
         portals it out itself). They still span the whole checkout
-        regardless of the drawer's open/closed state. The overlay has no
-        dismiss control by design; the result screen is only ever cleared
-        by its own two buttons. */}
+        regardless of the drawer's open/closed state. CheckoutOverlay has
+        no dismiss control by design (it's just progress, not a decision
+        point); the result popup does — see handleResultDismiss. */}
     {typeof document !== "undefined" &&
       createPortal(
         <>
           {checkoutStage !== "idle" && (
-            <CheckoutOverlay steps={buildCheckoutSteps(checkoutStage)} />
+            <CheckoutOverlay steps={buildCheckoutSteps(checkoutStage, stageTimestamps)} />
           )}
           {paymentResult && (
             <BookingConfirmation
               result={paymentResult}
               onPrimary={handleResultPrimary}
               onHome={handleResultHome}
+              onDismiss={handleResultDismiss}
             />
           )}
         </>,

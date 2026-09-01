@@ -5,12 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft,
+  Bike,
   Calendar,
   CalendarClock,
   Check,
   Clipboard,
+  ClipboardCheck,
   ClipboardList,
   MapPin,
+  MessageCircle,
+  Navigation,
+  Phone,
+  PartyPopper,
+  PlayCircle,
   Star,
   User,
 } from "lucide-react";
@@ -55,6 +62,20 @@ const STEP_ORDER: BookingStatus[] = [
   "COMPLETED",
 ];
 const STEP_LABELS = ["Confirmed", "On the way", "Arrived", "In progress", "Completed"];
+
+// Mobile-only status banner + stepper (see the reference design) — kept
+// separate from STEP_LABELS/status.label above rather than reusing them,
+// since the mobile wording ("Arriving Soon", "Started") and the icon per
+// step are both specific to that design and don't apply to the desktop/
+// tablet banner, which stays exactly as it already was.
+const MOBILE_STEP_LABELS = ["Confirmed", "On the way", "Arriving Soon", "Started", "Completed"];
+const MOBILE_STEP_META = [
+  { icon: ClipboardCheck, title: "Confirmed", subtitle: "Your booking is confirmed" },
+  { icon: Bike, title: "On the way", subtitle: "Your therapist is on the way" },
+  { icon: Navigation, title: "Arriving Soon", subtitle: "Your therapist is arriving soon" },
+  { icon: PlayCircle, title: "Started", subtitle: "Your service has started" },
+  { icon: PartyPopper, title: "Completed", subtitle: "Your service is complete" },
+] as const;
 
 /** Statuses that count as "at or past" a given step even though they aren't
  *  literally that step's value (matching / broadcast phases all read as
@@ -240,38 +261,102 @@ export default function BookingDetailPage() {
         </div>
 
         <div className="space-y-4">
-          {/* Status banner */}
-          <div className={`flex items-center justify-between rounded-2xl px-4 py-3 ${status.className}`}>
-            <span className="text-sm font-bold">{status.label}</span>
-            <span className="font-mono text-xs opacity-70">#{booking.id.slice(-8)}</span>
+          {/* Status banner + stepper — desktop/tablet only; unchanged from
+              before. Mobile gets its own version right below (see
+              MOBILE_STEP_META) rather than sharing this markup, since the
+              two designs differ in more than just size (icon+subtitle
+              banner vs. a plain label pill, checkmarks in the stepper
+              dots, different step wording). */}
+          <div className="hidden md:block">
+            <div className={`flex items-center justify-between rounded-2xl px-4 py-3 ${status.className}`}>
+              <span className="text-sm font-bold">{status.label}</span>
+              <span className="font-mono text-xs opacity-70">#{booking.id.slice(-8)}</span>
+            </div>
+
+            {/* Step tracker — only for the linear happy-path statuses */}
+            {stepIndex >= 0 && (
+              <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+                <div className="relative flex items-start justify-between">
+                  <div className="absolute top-[9px] left-[10px] right-[10px] h-0.5 bg-slate-100" />
+                  <div
+                    className="absolute top-[9px] left-[10px] h-0.5 bg-amber-400 transition-all"
+                    style={{ width: `${(stepIndex / (STEP_ORDER.length - 1)) * 100}%` }}
+                  />
+                  {STEP_LABELS.map((label, index) => (
+                    <div key={label} className="relative z-10 flex flex-col items-center gap-1">
+                      <div
+                        className={`h-5 w-5 rounded-full border-2 ${
+                          index <= stepIndex
+                            ? "border-amber-500 bg-amber-500"
+                            : "border-slate-200 bg-white"
+                        }`}
+                      />
+                      <span className="w-14 text-center text-[10px] font-medium text-slate-500">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Step tracker — only for the linear happy-path statuses */}
-          {stepIndex >= 0 && (
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <div className="relative flex items-start justify-between">
-                <div className="absolute top-[9px] left-[10px] right-[10px] h-0.5 bg-slate-100" />
-                <div
-                  className="absolute top-[9px] left-[10px] h-0.5 bg-amber-400 transition-all"
-                  style={{ width: `${(stepIndex / (STEP_ORDER.length - 1)) * 100}%` }}
-                />
-                {STEP_LABELS.map((label, index) => (
-                  <div key={label} className="relative z-10 flex flex-col items-center gap-1">
-                    <div
-                      className={`h-5 w-5 rounded-full border-2 ${
-                        index <= stepIndex
-                          ? "border-amber-500 bg-amber-500"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    />
-                    <span className="w-14 text-center text-[10px] font-medium text-slate-500">
-                      {label}
-                    </span>
-                  </div>
-                ))}
+          {/* Mobile-only status banner + stepper (see the reference
+              design). Only for the linear happy-path statuses that have a
+              MOBILE_STEP_META entry — anything else (cancelled, disputed,
+              pending payment, ...) falls back to the same plain label pill
+              desktop/tablet always uses, so mobile still shows *something*
+              for those statuses instead of nothing. */}
+          <div className="md:hidden">
+            {stepIndex >= 0 ? (
+              <>
+                {(() => {
+                  const current = MOBILE_STEP_META[stepIndex] ?? MOBILE_STEP_META[0];
+                  const Icon = current.icon;
+                  return (
+                    <div className="flex items-center gap-3 rounded-lg border-2 border-[#F7ECD8] bg-[#FBF7ED] p-4.5">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white">
+                        <Icon className="h-7 w-7 text-[#D38516]" />
+                      </span>
+                      <div>
+                        <p className="text-lg font-medium text-black">{current.title}</p>
+                        <p className="text-sm font-medium text-[#484848]">{current.subtitle}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="relative mt-6 flex items-start justify-between px-1">
+                  <div className="absolute top-[7px] left-[10px] right-[10px] h-0.5 bg-[#EDEAE4]" />
+                  <div
+                    className="absolute top-[7px] left-[10px] h-0.5 bg-[#CE8A1D] transition-all"
+                    style={{ width: `${(stepIndex / (MOBILE_STEP_LABELS.length - 1)) * 100}%` }}
+                  />
+                  {MOBILE_STEP_LABELS.map((label, index) => (
+                    <div key={label} className="relative z-10 flex flex-col items-center gap-1.5">
+                      {index < stepIndex ? (
+                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#D38516]">
+                          <Check className="h-2 w-2 text-white" strokeWidth={4} />
+                        </span>
+                      ) : index === stepIndex ? (
+                        <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#D38516] ring-4 ring-[#D38516]/20" />
+                      ) : (
+                        <span className="h-3.5 w-3.5 rounded-full bg-[#EDEAE4]" />
+                      )}
+                      <span className="w-14 text-center text-[10px] font-medium text-[#484848]">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className={`flex items-center justify-between rounded-2xl px-4 py-3 ${status.className}`}>
+                <span className="text-sm font-bold">{status.label}</span>
+                <span className="font-mono text-xs opacity-70">#{booking.id.slice(-8)}</span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {showOtp && booking.arrivalOtp && <OtpCard otp={booking.arrivalOtp} />}
 
@@ -297,9 +382,11 @@ export default function BookingDetailPage() {
             </div>
           )}
 
-          {/* Partner */}
+          {/* Partner — desktop/tablet only, unchanged. Mobile gets its own
+              "Therapist Details" card right below (see the reference
+              design: bigger avatar, call/message buttons). */}
           {booking.partner && (
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="hidden rounded-2xl border border-slate-200 p-4 md:block">
               <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Your Partner
               </p>
@@ -341,6 +428,62 @@ export default function BookingDetailPage() {
             </div>
           )}
 
+          {/* Therapist Details — mobile only. Call/message are shown as
+              plain icon buttons, not wired to anything real: the client-
+              facing booking payload doesn't expose the partner's phone
+              number (see types/booking.ts), and there's no in-app chat
+              feature anywhere else in this codebase to link to either. */}
+          {booking.partner && (
+            <div className="md:hidden">
+              <p className="mb-3 text-base font-medium text-black">Therapist Details</p>
+              <div className="flex items-center gap-3 rounded-lg border-2 border-black/[0.07] p-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-amber-100">
+                    {resolveImageSrc(booking.partner.profilePhotoKey) ? (
+                      <Image
+                        src={resolveImageSrc(booking.partner.profilePhotoKey) as string}
+                        alt={booking.partner.name ?? "Partner"}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-amber-600">
+                        <User className="h-6 w-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-medium text-black">
+                      {booking.partner.name ?? "Assigned partner"}
+                    </p>
+                    {!!booking.partner.averageRating && (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-[#666]">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <span className="font-medium text-[#666]">
+                          {booking.partner.averageRating.toFixed(1)}
+                        </span>
+                        {!!booking.partner.yearsOfExperience && (
+                          <>
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-[#666]" />
+                            <span>{booking.partner.yearsOfExperience} yrs exp</span>
+                          </>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="flex h-11.5 w-11.5 items-center justify-center rounded-full border border-black/8 text-[#D38516]">
+                    <Phone className="h-4.5 w-4.5" />
+                  </span>
+                  <span className="flex h-11.5 w-11.5 items-center justify-center rounded-full border border-black/8 text-[#D38516]">
+                    <MessageCircle className="h-4.5 w-4.5" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Items */}
           <div className="rounded-2xl border border-slate-200 p-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -366,8 +509,11 @@ export default function BookingDetailPage() {
             </div>
           </div>
 
-          {/* Address + schedule */}
-          <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
+          {/* Address + schedule — desktop/tablet only, unchanged. Mobile
+              gets a restyled "Booking Details" card right below instead
+              (see the reference design), which also folds in the booking
+              ID row that's otherwise only shown in the header pill. */}
+          <div className="hidden rounded-2xl border border-slate-200 p-4 space-y-3 md:block">
             <div className="flex items-start gap-2.5 text-sm">
               <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
               <span className="text-slate-700">
@@ -389,6 +535,39 @@ export default function BookingDetailPage() {
                   .filter(Boolean)
                   .join(", ")}
               </span>
+            </div>
+          </div>
+
+          {/* Booking Details — mobile only. */}
+          <div className="md:hidden">
+            <p className="mb-3 text-base font-medium text-black">Booking Details</p>
+            <div className="divide-y divide-black/[0.06] rounded-lg border-2 border-black/[0.04] px-3">
+              <div className="flex items-center justify-between gap-4 py-3.5">
+                <span className="shrink-0 text-xs font-medium text-black">Date &amp; Time</span>
+                <span className="text-right text-xs font-medium text-[#666]">
+                  {formatBookingDate(booking.scheduledDate)}, {formatBookingTime(booking.scheduledTime)}
+                </span>
+              </div>
+              <div className="flex items-start justify-between gap-4 py-3.5">
+                <span className="shrink-0 text-xs font-medium text-black">Address</span>
+                <span className="text-right text-xs font-medium leading-relaxed text-[#666]">
+                  {[
+                    booking.address.customLabel,
+                    booking.address.line1,
+                    booking.address.line2,
+                    booking.address.landmark,
+                    booking.address.city,
+                    booking.address.state,
+                    booking.address.pincode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-3.5">
+                <span className="shrink-0 text-xs font-medium text-black">Booking ID</span>
+                <span className="text-xs font-medium text-[#666]">#{booking.id.slice(-8).toUpperCase()}</span>
+              </div>
             </div>
           </div>
 

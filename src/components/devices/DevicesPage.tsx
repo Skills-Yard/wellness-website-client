@@ -12,6 +12,7 @@ import DeviceRow from "./DeviceRow";
 import type { DeviceItem } from "@/src/types/auth";
 import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
+import { notifyAuthChanged } from "@/src/utils/auth/authEvents";
 
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -61,6 +62,7 @@ export default function DevicesPage() {
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userProfile");
     localStorage.removeItem("isUserLoggedIn");
+    notifyAuthChanged();
     router.replace("/");
   };
 

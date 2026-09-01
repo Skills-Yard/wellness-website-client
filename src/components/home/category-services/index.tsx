@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
+import type { Swiper as SwiperInstance } from "swiper";
 import "swiper/css";
 import { HomeCategory, HomeServiceItem } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
@@ -97,6 +98,20 @@ export default function CategoryServices({
     null,
   );
 
+  // Desktop-only prev/next arrows (see the buttons below) — touch devices
+  // already scroll this row by dragging, so the arrows stay hidden below
+  // md and only exist here to give a mouse/trackpad user the same "there's
+  // more" affordance drag-scrolling gives a touch user. isBeginning/isEnd
+  // hide whichever arrow has nothing left to reveal, instead of leaving a
+  // dead click sitting there once you've scrolled all the way to an edge.
+  const swiperRef = useRef<SwiperInstance | null>(null);
+  const [isBeginning, setIsBeginning] = useState(true);
+  const [isEnd, setIsEnd] = useState(false);
+  const syncEdges = (swiper: SwiperInstance) => {
+    setIsBeginning(swiper.isBeginning);
+    setIsEnd(swiper.isEnd);
+  };
+
   const categoryFaqs = useMemo(() => {
     const uniqueFaqs = new Map<string, HomeFaq>();
 
@@ -146,6 +161,7 @@ export default function CategoryServices({
           No services are available in this category yet.
         </p>
       ) : (
+        <div className="group/row relative">
         <Swiper
           spaceBetween={8}
           // Fractional slidesPerView at every breakpoint, not just mobile —
@@ -158,6 +174,12 @@ export default function CategoryServices({
             1024: { slidesPerView: 4.15, spaceBetween: 14 },
             1280: { slidesPerView: 5.15, spaceBetween: 16 },
           }}
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper;
+            syncEdges(swiper);
+          }}
+          onSlideChange={syncEdges}
+          onResize={syncEdges}
           className="w-full"
         >
           {services.map((service) => {
@@ -225,6 +247,39 @@ export default function CategoryServices({
             );
           })}
         </Swiper>
+
+        {/* Desktop-only — hidden on touch breakpoints (md and below), where
+            dragging the row already does this. Each button's hit area
+            spans the row's full height (inset-y-0) with a gradient scrim
+            behind it so it reads as part of the row rather than a chip
+            floating over the cards; the circular button itself sits
+            centered within that, fading in only on hover of the row so it
+            doesn't visually compete with the cards at rest. */}
+        {!isBeginning && (
+          <button
+            type="button"
+            aria-label="Scroll left"
+            onClick={() => swiperRef.current?.slidePrev()}
+            className="absolute inset-y-0 left-0 z-10 hidden w-14 cursor-pointer items-center justify-start bg-gradient-to-r from-white via-white/70 to-transparent pl-1 opacity-0 transition-opacity duration-200 group-hover/row:opacity-100 md:flex"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-md transition-all duration-150 hover:scale-105 hover:border-amber-300 hover:text-amber-600 hover:shadow-lg active:scale-95">
+              <ChevronLeft className="h-5 w-5" />
+            </span>
+          </button>
+        )}
+        {!isEnd && (
+          <button
+            type="button"
+            aria-label="Scroll right"
+            onClick={() => swiperRef.current?.slideNext()}
+            className="absolute inset-y-0 right-0 z-10 hidden w-14 cursor-pointer items-center justify-end bg-gradient-to-l from-white via-white/70 to-transparent pr-1 opacity-0 transition-opacity duration-200 group-hover/row:opacity-100 md:flex"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-md transition-all duration-150 hover:scale-105 hover:border-amber-300 hover:text-amber-600 hover:shadow-lg active:scale-95">
+              <ChevronRight className="h-5 w-5" />
+            </span>
+          </button>
+        )}
+        </div>
       )}
 
       {selectedService && (

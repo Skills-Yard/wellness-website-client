@@ -211,11 +211,18 @@ export default function RequirementSelector({
           so the last bit of content is never hidden behind it. */}
       <section className="mx-auto w-full bg-white font-sans text-slate-800 pb-56 sm:pb-44 md:pb-36">
         {/* Responsive container with proper padding */}
-        <div className="px-4 sm:px-4 md:px-6 lg:px-8 pt-6 md:max-w-4xl lg:max-w-6xl md:mx-auto">
+        <div className="px-4 sm:px-4 md:px-6 lg:px-8 pt-6">
           {/* --- DESKTOP GRID CONTAINER --- */}
           <div className="flex flex-col md:flex-row md:gap-8 lg:gap-10">
             {/* --- LEFT COLUMN (Selections) --- */}
-            <div className="flex-1 w-full flex flex-col">
+            {/* min-w-0 — a flex item defaults to min-width:auto, which
+                refuses to shrink below its content's natural width (long
+                text, fixed-size grid cells, etc.). Without it, this column
+                was staying at its full intrinsic width and pushing the
+                Features sidebar (shrink-0, a fixed width) past the row's
+                right edge — invisible because the popup's scroll container
+                clips horizontal overflow rather than showing a scrollbar. */}
+            <div className="min-w-0 flex-1 w-full flex flex-col">
               {/* --- DURATION SECTION --- */}
               {durations.length > 0 && (
                 <div className="mb-6">
@@ -468,7 +475,7 @@ export default function RequirementSelector({
                         <img
                           src={item.image}
                           alt={item.title}
-                          className="w-full h-20 sm:h-24 md:h-32 object-cover rounded-lg"
+                          className="w-full h-20 sm:h-24 md:h-24 object-cover rounded-lg"
                         />
                         <h3 className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-base font-medium leading-tight text-black text-center w-full">
                           {item.title}
@@ -527,7 +534,7 @@ export default function RequirementSelector({
                   Items Used
                 </h2>
 
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-3 md:gap-4">
                   {itemsUsed.map((item, index) => (
                     <div key={item.id ?? index} className="flex flex-col items-center">
                       <div className="w-full aspect-square bg-[#FEF4F4] rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3">
