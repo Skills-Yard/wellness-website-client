@@ -457,6 +457,7 @@ export default function SpaBookingLayout() {
       />
       <CategoriesMenuModal
         isOpen={isMenuOpen}
+        categoryName={title}
         categories={serviceCategories}
         media={media}
         activeTab={activeTab}
