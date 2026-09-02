@@ -94,4 +94,10 @@ export interface CartContextType {
    *  still disable their own controls and show a busy state while it's set
    *  instead of relying solely on that silent drop. */
   isCartSyncing: boolean;
+  /** True while the authoritative GET /cart hydration is in flight — the
+   *  initial mount load, or a re-hydrate right after login. The cart
+   *  drawer should show a loading state rather than its empty-cart screen
+   *  while this is set, so it doesn't flash "your cart is empty" before
+   *  the real items have arrived from the server. */
+  isCartHydrating: boolean;
 }

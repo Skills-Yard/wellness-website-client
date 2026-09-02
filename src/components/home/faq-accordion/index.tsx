@@ -63,7 +63,7 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
             activeClass: "bg-emerald-600 text-white shadow-md shadow-emerald-600/20",
             buttonGradient: "from-emerald-500 to-emerald-400 shadow-emerald-500/30",
         },
-        physiotherapy: {
+        physio: {
             icon: Activity,
             color: "text-blue-600 bg-blue-50 border-blue-100",
             activeClass: "bg-blue-600 text-white shadow-md shadow-blue-600/20",

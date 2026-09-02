@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
@@ -143,6 +144,20 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
   document.body.appendChild(script);
 });
 
+// Shown while the cart's first server load is still in flight — the cart
+// state can legitimately be `[]` at that point (localStorage had nothing
+// cached, the GET /cart hasn't returned yet), and rendering EmptyCart
+// there reads as "your cart got emptied" for the second or two until the
+// real items land.
+function CartLoading() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
+      <Loader2 className="h-6 w-6 animate-spin" />
+      <p className="text-sm font-medium">Loading your cart…</p>
+    </div>
+  );
+}
+
 export default function CartSheet() {
   const {
     isCartOpen,
@@ -152,6 +167,7 @@ export default function CartSheet() {
     addressId,
     updateCartAddress,
     isCartSyncing,
+    isCartHydrating,
   } = useCart();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -519,7 +535,7 @@ export default function CartSheet() {
   };
 
   return <>
-    <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>Your Cart</SheetTitle></SheetHeader>{cartItems.length === 0 ? <EmptyCart /> : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onContinue={() => void handleCheckout()} />}</SheetContent></Sheet>
+    <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>Your Cart</SheetTitle></SheetHeader>{cartItems.length === 0 ? (isCartHydrating ? <CartLoading /> : <EmptyCart />) : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onContinue={() => void handleCheckout()} />}</SheetContent></Sheet>
     {/* Portaled to <body>: CartSheet is mounted inside the desktop navbar,
         which is `display:none` on mobile — rendering these inline would
         make the checkout overlay and the post-payment confirmation

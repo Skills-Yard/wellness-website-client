@@ -6,6 +6,8 @@ import { cartApi, type CartApiItem } from "@/src/services/cartApi";
 import { getCartItemPricing } from "@/src/utils/pricing";
 import { useZones } from "@/src/hooks/queries/useZones";
 import { hasValidAccessToken } from "@/src/utils/auth/token";
+import { refreshAccessToken } from "@/src/lib/api/apiClient";
+import { AUTH_CHANGED_EVENT } from "@/src/utils/auth/authEvents";
 import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
 import React, {
   createContext,
@@ -13,6 +15,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -139,10 +142,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // state instead of just silently swallowing the click.
   const [syncingCount, setSyncingCount] = useState(0);
   const isCartSyncing = syncingCount > 0;
-  const beginSync = useCallback(() => setSyncingCount((count) => count + 1), []);
-  const endSync = useCallback(
-    () => setSyncingCount((count) => Math.max(0, count - 1)),
-    [],
+  // Synchronous mirror of syncingCount — a mutation's beginSync() bumps
+  // this in the same tick, before React re-renders. loadCart() reads it
+  // right after its GET resolves to tell whether a mutation started while
+  // that GET was in flight (in which case the mutation's PATCH response is
+  // the fresher truth and this GET must not clobber it — see loadCart).
+  const syncInFlightRef = useRef(0);
+  const beginSync = useCallback(() => {
+    syncInFlightRef.current += 1;
+    setSyncingCount((count) => count + 1);
+  }, []);
+  const endSync = useCallback(() => {
+    syncInFlightRef.current = Math.max(0, syncInFlightRef.current - 1);
+    setSyncingCount((count) => Math.max(0, count - 1));
+  }, []);
+  // True while the authoritative GET /cart hydration is in flight (mount,
+  // or a re-hydrate after login). Lets the cart drawer show a loading
+  // state instead of flashing its empty-cart screen before the real items
+  // have arrived. Starts true when there's already a session to load a
+  // cart for, so the first paint is the loader, not "your cart is empty".
+  const [isCartHydrating, setIsCartHydrating] = useState(
+    () => typeof window !== "undefined" && !!localStorage.getItem("accessToken"),
   );
 
   // Resolves the device's GPS position — but only once, and only when no
@@ -219,21 +239,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) return;
-
+    // Pulls the authoritative cart from the server and replaces local
+    // state with it — the same hydration a full page reload does. No-ops
+    // without an access token.
     const loadCart = async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        setIsCartHydrating(false);
+        return;
+      }
+
+      setIsCartHydrating(true);
       try {
-        // Read straight from storage, not the zoneId state variable —
-        // this effect only ever runs once on mount, so it closes over
-        // zoneId's initial (null) value regardless of what the
-        // sibling "load from localStorage" effect sets moments later;
-        // state updates from that effect aren't visible here until
-        // the next render, but the raw value is already on disk.
+        // Read the zone straight from storage, not the zoneId state
+        // variable — on the mount call this runs before the sibling
+        // localStorage-hydration effect's setState is visible here, but
+        // the raw value is already on disk.
         const response = await cartApi.get(
           accessToken,
           localStorage.getItem("eezit_zone_id"),
         );
+        // A cart mutation (add / quantity / slot / address) fired while
+        // this GET was in flight — e.g. the post-login "add the item they
+        // clicked before logging in" flow, which runs a PATCH /cart in
+        // the same tick this re-hydrate was triggered. That PATCH's
+        // response is the fresher truth; letting this now-stale GET write
+        // is exactly what made the drawer blink to "empty" for a beat.
+        if (syncInFlightRef.current > 0) return;
         setCartItems(response.data.items.map(toCartItem));
         setCartId(response.data.id ?? response.data.cartId ?? null);
         setAddressId(response.data.addressId ?? null);
@@ -244,10 +276,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCouponCode(response.data.couponCode ?? "");
       } catch {
         // Retain the locally cached cart if the API is unavailable.
+      } finally {
+        setIsCartHydrating(false);
       }
     };
 
     void loadCart();
+    // Re-hydrate whenever login/logout happens anywhere in the tab. A
+    // mid-session login (the cart's own inline auth prompt, the navbar, or
+    // a silent token refresh) used to leave this context stuck on its
+    // pre-login state — an empty/local cart, a "please log in" address
+    // error — until the page was reloaded.
+    const onAuthChanged = () => void loadCart();
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
   }, []);
 
   // Save to localStorage whenever cartItems changes
@@ -457,12 +499,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // same reason; this is the backstop for whatever slips past that.
   const addToCart = (item: Omit<CartItem, "quantity">) => {
     if (isCartSyncing) return;
-    if (!hasValidAccessToken()) {
-      setPendingCartItem(item);
-      setIsAuthPromptOpen(true);
+    if (hasValidAccessToken()) {
+      performAddToCart(item);
       return;
     }
-    performAddToCart(item);
+    // No usable access token. If it's merely expired and a refresh token
+    // is still on hand, renew it silently and add the item — don't make
+    // the user sit through a full OTP login again just because the access
+    // token aged out. refreshAccessToken() resolves to null (and clears
+    // the local session) when there's genuinely nothing to resume, which
+    // is the only case that still needs the login prompt.
+    void refreshAccessToken().then((token) => {
+      if (token) {
+        performAddToCart(item);
+      } else {
+        setPendingCartItem(item);
+        setIsAuthPromptOpen(true);
+      }
+    });
   };
 
   const removeFromCart = (id: string) => {
@@ -786,6 +840,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateItemSlot,
         isUpdatingSlot,
         isCartSyncing,
+        isCartHydrating,
       }}
     >
       {children}

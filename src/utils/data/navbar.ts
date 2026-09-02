@@ -13,17 +13,17 @@ export const NAV_LINK_LABELS: Record<NavLinkType, string> = {
 
 // The id of the home-page section each nav link scrolls to — the live
 // category's own `slug` from the backend (see CategoryServices'
-// `id={category.slug}`), NOT just `link.toLowerCase()`. The "Wellness" nav
-// entry's category was renamed "Spa" on the backend (slug "spa") without
-// the NavLinkType key changing, so it no longer matches its own lowercased
-// name — this is the one place that mapping is allowed to drift from the
-// display label, so every scroll-to-section consumer (desktop Navbar,
-// BottomNav, useMobileHome) reads it from here instead of hardcoding its
-// own copy of "wellness".
+// `id={category.slug}`), NOT just `link.toLowerCase()`. Two of the three
+// nav entries' backend slugs drift from their NavLinkType key: "Wellness"'s
+// category is slug "spa" (renamed on the backend without the key changing),
+// and "Physiotherapy"'s category is slug "physio". This is the one place
+// that mapping is allowed to drift from the display label, so every
+// scroll-to-section consumer (desktop Navbar, BottomNav, useMobileHome)
+// reads it from here instead of hardcoding its own copy.
 export const NAV_LINK_SECTION_IDS: Record<NavLinkType, string> = {
     Massage: "massage",
     Wellness: "spa",
-    Physiotherapy: "physiotherapy",
+    Physiotherapy: "physio",
 };
 
 export const LOCATIONS = [

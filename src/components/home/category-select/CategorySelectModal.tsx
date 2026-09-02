@@ -215,28 +215,26 @@ export default function CategorySelectModal({
         role="dialog"
         aria-modal="true"
       >
-        {/* Close button floats above the sheet, on the backdrop, rather
-            than sitting inside a bordered header row — matching the Figma
-            spec's own close-button placement (offset above the sheet's
-            top edge). Grouped with the sheet in one column so both
-            slide/fade in together. */}
         <div
-          className={`flex w-full max-w-lg flex-col items-end gap-3 transition-transform duration-300 ${
+          className={`flex w-full max-w-lg flex-col transition-transform duration-300 ${
             mounted ? "translate-y-0" : "translate-y-full"
           }`}
           onClick={(event) => event.stopPropagation()}
         >
-          <button
-            type="button"
-            onClick={() => close()}
-            className="flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-stone-900 hover:bg-stone-50"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-
           <div className="relative flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl sm:max-h-[80vh] sm:rounded-3xl">
-            <div className="flex items-center gap-2 px-5 pb-1 pt-6">
+            {/* Close button sits inside the card's own top-right corner
+                (not floating above it on the backdrop) — same placement as
+                the suite step above. */}
+            <button
+              type="button"
+              onClick={() => close()}
+              className="absolute right-4 top-4 z-10 flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-stone-900 hover:bg-stone-50"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-center gap-2 px-5 pb-1 pt-6 pr-16">
               <h2 className="flex-1 text-xl font-semibold text-black">
                 {`Choose Your ${category.name}`}
               </h2>

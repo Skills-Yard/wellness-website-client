@@ -28,7 +28,19 @@ const getAuthorizationHeader = (headers: AxiosRequestConfig["headers"]) => {
   return (headers as Record<string, string | undefined>).Authorization;
 };
 
-const refreshAccessToken = async () => {
+/**
+ * Silently trades the stored refresh token for a fresh access token,
+ * persisting both. Returns the new access token, or null when there's
+ * nothing to refresh with (no refresh token) or the refresh itself fails
+ * (in which case the local session is cleared — see the catch below).
+ *
+ * Exported so callers that gate on a *valid* (present + unexpired) access
+ * token — e.g. CartContext's addToCart — can attempt a quiet renewal
+ * before falling back to a full re-login prompt, rather than making the
+ * user sign in again just because the access token aged out while a
+ * still-valid refresh token sits right there.
+ */
+export const refreshAccessToken = async () => {
   if (typeof window === "undefined") return null;
 
   const refreshToken = localStorage.getItem("refreshToken");
@@ -47,6 +59,10 @@ const refreshAccessToken = async () => {
 
         localStorage.setItem("accessToken", tokens.accessToken);
         if (tokens.refreshToken) localStorage.setItem("refreshToken", tokens.refreshToken);
+        // A renewed token can flip an "am I logged in" check from false
+        // (access token had expired) back to true — let every useAuthStatus
+        // consumer recompute instead of looking logged out until reload.
+        notifyAuthChanged();
         return tokens.accessToken;
       })
       .catch(() => {
