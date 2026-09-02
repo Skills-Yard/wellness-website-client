@@ -1,0 +1,33 @@
+%% Client API request flow — import into Excalidraw via:  Menu ▸ Insert ▸ Mermaid to Excalidraw
+%% (paste everything below the %% comment lines)
+
+flowchart TB
+    SVC["service module<br/>src/services/*Api.ts"]
+    AC["ApiClient (axios)<br/>baseURL = /api/v1"]
+    RT["Next catch-all route<br/>/api/v1/[...path]/route.ts"]
+    FWD["forwardToBackend()<br/>header allow-list · no-store"]
+    BE["Backend API<br/>API_BASE_URL + /api/v1/*"]
+    REF["refreshAccessToken()<br/>POST /api/v1/auth/refresh<br/>single-flight"]
+    LS[("localStorage<br/>accessToken / refreshToken")]
+
+    SVC -->|"get / post / patch / delete(path, { accessToken })"| AC
+    AC -->|"same-origin HTTPS<br/>Authorization · Cookie · x-zone-id"| RT
+    RT -->|"rebuild /api/v1/&lt;encoded segments&gt;"| FWD
+    FWD -->|"fetch upstream + JSON body + query"| BE
+    BE -.->|"status + body + Set-Cookie passthrough"| FWD
+
+    AC -->|"on 401 — retry once, if request had a bearer"| REF
+    REF -.->|"new accessToken — replay original request"| AC
+    REF -->|"persist on success · clear all tokens on failure"| LS
+
+    classDef browser fill:#e7f5ff,stroke:#1971c2,color:#0b3d63;
+    classDef server fill:#fff9db,stroke:#f08c00,color:#663d00;
+    classDef backend fill:#ebfbee,stroke:#2f9e44,color:#14532d;
+    classDef aux fill:#fff0f6,stroke:#e64980,color:#7a1f47;
+    classDef store fill:#f1f3f5,stroke:#868e96,color:#343a40;
+
+    class SVC,AC browser;
+    class RT,FWD server;
+    class BE backend;
+    class REF aux;
+    class LS store;

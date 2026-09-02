@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 import {
@@ -15,14 +15,13 @@ import {
   useNotifications,
   useUnreadNotificationCount,
 } from "@/src/hooks/queries/useNotifications";
+import { useAuthStatus } from "@/src/hooks/useAuthStatus";
 import NotificationRow from "./NotificationRow";
 
 /** Bell + unread badge. Pass `isLoggedIn` when the parent already tracks it
- *  reactively (e.g. Navbar, which flips it the instant AuthModal completes,
- *  in the same tab, without a page reload); omit it anywhere else and the
- *  bell figures it out itself from localStorage on mount — fine for a
- *  component that isn't persistent across the login transition (a fresh
- *  mount, like navigating back to a page, already sees the right value).
+ *  (e.g. Navbar); omit it anywhere else and the bell figures it out itself
+ *  via useAuthStatus, which — unlike a one-time localStorage read on mount —
+ *  stays correct if login/logout happens elsewhere while this is mounted.
  *
  *  Opening the panel is treated as "seeing" the notifications — it marks
  *  everything currently unread as read, clearing the highlight, while the
@@ -36,18 +35,12 @@ export default function NotificationBell({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [selfDetectedLoggedIn, setSelfDetectedLoggedIn] = useState(false);
+  const { isLoggedIn: selfDetectedLoggedIn } = useAuthStatus();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const { data: notifications = [], isLoading } = useNotifications(20);
   const markAllRead = useMarkAllNotificationsRead();
   const hasUnread = unreadCount > 0;
   const isLoggedIn = isLoggedInProp ?? selfDetectedLoggedIn;
-
-  useEffect(() => {
-    if (isLoggedInProp === undefined) {
-      setSelfDetectedLoggedIn(localStorage.getItem("isUserLoggedIn") === "true");
-    }
-  }, [isLoggedInProp]);
 
   if (!isLoggedIn) return null;
 

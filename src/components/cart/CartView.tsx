@@ -108,6 +108,23 @@ export default function CartView({
   const [slotPickerItemId, setSlotPickerItemId] = useState<string | null>(null);
   const slotPickerItem = cartItems.find((item) => item.id === slotPickerItemId) ?? null;
 
+  // Slot availability is looked up in the address's own zone (see
+  // slotPickerZoneId above) — with no address yet there's no zone to check
+  // against, so opening the picker at that point would just show a
+  // confusing "unavailable" state. Rather than let the click silently do
+  // nothing (or block it with no explanation), this keeps the button
+  // clickable but redirects the click into a visible nudge: flashes a
+  // hint under the button and highlights the Address card so it's obvious
+  // *why* nothing opened and what to do about it.
+  const [addressHintItemId, setAddressHintItemId] = useState<string | null>(null);
+  const [addressCardPulsing, setAddressCardPulsing] = useState(false);
+  const promptForAddress = (itemId: string) => {
+    setAddressHintItemId(itemId);
+    setAddressCardPulsing(true);
+    window.setTimeout(() => setAddressHintItemId(null), 2800);
+    window.setTimeout(() => setAddressCardPulsing(false), 1200);
+  };
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
@@ -137,7 +154,7 @@ export default function CartView({
                     onClick={() => removeFromCart(item.id)}
                     disabled={isCartSyncing}
                     aria-label="Remove item"
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black/15 text-[#666] hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/15 text-[#666] transition-all duration-150 hover:border-red-200 hover:bg-red-50 hover:text-red-500 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -158,7 +175,7 @@ export default function CartView({
                       onClick={() => decreaseQuantity(item.id)}
                       disabled={item.quantity <= 1 || isCartSyncing}
                       aria-label="Decrease quantity"
-                      className="flex h-7 w-7 items-center justify-center bg-[#F6F2EC] text-[#AA9778] disabled:opacity-40"
+                      className="flex h-7 w-7 cursor-pointer items-center justify-center bg-[#F6F2EC] text-[#AA9778] transition-colors duration-150 hover:bg-[#EFE7DA] active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
@@ -169,7 +186,7 @@ export default function CartView({
                       onClick={() => increaseQuantity(item.id)}
                       disabled={isCartSyncing}
                       aria-label="Increase quantity"
-                      className="flex h-7 w-7 items-center justify-center bg-[#F6F2EC] text-[#AA9778] disabled:opacity-40"
+                      className="flex h-7 w-7 cursor-pointer items-center justify-center bg-[#F6F2EC] text-[#AA9778] transition-colors duration-150 hover:bg-[#EFE7DA] active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </button>
@@ -195,14 +212,32 @@ export default function CartView({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setSlotPickerItemId(item.id)}
+                      onClick={() =>
+                        address ? setSlotPickerItemId(item.id) : promptForAddress(item.id)
+                      }
                       disabled={isCartSyncing}
-                      className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-[#CE9B5A] disabled:opacity-40"
+                      aria-describedby={
+                        addressHintItemId === item.id ? `address-hint-${item.id}` : undefined
+                      }
+                      className={`flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
+                        address
+                          ? "text-[#CE9B5A] hover:bg-[#FBF1E4] hover:text-[#B9812F]"
+                          : "text-stone-400 hover:bg-stone-100 hover:text-stone-500"
+                      }`}
                     >
                       {item.slotDate ? "Change" : "Select"}
                       <ChevronRight className="h-3 w-3" />
                     </button>
                   </div>
+                  {addressHintItemId === item.id && (
+                    <p
+                      id={`address-hint-${item.id}`}
+                      role="status"
+                      className="text-[11px] font-medium text-red-500 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      Add an address first — slot times depend on where you&apos;re booking.
+                    </p>
+                  )}
                   {item.slotStartTime && (
                     <div className="flex items-center gap-2 text-xs text-[#666]">
                       <Clock className="h-4 w-4 shrink-0 text-[#D38516]" />
@@ -217,7 +252,11 @@ export default function CartView({
 
         <div>
           <h3 className="mb-2 text-base font-medium text-black">Address</h3>
-          <div className={CARD}>
+          <div
+            className={`${CARD} transition-shadow duration-300 ${
+              addressCardPulsing ? "ring-2 ring-amber-400/70 shadow-[0_0_0_4px_rgba(251,191,36,0.15)]" : ""
+            }`}
+          >
             <div className="flex items-center justify-between gap-2 p-3">
               <span className="min-w-0 truncate text-sm font-medium text-black">
                 {address ? addressLabel(address) : "No address selected"}
@@ -226,7 +265,7 @@ export default function CartView({
                 type="button"
                 onClick={onToggleAddressForm}
                 disabled={isCartSyncing}
-                className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-[#CE9B5A] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-medium text-[#CE9B5A] transition-all duration-150 hover:bg-[#FBF1E4] hover:text-[#B9812F] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {address ? "Change" : "Add address"}
                 <ChevronRight className="h-3 w-3" />
@@ -282,7 +321,7 @@ export default function CartView({
             type="button"
             onClick={onContinue}
             disabled={isCheckingOut || isCartSyncing}
-            className="shrink-0 rounded-lg bg-[#25180F] px-8 py-3.5 text-sm font-medium text-white hover:bg-[#3a2518] disabled:opacity-60"
+            className="shrink-0 cursor-pointer rounded-lg bg-[#25180F] px-8 py-3.5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#3a2518] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
           >
             {isCheckingOut
               ? "Opening payment…"

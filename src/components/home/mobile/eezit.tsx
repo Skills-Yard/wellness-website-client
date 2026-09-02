@@ -1,32 +1,37 @@
 import Image from "next/image";
 
 export default function EezitPromiseCard() {
-    return (
-        <div className="relative flex h-62.5 flex-row items-start justify-between gap-4 mt-12 p-5 bg-gradient-to-br from-[#FFFDFC] via-[#FFF5F0] to-[#FFEAE5] text-left shadow-xs overflow-hidden">
-            <div className="w-full h-full flex relative">
-                <div className="flex-1 space-y-3 z-10">
-                    <div>
-                        <span className="inline-block bg-white border border-[#EAD2C6] text-[#8C5D47] text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-md uppercase select-none">
-                            Eezit Promise
-                        </span>
-                    </div>
-                    <h4 className="text-lg sm:text-2xl font-serif text-[#4E3425] leading-tight font-bold">
-                        Care you can count on,<br />Every Single Time.
-                    </h4>
-                    <p className="text-xs sm:text-sm text-[#7D6456]/90 font-medium leading-relaxed">
-                        Rigorous checks. Quality care. Complete peace of mind.
-                    </p>
-                </div>
-                <div className="shrink-0 z-10 absolute -right-5 -top-2  flex items-center justify-center">
-                    <Image
-                        src="/images/eezit_promise_stamps.png"
-                        alt="Eezit Promise Seal"
-                        width={128}
-                        height={128}
-                        className="object-contain w-28 h-28 sm:w-32 sm:h-32 select-none"
-                    />
-                </div>
-            </div>
-        </div >
-    )
+  return (
+    <div className="relative flex h-62.5 flex-row items-start justify-between gap-4 mt-12 p-5 bg-gradient-to-br from-[#FFFDFC] via-[#FFF5F0] to-[#FFEAE5] text-left shadow-xs overflow-hidden">
+      <div className="w-full h-full flex relative">
+        <div className="flex-1 flex flex-col gap-4 z-10">
+          <div>
+            <span className="inline-block bg-white border border-black/9 text-[#713414] text-[10px] font-semibold tracking-wide px-2 py-1 rounded uppercase select-none">
+              Eezit Promise
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-xl font-serif font-normal leading-none text-[#713414]">
+              Care you can count on,
+            </p>
+            <p className="text-xl font-serif font-normal leading-none text-[#A67257]">
+              Every Single Time.
+            </p>
+          </div>
+          <p className="max-w-44.25 text-xs font-medium leading-3.75 text-black/74">
+            Rigorous checks. Quality care. Complete peace of mind.
+          </p>
+        </div>
+        <div className="shrink-0 z-10 absolute -right-5 -top-2 flex items-center justify-center">
+          <Image
+            src="/images/eezit_promise_stamps1.png"
+            alt="Eezit Promise Seal"
+            width={121}
+            height={126}
+            className="object-contain w-30.25 h-31.5 select-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import { notifyAuthChanged } from "@/src/utils/auth/authEvents";
 
 // Use the same-origin Next.js proxy so browsers never call the backend cross-origin.
 export const API_V1_URL = "/api/v1";
@@ -52,6 +53,11 @@ const refreshAccessToken = async () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("isUserLoggedIn");
+        // The session just got force-logged-out (refresh token was
+        // invalid/expired) — tell every isLoggedIn consumer so the UI
+        // (navbar login label, etc.) reflects it immediately instead of
+        // looking logged in until the next reload.
+        notifyAuthChanged();
         return null;
       })
       .finally(() => {

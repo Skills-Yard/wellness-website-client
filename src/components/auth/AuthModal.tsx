@@ -8,6 +8,7 @@ import type { CreateUserBody } from "@/src/types/auth";
 import { authApi } from "@/src/services/authApi";
 import { userApi } from "@/src/services/userApi";
 import { requestPushNotifications } from "@/src/lib/notifications/push";
+import { notifyAuthChanged } from "@/src/utils/auth/authEvents";
 
 type AuthStep = "PHONE" | "OTP" | "ONBOARDING";
 
@@ -85,6 +86,10 @@ export default function AuthModal({
     if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     if (profile) localStorage.setItem("userProfile", JSON.stringify(profile));
     localStorage.setItem("isUserLoggedIn", "true");
+    // Tells every other already-mounted "am I logged in" consumer
+    // (useAuthStatus/useRequireAuth-based navbar, notification bell, etc.)
+    // to recompute right now instead of showing a stale value until reload.
+    notifyAuthChanged();
     // Best-effort: prompts for notification permission now that we have an
     // identity to attach the device token to. No-ops silently if Firebase
     // isn't configured, the browser doesn't support it, or the user denies —

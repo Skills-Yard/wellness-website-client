@@ -37,9 +37,10 @@ const GENDER_EMOJI: Record<ServiceGender["code"], string> = {
  * is still shown and must be tapped explicitly, rather than being
  * auto-selected silently.
  *
- * The gender step (small bottom sheet) and the suite step (full-screen
- * banner + list) are deliberately different visual languages, matching
- * their separate Figma specs — not a stylistic inconsistency.
+ * Both the gender and suite steps share the same popup shell (dark
+ * backdrop, bottom-sheet/rounded-card, close ×) — the suite step used to
+ * be a separate full-screen banner+list takeover, but that read as a page
+ * navigation rather than a step in this same modal flow.
  */
 export default function CategorySelectModal({
   category,
@@ -144,52 +145,65 @@ export default function CategorySelectModal({
   return createPortal(
     showSuiteStep ? (
       <div
-        className="fixed inset-0 z-70 overflow-y-auto bg-white"
+        className={`fixed inset-0 z-70 flex items-end justify-center bg-black/80 backdrop-blur-xs transition-opacity duration-300 sm:items-center sm:p-4 ${
+          mounted ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={() => close()}
         role="dialog"
         aria-modal="true"
       >
-        <div className="relative h-[298px] w-full shrink-0">
-          {category.homeBannerKey && (
-            <Image
-              src={category.homeBannerKey}
-              alt=""
-              fill
-              priority
-              sizes="390px"
-              className="object-cover"
-            />
-          )}
-          {/* Scrim for the white headline text below, independent of
-              whatever the banner photo itself looks like. */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          <button
-            type="button"
-            onClick={() => (canGoBackToGender ? setGenderId(null) : close())}
-            className="absolute left-4 top-13 flex h-8.25 w-8.25 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="absolute inset-x-4.5 bottom-6 text-white">
-            {/* sectionHeading/sectionSubheading are the banner-copy fields
-                (distinct from title/subtitle, used elsewhere) — not every
-                category has them set yet, so this falls back to the plain
-                name rather than rendering nothing. */}
-            <h1 className="text-2xl font-semibold leading-[112.5%]">
-              {category.sectionHeading ?? category.title ?? category.name}
-            </h1>
-            {(category.sectionSubheading ?? category.subtitle) && (
-              <p className="mt-1 text-sm font-semibold">
-                {category.sectionSubheading ?? category.subtitle}
-              </p>
+        <div
+          className={`w-full max-w-lg transition-transform duration-300 ${
+            mounted ? "translate-y-0" : "translate-y-full"
+          }`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="relative flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl sm:max-h-[80vh] sm:rounded-3xl">
+            {/* Both buttons float inside the card's own top corners here
+                (not above it on the backdrop, like the gender step below) —
+                matching this step's own reference design. */}
+            {canGoBackToGender && (
+              <button
+                type="button"
+                onClick={() => setGenderId(null)}
+                aria-label="Back"
+                className="absolute left-5 top-5 z-10 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:bg-stone-50 active:scale-95"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
             )}
-          </div>
-        </div>
+            <button
+              type="button"
+              onClick={() => close()}
+              aria-label="Close"
+              className="absolute right-5 top-5 z-10 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:bg-stone-50 active:scale-95"
+            >
+              <X className="h-4 w-4" />
+            </button>
 
-        <div className="divide-y divide-[#F3EFEB] px-4 pt-10">
-          {suites.map((suite) => (
-            <SuiteTierRow key={suite.id} suite={suite} onSelect={() => setSuiteId(suite.id)} />
-          ))}
+            <div className={`shrink-0 pb-4 pt-7 sm:pt-8 ${canGoBackToGender ? "px-16" : "pl-6 pr-16 sm:pl-8"}`}>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                {category.title ?? category.name}
+              </span>
+              <h2 className="mt-1 text-2xl sm:text-3xl font-bold text-[#3D1E0F]">Choose a Tier</h2>
+              {/* sectionSubheading/subtitle are the same copy fields the
+                  old full-screen banner used — kept as real copy when the
+                  backend has set one, just without a photo behind it now. */}
+              {(category.sectionSubheading ?? category.subtitle) && (
+                <p className="mt-1.5 text-sm text-stone-500">
+                  {category.sectionSubheading ?? category.subtitle}
+                </p>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 sm:px-8 sm:pb-8">
+              <div className="space-y-3">
+                {suites.map((suite) => (
+                  <SuiteTierRow key={suite.id} suite={suite} onSelect={() => setSuiteId(suite.id)} />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     ) : (
@@ -306,17 +320,18 @@ function SuiteTierRow({
   const label = suite.title ?? suite.name;
 
   return (
-    <button type="button" onClick={onSelect} className="flex w-full items-start gap-4 py-5 text-left">
-      <div className="relative h-24 w-[167px] shrink-0 overflow-hidden rounded-lg bg-stone-100">
+    <button
+      type="button"
+      onClick={onSelect}
+      className="group flex w-full items-center gap-4 rounded-2xl border border-[#F3EFEB] bg-[#FBF9F6] p-3 text-left transition-all hover:border-amber-200 hover:bg-amber-50/50 active:scale-[0.99]"
+    >
+      <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-xl bg-stone-100">
         {suite.iconKey && (
-          <Image src={suite.iconKey} alt="" fill sizes="167px" className="object-cover" />
+          <Image src={suite.iconKey} alt="" fill sizes="112px" className="object-cover" />
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 pt-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-base font-medium text-black">{label}</span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-[#25180F]" />
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="text-base font-semibold text-black">{label}</span>
         {/* No fabricated "Arriving in N mins" badge here — the Figma spec
             has one, but there's no backend field behind it (checked the
             real ServiceSuite payload directly; nothing suite- or
@@ -325,9 +340,10 @@ function SuiteTierRow({
             one — several suites don't yet, so this line just doesn't
             render for those rather than showing empty/placeholder text. */}
         {suite.subtitle && (
-          <p className="text-sm font-medium leading-[116%] text-[#666666]">{suite.subtitle}</p>
+          <p className="text-sm leading-snug text-[#666666]">{suite.subtitle}</p>
         )}
       </div>
+      <ChevronRight className="h-5 w-5 shrink-0 text-[#25180F] transition-transform group-hover:translate-x-0.5" />
     </button>
   );
 }

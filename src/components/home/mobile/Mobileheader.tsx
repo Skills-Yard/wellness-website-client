@@ -75,14 +75,13 @@ export default function MobileHeader({
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <div className="flex flex-col cursor-pointer max-w-[80%]">
-                            <span className="text-[20px] font-semibold leading-5 text-white flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                            <span className="text-[20px] font-semibold leading-5 text-white">
                                 In 15 Minutes
                             </span>
-                            <span className="text-[14px] font-medium text-white flex items-center gap-1 truncate mt-1">
-                                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span className="text-[14px] font-medium text-white flex items-center gap-1.5 truncate mt-1.5">
+                                <MapPin className="w-5 h-5 text-white shrink-0" fill="currentColor" />
                                 <span className="truncate">{isMounted ? displayLocation : LOCATIONS[0]}</span>
-                                <ChevronDown className="w-3 h-3 text-stone-300 shrink-0" />
+                                <ChevronDown className="w-3 h-3 text-white shrink-0" />
                             </span>
                         </div>
                     </DropdownMenuTrigger>

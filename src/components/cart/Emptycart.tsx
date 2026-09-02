@@ -1,11 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ShoppingCart, Sparkles, Leaf, Shield, Star } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 export default function EmptyCart() {
   const { setIsCartOpen } = useCart();
+  const router = useRouter();
+
+  const handleBrowseServices = () => {
+    setIsCartOpen(false);
+    router.push("/");
+  };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6">
@@ -57,7 +64,7 @@ export default function EmptyCart() {
 
       {/* CTA */}
       <button
-        onClick={() => setIsCartOpen(false)}
+        onClick={handleBrowseServices}
         className="w-full h-12 rounded-2xl bg-[#25180F] hover:bg-[#3a2518] text-white text-[14px] font-bold shadow-lg active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
       >
         <ShoppingCart className="w-4 h-4" />
