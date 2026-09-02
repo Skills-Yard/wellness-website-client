@@ -17,11 +17,11 @@ export default function FloatingCart({
 
   return (
     <div className="fixed bottom-6 left-1/2 z-[60] w-full max-w-[calc(100%-2rem)] sm:max-w-md -translate-x-1/2 transition-all duration-300 animate-slideUp">
-      <div className="flex items-center justify-between rounded-2xl bg-slate-900 px-6 py-4 shadow-2xl ring-1 ring-white/10">
-        
+      <div className="flex items-center justify-between rounded-2xl bg-[#25180F] px-6 py-4 shadow-2xl ring-1 ring-white/10">
+
         {/* Cart Details */}
         <div className="flex flex-col">
-          <span className="text-xs font-medium tracking-wide text-slate-400">
+          <span className="text-xs font-medium tracking-wide text-white/50">
             {cartCount} {cartCount === 1 ? "ITEM" : "ITEMS"}
           </span>
           <span className="text-lg font-bold text-white">
@@ -32,7 +32,7 @@ export default function FloatingCart({
         {/* Action Button */}
         <button
           onClick={onViewCart}
-          className="rounded-xl bg-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-400 active:scale-95"
+          className="rounded-xl bg-amber-400 px-6 py-2.5 text-sm font-semibold text-[#25180F] shadow-sm transition-all hover:bg-amber-300 active:scale-95"
         >
           View Cart
         </button>

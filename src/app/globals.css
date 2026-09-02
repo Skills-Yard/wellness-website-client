@@ -4,6 +4,63 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── App theme — Frame 158 design system ──────────────────────────────
+   Palette: amber #FFC558 (brand), brown #904720, espresso #25180F,
+   ink #000000, muted #666666, sand #AA9778, plus light tints.
+
+   The whole `amber-*` Tailwind ramp is redefined around #FFC558 so every
+   existing amber utility across the app (bg/text/border/ring, all
+   shades) shifts to the brand family with no per-file edits. Literal
+   `#D38516` usages are swapped to `#FFC558` directly. */
+@theme {
+  --color-amber-50: #fff8eb;
+  --color-amber-100: #fdeecc;
+  --color-amber-200: #fbdd9b;
+  --color-amber-300: #fbcf74;
+  --color-amber-400: #ffc558; /* Frame 158 brand amber */
+  --color-amber-500: #eda838;
+  --color-amber-600: #c17d1f; /* readable as text on white (~4.6:1) */
+  --color-amber-700: #9c6119;
+  --color-amber-800: #7c4c1c;
+  --color-amber-900: #653f1b;
+  --color-amber-950: #3c2410;
+
+  /* Semantic brand tokens (bg-brand, text-espresso, bg-tint-cream, …) */
+  --color-brand: #ffc558;
+  --color-brand-foreground: #25180f;
+  --color-brand-strong: #d48f28;
+  --color-brown: #904720;
+  --color-espresso: #25180f;
+  --color-espresso-hover: #3a2518;
+  --color-ink: #000000;
+  --color-muted-ink: #666666;
+  --color-sand: #aa9778;
+  --color-tint-blush: #fdf2f0;
+  --color-tint-cream: #faf3ea;
+  --color-tint-sand: #f3efeb;
+
+  /* Skeleton shimmer — a gradient highlight that sweeps L→R. Used by
+     <Skeleton> (components/ui/skeleton) for every loading placeholder. */
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  /* Type scale — Inter, line-height 110% (Frame 158) */
+  --text-h1: 1.25rem;
+  --text-h1--line-height: 1.1;
+  --text-h1--font-weight: 500;
+  --text-h2: 1rem;
+  --text-h2--line-height: 1.1;
+  --text-h2--font-weight: 500;
+  --text-subheading: 0.875rem;
+  --text-subheading--line-height: 1.1;
+  --text-subheading--font-weight: 500;
+  --text-body-1: 0.75rem;
+  --text-body-1--line-height: 1.1;
+  --text-body-1--font-weight: 500;
+  --text-body-2: 0.75rem;
+  --text-body-2--line-height: 1.1;
+  --text-body-2--font-weight: 400;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -95,6 +152,12 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* globals.css ya index.css */

@@ -80,7 +80,10 @@ export interface CartContextType {
   isOnDemand: boolean;
   couponCode: string;
   updateCartSchedule: (details: { scheduledDate?: string; scheduledTime?: string; isOnDemand?: boolean; couponCode?: string }) => void;
-  updateItemSlot: (id: string, slotDate: string, slotStartTime: string) => void;
+  /** Resolves once the slot update has settled (server round-trip done,
+   *  or immediately for the no-op paths) — the slot-picker modal awaits
+   *  this to keep its "Updating…" state up and close itself on success. */
+  updateItemSlot: (id: string, slotDate: string, slotStartTime: string) => Promise<void>;
   /** True while this cart item's slot update (PATCH /cart/items/{itemId})
    *  is in flight — the local slot picked via updateItemSlot is already
    *  applied optimistically, but callers can use this to show a loading

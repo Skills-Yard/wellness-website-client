@@ -16,6 +16,7 @@ import { useCart } from "@/src/context/CartContext";
 import type { Address, CreateAddressBody } from "@/src/services/addressApi";
 import { AddressPicker } from "@/src/components/addresses/AddressPicker";
 import { formatBookingTime } from "@/src/components/bookings/bookingStatus";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 // Only rendered after "Change"/"Select" is tapped on a synced cart item.
 const SlotPickerModal = dynamic(() => import("./SlotPickerModal"), {
@@ -135,7 +136,9 @@ export default function CartView({
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 pb-4">
         <h2 className="text-xl font-semibold text-black">My Cart</h2>
-        {isCartSyncing && (
+        {/* While the slot picker is open it shows its own "Updating…"
+            state, so this one stays quiet to avoid doubling up. */}
+        {isCartSyncing && !slotPickerItem && (
           <span className="inline-flex items-center gap-1 text-xs text-gray-400">
             <Loader2 className="h-3 w-3 animate-spin" />
             Updating…
@@ -201,15 +204,15 @@ export default function CartView({
 
             <div className="border-t border-black/5 px-3 py-3">
               {isUpdatingSlot(item.id) ? (
-                <p className="flex items-center gap-2 text-xs text-gray-400">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Saving slot…
-                </p>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40 rounded" />
+                  <Skeleton className="h-8 w-full rounded-lg" />
+                </div>
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="flex min-w-0 items-center gap-2 text-xs text-[#666]">
-                      <Calendar className="h-4 w-4 shrink-0 text-[#D38516]" />
+                      <Calendar className="h-4 w-4 shrink-0 text-[#904720]" />
                       <span className="truncate">
                         {item.slotDate ? slotDateLabel(item.slotDate) : "No slot selected"}
                       </span>
@@ -244,7 +247,7 @@ export default function CartView({
                   )}
                   {item.slotStartTime && (
                     <div className="flex items-center gap-2 text-xs text-[#666]">
-                      <Clock className="h-4 w-4 shrink-0 text-[#D38516]" />
+                      <Clock className="h-4 w-4 shrink-0 text-[#904720]" />
                       {slotTimeRange(item.slotStartTime, item.duration)}
                     </div>
                   )}
@@ -329,7 +332,7 @@ export default function CartView({
           >
             {isCheckingOut
               ? "Opening payment…"
-              : isCartSyncing
+              : isCartSyncing && !slotPickerItem
                 ? "Updating…"
                 : address
                   ? "Continue"

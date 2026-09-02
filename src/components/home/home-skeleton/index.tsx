@@ -17,11 +17,13 @@ export default function HomeSkeleton() {
 
   return (
     <main
-      className="w-full overflow-x-hidden flex-1 flex flex-col animate-pulse"
+      className="relative w-full overflow-x-hidden flex-1 flex flex-col"
       aria-busy="true"
       aria-live="polite"
     >
       <span className="sr-only">Loading services…</span>
+      {/* Single shimmer sweep across the whole placeholder tree. */}
+      <span className="pointer-events-none absolute inset-0 z-10 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent motion-reduce:hidden" />
 
       {/* ───────── DESKTOP ───────── */}
       <div className="hidden md:block">

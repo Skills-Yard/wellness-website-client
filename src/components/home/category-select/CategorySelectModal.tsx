@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { useServiceGenders } from "@/src/hooks/queries/useServiceGenders";
 import { useServiceSuites } from "@/src/hooks/queries/useServiceSuites";
 import { HomeCategory } from "@/src/types/serviceTypes";
@@ -260,7 +261,7 @@ export default function CategorySelectModal({
               ) : showLoading ? (
                 <div className="grid grid-cols-2 gap-3 py-2">
                   {Array.from({ length: 2 }).map((_, index) => (
-                    <div key={index} className="aspect-square animate-pulse rounded-2xl bg-stone-100" />
+                    <Skeleton key={index} className="aspect-square rounded-2xl" />
                   ))}
                 </div>
               ) : (

@@ -1,455 +1,400 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/src/components/ui/accordion";
-import { Switch } from "@/src/components/ui/switch";
+import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { toast, ToastContainer } from "react-toastify";
 import {
   ArrowLeft,
-  ShieldCheck,
-  UserCircle2,
+  Bell,
+  CalendarClock,
+  CalendarDays,
+  Camera,
+  CircleDashed,
+  Clock,
+  Headset,
+  Loader2,
+  LogOut,
+  Mail,
+  MapPin,
+  Megaphone,
+  MessageCircle,
   MonitorSmartphone,
+  Pencil,
+  Phone,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  Ticket,
+  User as UserIcon,
+  UserCircle2,
+  UserPlus,
+  Users,
+  X,
 } from "lucide-react";
+import { Switch } from "@/src/components/ui/switch";
+import { Dialog, DialogContent } from "@/src/components/ui/dialog";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import AuthModal from "../auth/LazyAuthModal";
 import BottomNav from "../home/mobile/Bottomnav";
-import { useRouter } from "next/navigation";
-import { toast, ToastContainer } from "react-toastify";
 import { authApi } from "@/src/services/authApi";
 import { requestPushNotifications, unregisterPushToken } from "@/src/lib/notifications/push";
-import Link from "next/link";
-import { Bell, CalendarClock } from "lucide-react";
-import { useMe, useUpdateProfile, useNotificationPreference, useUpdateNotificationPreference } from "@/src/hooks/queries/useProfile";
-import { useAddresses, useCreateAddress, useUpdateAddress, useRemoveAddress } from "@/src/hooks/queries/useAddresses";
-import type { Address } from "@/src/services/addressApi";
-import type { UserProfile } from "@/src/types/auth";
-import { AddressPicker, type AddressInput } from "@/src/components/addresses/AddressPicker";
+import {
+  useMe,
+  useUpdateProfile,
+  useUpdateNotificationPreference,
+} from "@/src/hooks/queries/useProfile";
+import {
+  useCreateAddress,
+  useUpdateAddress,
+  useRemoveAddress,
+} from "@/src/hooks/queries/useAddresses";
+import type { CreateAddressBody } from "@/src/services/addressApi";
+import type { MeAddress, MePreferences, UserProfile } from "@/src/types/auth";
+import { userApi } from "@/src/services/userApi";
+import { resolveCdnUrl } from "@/src/utils/media";
 import { useRequireAuth } from "@/src/hooks/useRequireAuth";
+import AddressBook from "./AddressBook";
+import DevicesTable from "./DevicesTable";
+import ImageCropModal from "./ImageCropModal";
+import type { AddressFormValues } from "./EditAddressModal";
 
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
-// ==========================================
-// 1. ACCOUNT COMPONENT
-// ==========================================
-const AccountSection = ({
+type SectionId = "overview" | "addresses" | "devices" | "preferences" | "account";
+
+const NAV: { id: SectionId; label: string; icon: typeof UserIcon }[] = [
+  { id: "overview", label: "Profile Overview", icon: UserIcon },
+  { id: "addresses", label: "Addresses", icon: MapPin },
+  { id: "devices", label: "Devices", icon: MonitorSmartphone },
+  { id: "preferences", label: "Preferences", icon: Bell },
+  { id: "account", label: "Account Settings", icon: Settings },
+];
+
+const SECTION_META: Record<SectionId, { title: string; subtitle: string }> = {
+  overview: {
+    title: "Profile Overview",
+    subtitle: "Manage your personal information and account details",
+  },
+  addresses: { title: "Addresses", subtitle: "Where we deliver your bookings" },
+  devices: { title: "Devices", subtitle: "Places you're signed in" },
+  preferences: { title: "Preferences", subtitle: "How we keep in touch with you" },
+  account: { title: "Account Settings", subtitle: "Security and account controls" },
+};
+
+// ── formatting helpers ───────────────────────────────────────────────
+const fmtDate = (iso?: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+};
+const fmtDateTime = (iso?: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d
+        .toLocaleString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+        .replace(",", "");
+};
+const titleCase = (s?: string | null) =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "—";
+const initials = (name?: string | null) =>
+  (name ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("") || "U";
+
+// ── shared bits ──────────────────────────────────────────────────────
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section
+      className={`rounded-2xl border border-black/5 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] sm:p-5 ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: typeof UserIcon;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#999]" />
+      <div className="min-w-0">
+        <p className="text-xs text-[#999]">{label}</p>
+        <div className="mt-0.5 text-sm font-medium break-words text-espresso">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function OptBadge({ opted }: { opted: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+        opted ? "bg-[#E7F4E4] text-[#208900]" : "bg-red-50 text-red-500"
+      }`}
+    >
+      {opted ? "Opted In" : "Opted Out"}
+    </span>
+  );
+}
+
+const editBtnCls =
+  "inline-flex items-center gap-1.5 rounded-lg border border-amber-600/40 px-3 py-1.5 text-xs font-semibold text-amber-600 transition-colors hover:bg-[#FBF1E0]";
+
+// ── Edit Profile modal ───────────────────────────────────────────────
+function EditProfileModal({
   profile,
-  isLoading,
   isSaving,
+  onClose,
   onSave,
 }: {
-  profile: UserProfile | undefined;
-  isLoading: boolean;
+  profile: UserProfile;
   isSaving: boolean;
-  onSave: (values: { name: string; email: string }) => void;
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-
-  // Seed the draft from whatever's currently loaded whenever we're not
-  // mid-edit — keeps the form in sync once useMe() resolves without
-  // clobbering what the user is actively typing.
-  useEffect(() => {
-    if (isEditing) return;
-    setName(profile?.name ?? "");
-    setEmail(profile?.email ?? "");
-  }, [profile, isEditing]);
-
-  const isProfileComplete = !!profile?.name && !!profile?.email;
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    onSave({ name: name.trim(), email: email.trim() });
-    setIsEditing(false);
-  };
-
-  return (
-    <AccordionItem value="account" className="border-b-slate-200 py-2">
-      <AccordionTrigger className="hover:no-underline">
-        <div className="flex items-center gap-3 text-left">
-          <span className="text-lg font-bold text-slate-900">
-            Account Details
-          </span>
-          {!isLoading && !isProfileComplete && (
-            <span className="inline-flex animate-pulse items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800">
-              INCOMPLETE
-            </span>
-          )}
-        </div>
-      </AccordionTrigger>
-
-      <AccordionContent className="pt-2 text-slate-600">
-        <p className="mb-6 text-sm text-slate-500">
-          Manage your personal information
-        </p>
-
-        {isLoading ? (
-          <p className="text-sm text-slate-400">Loading…</p>
-        ) : (
-          <>
-            {!isProfileComplete && (
-              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm text-amber-800">
-                  Please complete your profile to receive booking confirmations
-                  and exclusive offers.
-                </p>
-              </div>
-            )}
-
-            {isEditing ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-slate-500">Full Name</label>
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Your full name"
-                    className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-amber-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-500">Email Address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="you@example.com"
-                    className="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-amber-400"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="flex-1 rounded-lg bg-amber-500 py-2 text-sm font-bold text-white hover:bg-amber-500/90 disabled:opacity-60 cursor-pointer"
-                  >
-                    {isSaving ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-5">
-                <div>
-                  <label className="text-xs font-medium text-slate-500">
-                    Mobile Number
-                  </label>
-                  <div className="mt-1 flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                    <span className="font-medium">
-                      {profile?.phone ? `${profile.countryCode} ${profile.phone}` : "—"}
-                    </span>
-                    {profile?.isPhoneVerified && (
-                      <span className="text-xs font-semibold text-green-600">
-                        Verified ✓
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-500">
-                    Full Name
-                  </label>
-                  <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
-                    <span
-                      className={
-                        profile?.name ? "text-slate-900" : "text-slate-400 italic"
-                      }
-                    >
-                      {profile?.name || "Not provided yet"}
-                    </span>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
-                    >
-                      {profile?.name ? "Edit" : "Add"}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-500">
-                    Email Address
-                  </label>
-                  <div className="mt-1 flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm">
-                    <span
-                      className={
-                        profile?.email ? "text-slate-900" : "text-slate-400 italic"
-                      }
-                    >
-                      {profile?.email || "Not provided yet"}
-                    </span>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="font-semibold text-amber-600 transition-colors hover:text-amber-700 cursor-pointer"
-                    >
-                      {profile?.email ? "Edit" : "Add"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </AccordionContent>
-    </AccordionItem>
+  onClose: () => void;
+  onSave: (v: { name: string; email: string; dateOfBirth: string; gender: string }) => void;
+}) {
+  const [name, setName] = useState(profile.name ?? "");
+  const [email, setEmail] = useState(profile.email ?? "");
+  const [dob, setDob] = useState(
+    profile.dateOfBirth ? new Date(profile.dateOfBirth).toISOString().slice(0, 10) : "",
   );
-};
+  const [gender, setGender] = useState(profile.gender ?? "");
 
-// ==========================================
-// 2. ADDRESS COMPONENT
-// ==========================================
-const AddressSection = ({
-  addresses,
-  isLoading,
-  isSaving,
-  isDeleting,
-  onCreate,
-  onUpdate,
-  onDelete,
-}: {
-  addresses: Address[];
-  isLoading: boolean;
-  isSaving: boolean;
-  isDeleting: boolean;
-  onCreate: (address: AddressInput) => void;
-  onUpdate: (addressId: string, address: AddressInput) => void;
-  onDelete: (addressId: string) => void;
-}) => {
-  return (
-    <AccordionItem value="address" className="border-b-slate-200 py-2">
-      <AccordionTrigger className="hover:no-underline">
-        <span className="text-lg font-bold text-slate-900">
-          Saved Addresses
-        </span>
-      </AccordionTrigger>
-
-      <AccordionContent className="pt-2">
-        <p className="mb-6 text-sm text-slate-500">
-          Manage where we deliver our spa services.
-        </p>
-
-        {isLoading ? (
-          <p className="text-sm text-slate-400">Loading…</p>
-        ) : (
-          // AddressPicker (shared with checkout's address step) already
-          // renders the full list — each row with working Edit/Delete —
-          // plus the add/edit form together, so there's no separate
-          // "view mode" card list to keep in sync with it here.
-          <div className="-mx-1 overflow-hidden rounded-xl border border-slate-100">
-            <AddressPicker
-              addresses={addresses}
-              isSaving={isSaving}
-              isDeleting={isDeleting}
-              onCreate={onCreate}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-            />
-          </div>
-        )}
-      </AccordionContent>
-    </AccordionItem>
-  );
-};
-
-// ==========================================
-// 3. SETTINGS COMPONENT
-// ==========================================
-const SettingsSection = () => {
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const [isTogglingPush, setIsTogglingPush] = useState(false);
-
-  const { data: preference } = useNotificationPreference();
-  const updatePreference = useUpdateNotificationPreference();
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setPushEnabled(Notification.permission === "granted");
-    }
-  }, []);
-
-  const handleTogglePush = async (checked: boolean) => {
-    const accessToken = getAccessToken();
-    if (!accessToken || isTogglingPush) return;
-
-    setIsTogglingPush(true);
-    try {
-      if (checked) {
-        const registered = await requestPushNotifications(accessToken);
-        setPushEnabled(registered);
-        if (!registered) {
-          toast.error("Couldn't enable notifications. Check your browser's permission settings.");
-        }
-      } else {
-        // Browser permission itself can only be revoked from browser settings —
-        // this stops the backend from targeting this device going forward.
-        await unregisterPushToken(accessToken);
-        setPushEnabled(false);
-      }
-    } finally {
-      setIsTogglingPush(false);
-    }
-  };
+  const inputCls =
+    "mt-1 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-espresso outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25";
 
   return (
-    <AccordionItem value="settings" className="border-b-slate-200 py-2">
-      <AccordionTrigger className="hover:no-underline">
-        <span className="text-lg font-bold text-slate-900">Settings</span>
-      </AccordionTrigger>
-
-      <AccordionContent className="pt-2">
-        <div className="divide-y divide-slate-100">
-          <Link
-            href="/bookings"
-            className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
+    <Dialog open onOpenChange={(open) => !open && !isSaving && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="top-0 left-0 flex h-full max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-white p-0 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-black/10 sm:shadow-2xl"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-black/5 px-5 py-4">
+          <h2 className="text-base font-semibold text-espresso">Edit Profile</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-[#666] hover:bg-stone-100 disabled:opacity-40"
           >
-            <div className="flex items-center gap-3">
-              <CalendarClock className="h-4 w-4 text-amber-500" />
-              <div className="space-y-0.5">
-                <p className="font-medium text-slate-900">My Bookings</p>
-                <p className="text-xs text-slate-500">View upcoming and past bookings</p>
-              </div>
-            </div>
-            <span className="text-slate-400">→</span>
-          </Link>
-
-          <Link
-            href="/profile/notifications"
-            className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Bell className="h-4 w-4 text-amber-500" />
-              <div className="space-y-0.5">
-                <p className="font-medium text-slate-900">Notifications</p>
-                <p className="text-xs text-slate-500">View booking updates and offers</p>
-              </div>
-            </div>
-            <span className="text-slate-400">→</span>
-          </Link>
-
-          <Link
-            href="/profile/devices"
-            className="flex items-center justify-between py-4 hover:bg-slate-50 -mx-1 px-1 rounded-lg transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <MonitorSmartphone className="h-4 w-4 text-amber-500" />
-              <div className="space-y-0.5">
-                <p className="font-medium text-slate-900">Devices</p>
-                <p className="text-xs text-slate-500">Manage where you&apos;re logged in</p>
-              </div>
-            </div>
-            <span className="text-slate-400">→</span>
-          </Link>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5">
-              <p className="font-medium text-slate-900">Push Notifications</p>
-              <p className="text-xs text-slate-500">Get notified on this device</p>
-            </div>
-            <Switch
-              checked={pushEnabled}
-              disabled={isTogglingPush}
-              onCheckedChange={(checked) => void handleTogglePush(checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5">
-              <p className="font-medium text-slate-900">WhatsApp Updates</p>
-              <p className="text-xs text-slate-500">Booking updates over WhatsApp</p>
-            </div>
-            <Switch
-              checked={preference?.whatsappOptIn ?? false}
-              onCheckedChange={(checked) => updatePreference.mutate({ whatsappOptIn: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5">
-              <p className="font-medium text-slate-900">Offers & Promotions</p>
-              <p className="text-xs text-slate-500">Occasional deals and discounts</p>
-            </div>
-            <Switch
-              checked={preference?.promotionalOptIn ?? false}
-              onCheckedChange={(checked) => updatePreference.mutate({ promotionalOptIn: checked })}
-            />
-          </div>
-        </div>
-      </AccordionContent>
-    </AccordionItem>
-  );
-};
-
-// ==========================================
-// 4. ABOUT COMPONENT
-// ==========================================
-const AboutSection = ({
-  onLogout,
-  isLoggingOut,
-}: {
-  onLogout: () => void;
-  isLoggingOut: boolean;
-}) => {
-  return (
-    <AccordionItem value="about" className="border-none py-2">
-      <AccordionTrigger className="hover:no-underline">
-        <span className="text-lg font-bold text-slate-900">
-          About Spa Prime
-        </span>
-      </AccordionTrigger>
-
-      <AccordionContent className="pt-2">
-        <div className="space-y-2 text-sm text-slate-700">
-          <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-amber-600 cursor-pointer">
-            <span className="font-medium">Terms & Conditions</span>
-            <span className="text-slate-400">→</span>
+            <X className="h-4 w-4" />
           </button>
-          <button className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-slate-50 hover:text-amber-600 cursor-pointer">
-            <span className="font-medium">Privacy Policy</span>
-            <span className="text-slate-400">→</span>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isSaving) onSave({ name: name.trim(), email: email.trim(), dateOfBirth: dob, gender });
+          }}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            <label className="block">
+              <span className="text-xs font-medium text-[#666]">Full Name</span>
+              <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-[#666]">Email Address</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputCls}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs font-medium text-[#666]">Date of Birth</span>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-[#666]">Gender</span>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Select</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </label>
+            </div>
+            <div className="rounded-lg bg-stone-50 px-3 py-2.5 text-xs text-[#666]">
+              Mobile number:{" "}
+              <span className="font-medium text-espresso">
+                {profile.phone ? `${profile.countryCode} ${profile.phone}` : "—"}
+              </span>{" "}
+              {profile.isPhoneVerified && <span className="text-[#208900]">· Verified</span>}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-black/5 px-5 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="rounded-lg border border-black/10 px-5 py-2.5 text-sm font-medium text-[#666] hover:bg-stone-50 disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+            >
+              {isSaving ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Edit Preferences modal ───────────────────────────────────────────
+const PREF_ROWS: { key: keyof MePreferences; label: string; hint: string; icon: typeof Bell }[] = [
+  { key: "whatsappOptIn", label: "WhatsApp Notifications", hint: "Booking updates over WhatsApp", icon: MessageCircle },
+  { key: "emailOptIn", label: "Email Notifications", hint: "Receipts and confirmations by email", icon: Mail },
+  { key: "pushOptIn", label: "Push Notifications", hint: "Alerts on your devices", icon: Bell },
+  { key: "promotionalOptIn", label: "Promotional Updates", hint: "Occasional offers and deals", icon: Megaphone },
+];
+
+function EditPreferencesModal({
+  preferences,
+  isSaving,
+  onClose,
+  onSave,
+}: {
+  preferences: MePreferences;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (v: MePreferences) => void;
+}) {
+  const [draft, setDraft] = useState<MePreferences>(preferences);
+  return (
+    <Dialog open onOpenChange={(open) => !open && !isSaving && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="top-0 left-0 flex h-full max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-white p-0 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-black/10 sm:shadow-2xl"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-black/5 px-5 py-4">
+          <h2 className="text-base font-semibold text-espresso">Edit Preferences</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-[#666] hover:bg-stone-100 disabled:opacity-40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="divide-y divide-black/5 px-5">
+          {PREF_ROWS.map(({ key, label, hint, icon: Icon }) => (
+            <div key={key} className="flex items-center justify-between gap-3 py-4">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brown" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-espresso">{label}</p>
+                  <p className="text-xs text-[#999]">{hint}</p>
+                </div>
+              </div>
+              <Switch
+                checked={draft[key]}
+                onCheckedChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-black/5 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="rounded-lg border border-black/10 px-5 py-2.5 text-sm font-medium text-[#666] hover:bg-stone-50 disabled:opacity-40"
+          >
+            Cancel
           </button>
           <button
-            onClick={onLogout}
-            disabled={isLoggingOut}
-            className="mt-4 flex w-full items-center justify-between rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 cursor-pointer"
+            type="button"
+            onClick={() => !isSaving && onSave(draft)}
+            disabled={isSaving}
+            className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
           >
-            <span className="font-medium">
-              {isLoggingOut ? "Logging out..." : "Log Out"}
-            </span>
+            {isSaving ? "Saving…" : "Save Preferences"}
           </button>
         </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-xs font-medium text-slate-400">
-            App Version 1.0.4
-          </p>
-        </div>
-      </AccordionContent>
-    </AccordionItem>
+      </DialogContent>
+    </Dialog>
   );
-};
+}
 
-// ==========================================
-// MAIN PAGE COMPONENT
-// ==========================================
+// ── Preferences panel (used in Overview + its own section) ────────────
+function PreferencesPanel({
+  preferences,
+  onEdit,
+}: {
+  preferences: MePreferences;
+  onEdit: () => void;
+}) {
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4.5 w-4.5 text-brown" />
+          <h2 className="text-base font-semibold text-espresso">Preferences</h2>
+        </div>
+        <button type="button" onClick={onEdit} className={editBtnCls}>
+          <Pencil className="h-3.5 w-3.5" />
+          Edit Preferences
+        </button>
+      </div>
+      <div className="divide-y divide-black/5">
+        {PREF_ROWS.map(({ key, label, icon: Icon }) => (
+          <div key={key} className="flex items-center justify-between gap-3 py-3.5">
+            <span className="flex items-center gap-2.5 text-sm text-espresso">
+              <Icon className="h-4 w-4 text-brown" />
+              {label}
+            </span>
+            <OptBadge opted={preferences[key]} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── main ─────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const router = useRouter();
-
-  // Gates this whole page on a present *and* unexpired access token (not
-  // just the `isUserLoggedIn` flag, which outlives an actually-expired
-  // token) — showAuthModal starts true the moment that check comes back
-  // negative, so a visitor lands straight on the login prompt instead of
-  // needing to find and click "Login to continue" first.
   const {
     isMounted,
     isLoggedIn: isLogin,
@@ -458,203 +403,638 @@ export default function ProfilePage() {
     setShowAuthModal,
     handleAuthComplete,
   } = useRequireAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  // Which accordion section opens first — read from ?section= below so
-  // links like the navbar's "Account Settings" can land directly on it,
-  // same `new URLSearchParams(window.location.search)` convention
-  // useMobileHome.ts already uses for its own ?tab= deep link.
-  const [openSection, setOpenSection] = useState("account");
 
-  const { data: profile, isLoading: isProfileLoading } = useMe();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  // Deep link: /profile?section=settings (navbar's "Account Settings") etc.
+  // Read once, synchronously — this is a client-only component.
+  const [section, setSection] = useState<SectionId>(() => {
+    if (typeof window === "undefined") return "overview";
+    const raw = new URLSearchParams(window.location.search).get("section");
+    const map: Record<string, SectionId> = {
+      settings: "account",
+      account: "account",
+      addresses: "addresses",
+      devices: "devices",
+      preferences: "preferences",
+      overview: "overview",
+    };
+    return (raw && map[raw]) || "overview";
+  });
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [prefsModalOpen, setPrefsModalOpen] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pushEnabled, setPushEnabled] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted",
+  );
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
+
+  const { data: profile, isLoading } = useMe();
   const updateProfile = useUpdateProfile();
-  const { data: addresses = [], isLoading: isAddressesLoading } = useAddresses();
+  const updatePreference = useUpdateNotificationPreference();
   const createAddress = useCreateAddress();
   const updateAddress = useUpdateAddress();
   const removeAddress = useRemoveAddress();
 
-  useEffect(() => {
-    const section = new URLSearchParams(window.location.search).get("section");
-    if (section === "settings") {
-      setOpenSection("settings");
-    }
-  }, []);
+  const preferences: MePreferences = useMemo(
+    () => ({
+      whatsappOptIn: profile?.preferences?.whatsappOptIn ?? false,
+      emailOptIn: profile?.preferences?.emailOptIn ?? false,
+      pushOptIn: profile?.preferences?.pushOptIn ?? false,
+      promotionalOptIn: profile?.preferences?.promotionalOptIn ?? false,
+    }),
+    [profile],
+  );
 
-  // Called when the user successfully finishes the AuthModal flow.
+  const addresses: MeAddress[] = profile?.addresses ?? [];
+  const isAddressSaving = createAddress.isPending || updateAddress.isPending;
+  const photoUrl = photoPreview ?? resolveCdnUrl(profile?.profilePhotoKey);
+
+  if (!isMounted) return null;
+
+  // ── handlers ──
   const handleLoginSuccess = () => {
     handleAuthComplete();
-    // Kept alongside the token check for the other places that still read
-    // this flag directly (e.g. Navbar, BottomNav badges).
     localStorage.setItem("isUserLoggedIn", "true");
     toast.success("Successfully logged in!");
   };
 
-  // Do not render the UI until we have checked local storage on the client
-  if (!isMounted) return null;
-
-  const handleSaveProfile = (values: { name: string; email: string }) => {
-    updateProfile.mutate(values, {
-      onSuccess: () => toast.success("Profile updated."),
-      onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't update your profile."),
+  const handleSaveProfile = (v: {
+    name: string;
+    email: string;
+    dateOfBirth: string;
+    gender: string;
+  }) => {
+    const body: Record<string, string> = {};
+    if (v.name) body.name = v.name;
+    if (v.email) body.email = v.email;
+    if (v.dateOfBirth) body.dateOfBirth = `${v.dateOfBirth}T00:00:00.000Z`;
+    if (v.gender) body.gender = v.gender;
+    updateProfile.mutate(body, {
+      onSuccess: () => {
+        toast.success("Profile updated.");
+        setProfileModalOpen(false);
+      },
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't update your profile."),
     });
   };
 
-  const handleCreateAddress = (values: AddressInput) => {
-    if (!profile) return;
-    createAddress.mutate(
-      { ...values, userId: profile.id },
-      {
-        onSuccess: () => toast.success("Address added."),
-        onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't add this address."),
-      },
-    );
+  // Step 1: a file was picked — validate, then open the crop modal.
+  // Nothing hits the network until the user confirms a crop.
+  const handlePhotoPicked = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Image must be under 8 MB.");
+      return;
+    }
+    setCropFile(file);
   };
 
-  const handleUpdateAddress = (addressId: string, values: AddressInput) => {
+  // Step 2: crop confirmed — show the cropped preview instantly, then
+  // upload the cropped square.
+  const handleCropConfirm = (blob: Blob, previewUrl: string) => {
+    setCropFile(null);
+    setPhotoPreview(previewUrl);
+    void handlePhotoUpload(new File([blob], "profile-photo.jpg", { type: "image/jpeg" }));
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    if (isUploadingPhoto) return;
+    const token = getAccessToken();
+    if (!token) return;
+    setIsUploadingPhoto(true);
+    try {
+      // Store the raw r2Key on the profile — the CDN domain is joined on
+      // only for display (resolveCdnUrl), never persisted.
+      const r2Key = await userApi.uploadProfilePhoto(file, token);
+      updateProfile.mutate(
+        { profilePhotoKey: r2Key },
+        {
+          onSuccess: () => {
+            toast.success("Photo updated.");
+            setPhotoPreview(null);
+          },
+          onError: (e) => {
+            setPhotoPreview(null);
+            toast.error(e instanceof Error ? e.message : "Couldn't save the photo.");
+          },
+        },
+      );
+    } catch (e) {
+      setPhotoPreview(null);
+      toast.error(e instanceof Error ? e.message : "Couldn't upload the photo.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleSavePrefs = (v: MePreferences) => {
+    updatePreference.mutate(v, {
+      onSuccess: () => {
+        toast.success("Preferences updated.");
+        setPrefsModalOpen(false);
+      },
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't update preferences."),
+    });
+  };
+
+  const toNum = (s: string) => {
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // POST and PATCH take the identical body, so create/update/set-default
+  // all go through here. `base` (an existing address) fills the gaps for
+  // the partial "set as default" case.
+  const buildAddressBody = (
+    v: Partial<AddressFormValues> & { isDefault?: boolean },
+    base?: MeAddress,
+  ): CreateAddressBody => {
+    const body: CreateAddressBody = {
+      userId: profile?.id ?? "",
+      label: v.label ?? base?.label ?? "HOME",
+      customLabel: v.customLabel ?? base?.customLabel ?? "",
+      line1: (v.line1 ?? base?.line1 ?? "").trim(),
+      line2: (v.line2 ?? base?.line2 ?? "").trim(),
+      landmark: (v.landmark ?? base?.landmark ?? "").trim(),
+      city: (v.city ?? base?.city ?? "").trim(),
+      state: (v.state ?? base?.state ?? "").trim(),
+      pincode: (v.pincode ?? base?.pincode ?? "").trim(),
+      latitude: v.latitude != null ? toNum(v.latitude) : (base?.latitude ?? 0),
+      longitude: v.longitude != null ? toNum(v.longitude) : (base?.longitude ?? 0),
+      isDefault: v.isDefault ?? base?.isDefault ?? false,
+    };
+    const name = v.customerName ?? base?.customerName;
+    const code = v.customerCountryCode ?? base?.customerCountryCode;
+    if (name) body.customerName = name.trim();
+    if (code) body.customerCountryCode = code;
+    if (v.customerPhone) body.customerPhone = v.customerPhone.trim();
+    return body;
+  };
+
+  const handleCreateAddress = (v: AddressFormValues) => {
+    if (!profile) return;
+    createAddress.mutate(buildAddressBody(v), {
+      onSuccess: () => toast.success("Address added."),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't add this address."),
+    });
+  };
+
+  const handleUpdateAddress = (id: string, v: AddressFormValues) => {
     updateAddress.mutate(
-      { addressId, body: values },
+      { addressId: id, body: buildAddressBody(v) },
       {
         onSuccess: () => toast.success("Address updated."),
-        onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't update this address."),
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't update this address."),
       },
     );
   };
 
-  const handleDeleteAddress = (addressId: string) => {
-    removeAddress.mutate(addressId, {
+  const handleSetDefault = (addr: MeAddress) => {
+    updateAddress.mutate(
+      { addressId: addr.id, body: buildAddressBody({ isDefault: true }, addr) },
+      {
+        onSuccess: () => toast.success("Default address updated."),
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't set default."),
+      },
+    );
+  };
+
+  const handleDeleteAddress = (id: string) => {
+    if (!window.confirm("Remove this address?")) return;
+    removeAddress.mutate(id, {
       onSuccess: () => toast.success("Address removed."),
-      onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't remove this address."),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't remove this address."),
     });
+  };
+
+  const handleTogglePush = async (checked: boolean) => {
+    const token = getAccessToken();
+    if (!token || isTogglingPush) return;
+    setIsTogglingPush(true);
+    try {
+      if (checked) {
+        const ok = await requestPushNotifications(token);
+        setPushEnabled(ok);
+        if (!ok) toast.error("Couldn't enable notifications. Check your browser permissions.");
+      } else {
+        await unregisterPushToken(token);
+        setPushEnabled(false);
+      }
+    } finally {
+      setIsTogglingPush(false);
+    }
   };
 
   const handleLogout = async () => {
-    const accessToken = getAccessToken();
+    const token = getAccessToken();
     setIsLoggingOut(true);
-
     try {
-      if (accessToken) {
-        await unregisterPushToken(accessToken);
-        await authApi.logout(accessToken);
+      if (token) {
+        await unregisterPushToken(token);
+        await authApi.logout(token);
       }
     } catch {
-      // The local session should still end if the server session has expired.
+      /* local session ends regardless */
     } finally {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("userProfile");
-      localStorage.removeItem("isUserLoggedIn");
+      ["accessToken", "refreshToken", "userProfile", "isUserLoggedIn"].forEach((k) =>
+        localStorage.removeItem(k),
+      );
       setIsLogin(false);
       setIsLoggingOut(false);
       router.replace("/");
     }
   };
 
+  // ── unauthenticated ──
+  if (!isLogin) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F4]">
+        <ToastContainer position="top-center" />
+        <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 text-center">
+          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#FBF7ED] text-amber-600">
+            <UserCircle2 className="h-12 w-12" strokeWidth={1.5} />
+          </div>
+          <h2 className="mb-3 text-2xl font-bold text-espresso">Your Profile</h2>
+          <p className="mb-6 max-w-md text-base leading-relaxed text-[#666]">
+            Log in or sign up to view your account details, manage saved addresses, and check your
+            bookings.
+          </p>
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="mx-auto flex w-fit items-center justify-center gap-2 rounded-xl bg-amber-600 px-8 py-3 font-semibold text-white transition-all hover:bg-amber-700 active:scale-[0.98]"
+          >
+            <ShieldCheck className="h-5 w-5" />
+            Login to continue
+          </button>
+        </div>
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} onComplete={handleLoginSuccess} />
+        )}
+      </div>
+    );
+  }
+
+  const meta = SECTION_META[section];
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 md:pb-0 relative">
-      {/* 1. Global Toaster Component for notifications */}
+    <div className="min-h-screen bg-[#FAF8F4] pb-24 lg:pb-10">
       <ToastContainer position="top-center" />
-      {!isLogin ? (
-        /* ==========================================
-           UNAUTHENTICATED STATE (Empty Profile View)
-           ========================================== */
-        <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 animate-in fade-in duration-500">
-          <div className="w-full max-w-md  p-4 text-center ">
-            {/* Decorative Icon */}
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-amber-50 text-amber-500 shadow-inner">
-              <UserCircle2 className="h-12 w-12" strokeWidth={1.5} />
+
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+        {/* Page header */}
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-espresso hover:bg-stone-50 lg:hidden"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h1 className="text-xl font-bold tracking-tight text-espresso sm:text-2xl">
+            {meta.title}
+          </h1>
+        </div>
+
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-6">
+          {/* Sidebar */}
+          <aside className="lg:sticky lg:top-4 lg:self-start">
+            <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0">
+              {NAV.map(({ id, label, icon: Icon }) => {
+                const active = section === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSection(id)}
+                    className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors lg:w-full ${
+                      active
+                        ? "bg-espresso text-white"
+                        : "text-[#666] hover:bg-black/5 lg:hover:bg-black/[0.04]"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-4 hidden rounded-2xl border border-black/5 bg-white p-4 lg:block">
+              <div className="flex items-center gap-2.5">
+                <Headset className="h-5 w-5 text-amber-600" />
+                <div>
+                  <p className="text-sm font-semibold text-espresso">Need Help?</p>
+                  <p className="text-xs text-[#999]">We&apos;re here to help you</p>
+                </div>
+              </div>
+              <Link
+                href="/faq"
+                className="mt-3 block rounded-lg bg-[#FBF7ED] py-2 text-center text-xs font-semibold text-amber-600 hover:bg-[#F7EBD3]"
+              >
+                Contact Support
+              </Link>
             </div>
 
-            {/* Text Content */}
-            <h2 className="mb-3 text-2xl font-bold text-slate-900">
-              Your Profile
-            </h2>
-            <p className="mb-6 text-base text-slate-500 leading-relaxed">
-              Log in or sign up to view your account details, manage saved
-              addresses, and check your bookings.
-            </p>
-
-            {/* Shadcn-style Button */}
             <button
-              onClick={() => setShowAuthModal(true)}
-              className="w-fit mx-auto flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-8 py-3 font-bold text-white transition-all active:scale-[0.98] hover:bg-amber-500/90 hover:scale-101  cursor-pointer"
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="mt-4 hidden w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 lg:flex"
             >
-              <ShieldCheck className="h-5 w-5" />
-              Login to continue
+              <LogOut className="h-4 w-4" />
+              {isLoggingOut ? "Logging out…" : "Logout"}
             </button>
+          </aside>
+
+          {/* Content */}
+          <div className="mt-4 space-y-5 lg:mt-0">
+            {isLoading || !profile ? (
+              <Card>
+                <div className="flex flex-col gap-5 sm:flex-row">
+                  <Skeleton className="h-28 w-28 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-4 w-full rounded" />
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <>
+                {(section === "overview" || section === "account") && (
+                  <Card className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setProfileModalOpen(true)}
+                      className={`${editBtnCls} absolute right-4 top-4 z-10`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit Profile
+                    </button>
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                      <div className="flex shrink-0 flex-col items-center gap-1.5 sm:w-36">
+                        <div className="relative h-24 w-24">
+                          {photoUrl ? (
+                            // Plain <img>: src can be a CDN URL or a data:
+                            // URL (the just-cropped preview) — next/image
+                            // rejects data URIs.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={photoUrl}
+                              alt={profile.name || "Profile photo"}
+                              className="h-full w-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center rounded-full bg-[#FBF7ED] text-2xl font-bold text-amber-600">
+                              {initials(profile.name)}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploadingPhoto}
+                            aria-label="Change photo"
+                            className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-amber-600 text-white shadow-sm hover:bg-amber-700 disabled:opacity-60"
+                          >
+                            {isUploadingPhoto ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Camera className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = "";
+                              if (file) handlePhotoPicked(file);
+                            }}
+                          />
+                        </div>
+                        <p className="mt-1 text-center text-base font-semibold text-espresso">
+                          {profile.name || "Unnamed"}
+                        </p>
+                        <span className="rounded-full bg-[#FBF1E0] px-2 py-0.5 text-[10px] font-semibold text-[#8a5a20]">
+                          {profile.userRole ?? "CLIENT"}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-[#208900]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#208900]" />
+                          {profile.isActive === false ? "Inactive" : "Active"}
+                        </span>
+                      </div>
+
+                      <div className="grid flex-1 grid-cols-1 gap-x-4 gap-y-3.5 sm:grid-cols-2 sm:pt-10 lg:grid-cols-3">
+                        <Field icon={Mail} label="Email">
+                          <span className="block truncate">{profile.email || "—"}</span>
+                        </Field>
+                        <Field icon={Phone} label="Phone">
+                          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            <span className="whitespace-nowrap">
+                              {profile.phone ? `${profile.countryCode} ${profile.phone}` : "—"}
+                            </span>
+                            {profile.isPhoneVerified && (
+                              <span className="rounded-full bg-[#E7F4E4] px-1.5 py-0.5 text-[10px] font-semibold text-[#208900]">
+                                Verified
+                              </span>
+                            )}
+                          </span>
+                        </Field>
+                        <Field icon={CalendarDays} label="Date of Birth">
+                          {fmtDate(profile.dateOfBirth)}
+                        </Field>
+                        <Field icon={Users} label="Gender">
+                          {titleCase(profile.gender)}
+                        </Field>
+                        <Field icon={Ticket} label="Referral Code">
+                          {profile.referralCode || "—"}
+                        </Field>
+                        <Field icon={UserPlus} label="Referred By">
+                          {profile.referredBy || "—"}
+                        </Field>
+                        <Field icon={CircleDashed} label="Profile Complete">
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              profile.isProfileComplete
+                                ? "bg-[#E7F4E4] text-[#208900]"
+                                : "bg-red-50 text-red-500"
+                            }`}
+                          >
+                            {profile.isProfileComplete ? "Yes" : "No"}
+                          </span>
+                        </Field>
+                        <Field icon={Clock} label="Last Login">
+                          {fmtDateTime(profile.lastLoginAt)}
+                        </Field>
+                        <Field icon={CalendarClock} label="Member Since">
+                          {fmtDateTime(profile.createdAt)}
+                        </Field>
+                        <Field icon={RefreshCw} label="Last Updated">
+                          {fmtDateTime(profile.updatedAt)}
+                        </Field>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {section === "overview" && (
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <Card>
+                      <AddressBook
+                        addresses={addresses}
+                        isSaving={isAddressSaving}
+                        limit={3}
+                        onCreate={handleCreateAddress}
+                        onUpdate={handleUpdateAddress}
+                        onDelete={handleDeleteAddress}
+                        onSetDefault={handleSetDefault}
+                        onViewAll={() => setSection("addresses")}
+                      />
+                    </Card>
+                    <Card>
+                      <PreferencesPanel
+                        preferences={preferences}
+                        onEdit={() => setPrefsModalOpen(true)}
+                      />
+                    </Card>
+                  </div>
+                )}
+
+                {section === "overview" && (
+                  <Card>
+                    <DevicesTable devices={profile.devices ?? []} />
+                  </Card>
+                )}
+
+                {section === "addresses" && (
+                  <Card>
+                    <AddressBook
+                      addresses={addresses}
+                      isSaving={isAddressSaving}
+                      onCreate={handleCreateAddress}
+                      onUpdate={handleUpdateAddress}
+                      onDelete={handleDeleteAddress}
+                      onSetDefault={handleSetDefault}
+                    />
+                  </Card>
+                )}
+
+                {section === "devices" && (
+                  <Card>
+                    <DevicesTable devices={profile.devices ?? []} />
+                  </Card>
+                )}
+
+                {section === "preferences" && (
+                  <Card>
+                    <PreferencesPanel
+                      preferences={preferences}
+                      onEdit={() => setPrefsModalOpen(true)}
+                    />
+                  </Card>
+                )}
+
+                {section === "account" && (
+                  <Card>
+                    <div className="mb-4 flex items-center gap-2">
+                      <Settings className="h-4.5 w-4.5 text-brown" />
+                      <h2 className="text-base font-semibold text-espresso">Account Settings</h2>
+                    </div>
+                    <div className="divide-y divide-black/5">
+                      <div className="flex items-center justify-between gap-3 py-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-espresso">
+                            Push notifications on this device
+                          </p>
+                          <p className="text-xs text-[#999]">
+                            Uses your browser&apos;s notification permission.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={pushEnabled}
+                          disabled={isTogglingPush}
+                          onCheckedChange={(c) => void handleTogglePush(c)}
+                        />
+                      </div>
+                      <Link
+                        href="/profile/notifications"
+                        className="flex items-center justify-between gap-3 py-4 text-sm text-espresso hover:text-amber-600"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Bell className="h-4 w-4 text-brown" />
+                          Notification history
+                        </span>
+                        <span className="text-[#999]">→</span>
+                      </Link>
+                      <Link
+                        href="/bookings"
+                        className="flex items-center justify-between gap-3 py-4 text-sm text-espresso hover:text-amber-600"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <CalendarClock className="h-4 w-4 text-brown" />
+                          My bookings
+                        </span>
+                        <span className="text-[#999]">→</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex w-full items-center gap-2.5 py-4 text-sm font-medium text-red-600 disabled:opacity-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {isLoggingOut ? "Logging out…" : "Log out"}
+                      </button>
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
           </div>
         </div>
-      ) : (
-        <div className="min-h-screen bg-white">
-          <div className="mx-auto max-w-2xl bg-white px-4 py-8 sm:px-6 lg:px-8">
-            {/* Header — the back button is mobile-only: desktop already has
-                the persistent top Navbar for that, and reaching /profile
-                from the mobile header's new profile icon (BottomNav no
-                longer has a Profile tab to fall back on) otherwise left no
-                way back except "Home". Goes straight to "/" rather than
-                router.back() — profile is reachable from several places
-                now, and "back" should mean "home", not whatever happens to
-                be on the history stack. */}
-            <div className="mb-6 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className="flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50 md:hidden"
-                aria-label="Back"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Profile
-              </h1>
-            </div>
+      </div>
 
-            {/* Accordion Layout wrapper */}
-            <div className="rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
-              <Accordion
-                type="single"
-                collapsible
-                defaultValue={openSection}
-                className="w-full"
-              >
-                <AccountSection
-                  profile={profile}
-                  isLoading={isProfileLoading}
-                  isSaving={updateProfile.isPending}
-                  onSave={handleSaveProfile}
-                />
-                <AddressSection
-                  addresses={addresses}
-                  isLoading={isAddressesLoading}
-                  isSaving={createAddress.isPending || updateAddress.isPending}
-                  isDeleting={removeAddress.isPending}
-                  onCreate={handleCreateAddress}
-                  onUpdate={handleUpdateAddress}
-                  onDelete={handleDeleteAddress}
-                />
-                <SettingsSection />
-                <AboutSection
-                  onLogout={handleLogout}
-                  isLoggingOut={isLoggingOut}
-                />
-              </Accordion>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Bottom Navigation Bar (mobile only) ──────────── */}
-      <div className="block md:hidden">
+      <div className="block lg:hidden">
         <BottomNav onHomeClick={() => router.push("/")} />
       </div>
 
-      {/* ==========================================
-          AUTH MODAL POPUP
-          ========================================== */}
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          // Pass the success handler. Make sure your AuthModal calls this when the OTP/Setup is done!
-          onComplete={handleLoginSuccess}
+      {profileModalOpen && profile && (
+        <EditProfileModal
+          profile={profile}
+          isSaving={updateProfile.isPending}
+          onClose={() => setProfileModalOpen(false)}
+          onSave={handleSaveProfile}
         />
+      )}
+      {prefsModalOpen && (
+        <EditPreferencesModal
+          preferences={preferences}
+          isSaving={updatePreference.isPending}
+          onClose={() => setPrefsModalOpen(false)}
+          onSave={handleSavePrefs}
+        />
+      )}
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onCropped={handleCropConfirm}
+        />
+      )}
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} onComplete={handleLoginSuccess} />
       )}
     </div>
   );

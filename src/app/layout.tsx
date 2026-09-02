@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Abyssinica_SIL } from "next/font/google";
+import { Inter, Geist_Mono, Abyssinica_SIL } from "next/font/google";
 import "./globals.css";
 import Footer from "@/src/components/home/footer";
 import { CartProvider } from "@/src/context/CartContext";
@@ -8,7 +8,10 @@ import Navbar from "@/src/components/home/navbar";
 import Providers from "./providers";
 import PushNotificationBootstrap from "@/src/components/notifications/PushNotificationBootstrap";
 
-const geistSans = Geist({
+// App typeface — Inter, per the Frame 158 design system. Keeps the
+// existing `--font-geist-sans` CSS variable name so `--font-sans` /
+// `font-sans` wiring in globals.css stays untouched.
+const geistSans = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });

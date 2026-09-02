@@ -30,7 +30,7 @@ export default function BottomNav({ activeTab, onHomeClick }: BottomNavProps) {
         onClick={onHomeClick}
         className={cn(
           "flex cursor-pointer flex-col items-center gap-1 transition-transform active:scale-90",
-          activeTab === "home" ? "text-[#CB7D14]" : "text-black/36",
+          activeTab === "home" ? "text-amber-600" : "text-black/36",
         )}
         aria-label="Home"
       >
@@ -42,7 +42,7 @@ export default function BottomNav({ activeTab, onHomeClick }: BottomNavProps) {
         href="/bookings"
         className={cn(
           "flex cursor-pointer flex-col items-center gap-1 transition-transform active:scale-90",
-          activeTab === "bookings" ? "text-[#CB7D14]" : "text-black/36",
+          activeTab === "bookings" ? "text-amber-600" : "text-black/36",
         )}
       >
         <Calendar className="h-5.5 w-5.5" />
@@ -54,7 +54,7 @@ export default function BottomNav({ activeTab, onHomeClick }: BottomNavProps) {
         onClick={() => setIsCartOpen(true)}
         className={cn(
           "relative flex cursor-pointer flex-col items-center gap-1 transition-transform active:scale-90",
-          isCartOpen ? "text-[#CB7D14]" : "text-black/36",
+          isCartOpen ? "text-amber-600" : "text-black/36",
         )}
         aria-label="Cart"
       >

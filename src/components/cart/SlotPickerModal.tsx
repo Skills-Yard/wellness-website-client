@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/src/components/ui/dialog";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { bookingApi, type AvailableSlot } from "@/src/services/bookingApi";
 import { formatBookingTime } from "@/src/components/bookings/bookingStatus";
 import type { CartItem } from "@/src/utils/types/cart";
@@ -21,7 +22,9 @@ type SlotPickerModalProps = {
   item: CartItem;
   zoneId: string | null;
   onClose: () => void;
-  onConfirm: (slotDate: string, slotStartTime: string) => void;
+  /** May be async — the modal keeps its "Updating…" state until this
+   *  resolves, then closes. */
+  onConfirm: (slotDate: string, slotStartTime: string) => void | Promise<void>;
 };
 
 type DayChip = { iso: string; weekday: string; day: string; month: string };
@@ -128,6 +131,9 @@ export default function SlotPickerModal({
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [dateMenuOpen, setDateMenuOpen] = useState(false);
+  // True from "Confirm" click until onConfirm resolves — the modal stays
+  // open showing this, then closes itself.
+  const [isSaving, setIsSaving] = useState(false);
   // Mobile shows 3 date chips (+ next 4 in the More-dates dropdown); md:
   // up shows 4 (+ next 3). This modal is client-only (ssr:false in
   // CartView) so the initializer can safely read matchMedia — no
@@ -219,12 +225,17 @@ export default function SlotPickerModal({
     setSelectedStartTime(null);
   };
 
-  const handleConfirm = () => {
-    if (!selectedStartTime) return;
+  const handleConfirm = async () => {
+    if (!selectedStartTime || isSaving) return;
     const picked = slots.find((s) => s.startTime === selectedStartTime);
     if (picked && isSlotExpired(picked)) return;
-    onConfirm(selectedDate, selectedStartTime);
-    onClose();
+    setIsSaving(true);
+    try {
+      // Stays open showing "Updating…" until the slot is actually saved.
+      await onConfirm(selectedDate, selectedStartTime);
+    } finally {
+      onClose();
+    }
   };
 
   // Only the first few days get their own chip (4 on desktop, 3 on
@@ -278,7 +289,7 @@ export default function SlotPickerModal({
   // top-1/2/left-1/2/-translate-1/2 centering, capped width, rounded on
   // every corner) instead of staying pinned full-screen on desktop/tablet.
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !isSaving && onClose()}>
       <DialogContent
         showCloseButton={false}
         className="top-0 left-0 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-white p-0 ring-0 sm:max-w-none md:top-1/2 md:left-1/2 md:h-[85vh] md:max-h-184 md:w-full md:max-w-4xl md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border md:border-slate-100 md:shadow-2xl"
@@ -288,8 +299,9 @@ export default function SlotPickerModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={isSaving}
             aria-label="Back"
-            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[#EDEDED] text-black transition-colors hover:bg-stone-50 active:scale-95 md:h-8 md:w-8"
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[#EDEDED] text-black transition-colors hover:bg-stone-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
           >
             <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </button>
@@ -305,8 +317,9 @@ export default function SlotPickerModal({
         <button
           type="button"
           onClick={onClose}
+          disabled={isSaving}
           aria-label="Close"
-          className="hidden h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[#EDEDED] text-black transition-colors hover:bg-stone-50 active:scale-95 md:flex"
+          className="hidden h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[#EDEDED] text-black transition-colors hover:bg-stone-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 md:flex"
         >
           <X className="h-4 w-4" />
         </button>
@@ -333,7 +346,7 @@ export default function SlotPickerModal({
               <span className="h-1 w-1 rounded-full bg-[#666]" />
               <span className="text-[#666]">At home</span>
             </p>
-            <p className="mt-1 text-xs font-medium text-[#D38516] md:mt-1.5 md:text-sm">{longDate}</p>
+            <p className="mt-1 text-xs font-medium text-[#904720] md:mt-1.5 md:text-sm">{longDate}</p>
           </div>
         </div>
 
@@ -374,7 +387,7 @@ export default function SlotPickerModal({
                       className={`flex h-22 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg text-xs font-medium transition-all duration-150 active:scale-95 md:h-25.75 md:w-16 md:flex-none md:gap-2.5 md:text-sm ${
                         selected
                           ? "bg-[#25180F] text-white hover:bg-[#3a2518]"
-                          : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
+                          : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#FFC558]/40 hover:bg-[#F7EBD3]"
                       }`}
                     >
                       <span>{d.weekday}</span>
@@ -397,9 +410,9 @@ export default function SlotPickerModal({
                   aria-expanded={dateMenuOpen}
                   className={`relative flex h-22 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg text-center text-[11px] font-medium transition-colors duration-150 active:scale-95 md:h-25.75 md:w-16 md:flex-none md:text-xs ${
                     customDate
-                      ? "border-2 border-dashed border-[#D38516] bg-[#25180F] text-white"
-                      : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
-                  } ${dateMenuOpen ? "ring-2 ring-[#D38516]/40" : ""}`}
+                      ? "border-2 border-dashed border-[#FFC558] bg-[#25180F] text-white"
+                      : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#FFC558]/40 hover:bg-[#F7EBD3]"
+                  } ${dateMenuOpen ? "ring-2 ring-[#FFC558]/40" : ""}`}
                 >
                   {customDate ? (
                     <>
@@ -413,7 +426,7 @@ export default function SlotPickerModal({
                     </>
                   ) : (
                     <>
-                      <Calendar className="h-6 w-6 text-[#D38516] md:h-8 md:w-8" />
+                      <Calendar className="h-6 w-6 text-[#904720] md:h-8 md:w-8" />
                       More Dates
                     </>
                   )}
@@ -464,7 +477,7 @@ export default function SlotPickerModal({
                             <span className="text-[11px] text-[#888]">{md.weekday}</span>
                             <span className="text-sm font-medium">{full}</span>
                           </span>
-                          {active && <span className="h-2 w-2 shrink-0 rounded-full bg-[#D38516]" />}
+                          {active && <span className="h-2 w-2 shrink-0 rounded-full bg-[#FFC558]" />}
                         </button>
                       );
                     })}
@@ -485,7 +498,7 @@ export default function SlotPickerModal({
                     i > 0 ? "border-t border-black/5" : ""
                   }`}
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#D38516]">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#904720]">
                     <Icon className="h-4.5 w-4.5" />
                   </span>
                   <span className="min-w-0">
@@ -512,7 +525,11 @@ export default function SlotPickerModal({
                     : "Your service zone is unavailable — refresh your location and try again."}
                 </p>
               ) : isLoading ? (
-                <p className="py-4 text-center text-xs text-gray-400 md:py-6">Loading available slots…</p>
+                <div className="space-y-2 md:space-y-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-13 w-full rounded-lg md:h-15" />
+                  ))}
+                </div>
               ) : error ? (
                 <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
               ) : visibleSlots.length === 0 ? (
@@ -534,21 +551,21 @@ export default function SlotPickerModal({
                         onClick={() => setSelectedStartTime(slot.startTime)}
                         className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left transition-all duration-150 md:px-3.5 md:py-4 ${
                           isSelected
-                            ? "border-[#D38516]/40 bg-[radial-gradient(120%_120%_at_60%_0%,#FDE8CF_0%,rgba(255,226,173,0)_60%,#FDE8CF_100%)]"
+                            ? "border-[#FFC558]/40 bg-[radial-gradient(120%_120%_at_60%_0%,#FDE8CF_0%,rgba(255,226,173,0)_60%,#FDE8CF_100%)]"
                             : "border-black/8 bg-white"
                         } ${
                           isAvailable
-                            ? "cursor-pointer hover:border-[#D38516]/40 hover:bg-[#FFFBF3] active:scale-[0.98]"
+                            ? "cursor-pointer hover:border-[#FFC558]/40 hover:bg-[#FFFBF3] active:scale-[0.98]"
                             : "cursor-not-allowed opacity-50"
                         }`}
                       >
                         <span className="flex items-center gap-2.5 md:gap-3">
                           <span
                             className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 md:h-5.5 md:w-5.5 ${
-                              isSelected ? "border-[#D38516]" : "border-black/30"
+                              isSelected ? "border-[#FFC558]" : "border-black/30"
                             }`}
                           >
-                            {isSelected && <span className="h-2 w-2 rounded-full bg-[#D38516] md:h-2.5 md:w-2.5" />}
+                            {isSelected && <span className="h-2 w-2 rounded-full bg-[#FFC558] md:h-2.5 md:w-2.5" />}
                           </span>
                           <span className="text-xs font-medium text-black md:text-sm">
                             {to12h(slot.startTime)} - {to12h(slot.endTime)}
@@ -575,12 +592,22 @@ export default function SlotPickerModal({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={!selectedStartTime || activeSlotExpired}
-          className="relative w-full cursor-pointer rounded-lg bg-[#25180F] py-3 text-[13px] font-medium text-white transition-all duration-150 hover:bg-[#3a2518] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:opacity-100 disabled:active:scale-100 md:py-3.5 md:text-base"
+          disabled={!selectedStartTime || activeSlotExpired || isSaving}
+          aria-busy={isSaving}
+          className={`relative w-full overflow-hidden rounded-lg py-3 text-[13px] font-medium text-white transition-all duration-150 active:scale-[0.98] md:py-3.5 md:text-base ${
+            isSaving
+              ? "cursor-wait bg-[#25180F]"
+              : "cursor-pointer bg-[#25180F] hover:bg-[#3a2518] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:active:scale-100"
+          }`}
         >
-          Confirm Time Slot
+          {isSaving ? "Updating your slot…" : "Confirm Time Slot"}
+          {isSaving && (
+            <span className="pointer-events-none absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+          )}
           {/* Desktop-only trailing arrow, matching the reference design. */}
-          <ArrowRight className="absolute right-6 top-1/2 hidden h-5 w-5 -translate-y-1/2 md:block" />
+          {!isSaving && (
+            <ArrowRight className="absolute top-1/2 right-6 hidden h-5 w-5 -translate-y-1/2 md:block" />
+          )}
         </button>
       </div>
       </DialogContent>

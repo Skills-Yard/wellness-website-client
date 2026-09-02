@@ -36,10 +36,10 @@ interface BookingConfirmationProps {
 const CONFETTI = [
   { top: "0%", left: "4%", color: "#FFB818", delay: "0s", dur: "1.3s" },
   { top: "10%", left: "92%", color: "#FF6B35", delay: "0.15s", dur: "1.5s" },
-  { top: "55%", left: "0%", color: "#D38516", delay: "0.3s", dur: "1.2s" },
+  { top: "55%", left: "0%", color: "#FFC558", delay: "0.3s", dur: "1.2s" },
   { top: "5%", left: "68%", color: "#FFD700", delay: "0.45s", dur: "1.35s" },
   { top: "70%", left: "96%", color: "#FFB818", delay: "0.6s", dur: "1.4s" },
-  { top: "0%", left: "32%", color: "#D38516", delay: "0.75s", dur: "1.5s" },
+  { top: "0%", left: "32%", color: "#FFC558", delay: "0.75s", dur: "1.5s" },
   { top: "60%", left: "14%", color: "#FF6B35", delay: "0.9s", dur: "1.25s" },
   { top: "20%", left: "82%", color: "#FFD700", delay: "1.05s", dur: "1.3s" },
 ] as const;
@@ -51,13 +51,13 @@ const MOBILE_CONFETTI = [
   { top: "6%", left: "10%", color: "#FFB818", delay: "0s", dur: "1.3s" },
   { top: "12%", left: "82%", color: "#FF6B35", delay: "0.15s", dur: "1.5s" },
   { top: "26%", left: "6%", color: "#FFFFFF", delay: "0.3s", dur: "1.2s" },
-  { top: "20%", left: "58%", color: "#D38516", delay: "0.45s", dur: "1.35s" },
+  { top: "20%", left: "58%", color: "#FFC558", delay: "0.45s", dur: "1.35s" },
   { top: "40%", left: "88%", color: "#FFD700", delay: "0.6s", dur: "1.4s" },
   { top: "9%", left: "38%", color: "#FFB818", delay: "0.75s", dur: "1.5s" },
   { top: "46%", left: "18%", color: "#FF6B35", delay: "0.9s", dur: "1.25s" },
   { top: "33%", left: "68%", color: "#FFFFFF", delay: "1.05s", dur: "1.3s" },
   { top: "16%", left: "48%", color: "#FFD700", delay: "0.2s", dur: "1.45s" },
-  { top: "52%", left: "78%", color: "#D38516", delay: "0.35s", dur: "1.5s" },
+  { top: "52%", left: "78%", color: "#FFC558", delay: "0.35s", dur: "1.5s" },
 ] as const;
 
 const formatAddress = (address: Booking["address"]) =>
@@ -140,7 +140,7 @@ function MobileBookingConfirmation({
 
           <div
             className={`relative z-10 mx-auto flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${
-              isSuccess ? "bg-[#D38516]" : "bg-red-500"
+              isSuccess ? "bg-[#FFC558]" : "bg-red-500"
             }`}
           >
             {isSuccess ? (
@@ -190,7 +190,7 @@ function MobileBookingConfirmation({
                           <span className="h-1 w-1 rounded-full bg-slate-400" />
                           <span className="text-slate-500">At home</span>
                         </p>
-                        <p className="mt-1.5 text-sm font-medium text-[#D38516]">
+                        <p className="mt-1.5 text-sm font-medium text-[#904720]">
                           {formatBookingDate(booking.scheduledDate)}
                         </p>
                       </div>
@@ -331,7 +331,7 @@ export default function BookingConfirmation({
               }`}
             >
               {isSuccess ? (
-                <Check className="h-7 w-7 text-[#D38516]" strokeWidth={3} />
+                <Check className="h-7 w-7 text-[#904720]" strokeWidth={3} />
               ) : (
                 <X className="h-7 w-7 text-red-500" strokeWidth={3} />
               )}
@@ -376,7 +376,7 @@ export default function BookingConfirmation({
                           <span className="h-1 w-1 rounded-full bg-slate-400" />
                           <span className="text-slate-500">At home</span>
                         </p>
-                        <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-[#D38516]">
+                        <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-[#904720]">
                           <Calendar className="h-3.5 w-3.5 shrink-0" />
                           {formatBookingDate(booking.scheduledDate)}
                         </p>

@@ -43,7 +43,7 @@ export default function SpotlightServiceCard({
           <p className="mt-2 flex h-4 items-center gap-1 text-sm leading-[116%] font-medium text-black"><span>Starting at {service.price}</span>{hasDiscount && <span className="text-xs leading-[116%] text-[#666666] line-through">{service.originalPrice}</span>}</p>
           <AddonIcons addOns={service.addOns} size={18} className="mt-2" />
           <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="absolute right-0 top-[15px] h-[35px] w-[68px] rounded bg-[#25180F] text-base leading-[19px] font-medium text-white active:scale-95 transition-transform">Book</button>
-          <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="mt-[18px] h-3.5 text-xs leading-[116%] font-medium text-[#D38516]">View details</button>
+          <button onClick={(e) => { e.stopPropagation(); onDetailClick(service); }} className="mt-[18px] h-3.5 text-xs leading-[116%] font-medium text-[#904720]">View details</button>
           {features.length > 0 && <ul className="mt-2 space-y-[3px] text-sm leading-[116%] font-medium text-[#666666]">{features.slice(0, 3).map((feat, i) => <li key={i} className="flex items-start gap-[9px]"><span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#666666]" /><span className="line-clamp-1">{feat}</span></li>)}</ul>}
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function SpotlightServiceCard({
               {service.tag}
             </span>
           )}
-          <h3 className="text-xl font-bold text-[#000000] group-hover/item:text-[#D38516] transition-colors">
+          <h3 className="text-xl font-bold text-[#000000] group-hover/item:text-[#904720] transition-colors">
             {service.title}
           </h3>
           <p className="mt-1 text-sm text-[#666666] flex items-center gap-1.5">
@@ -80,7 +80,7 @@ export default function SpotlightServiceCard({
             • <span>{service.totalBookingsCount ?? 0} bookings</span>
           </p>
           <p className="mt-2 text-sm text-[#000000] font-medium">
-            <span className="font-extrabold text-[#D38516] text-base">
+            <span className="font-extrabold text-[#904720] text-base">
               {service.price}
             </span>
             {hasDiscount && (
@@ -97,7 +97,7 @@ export default function SpotlightServiceCard({
             e.stopPropagation();
             onDetailClick(service);
           }}
-          className="rounded-xl border border-[#E8CCBE] bg-[#FEF6F3] px-8 py-2.5 font-bold text-xs text-[#D38516] shadow-xs transition-all hover:bg-[#FDE9DD] cursor-pointer active:scale-95 shrink-0"
+          className="rounded-xl border border-[#E8CCBE] bg-[#FEF6F3] px-8 py-2.5 font-bold text-xs text-[#904720] shadow-xs transition-all hover:bg-[#FDE9DD] cursor-pointer active:scale-95 shrink-0"
         >
           ADD
         </button>
@@ -118,7 +118,7 @@ export default function SpotlightServiceCard({
             e.stopPropagation();
             onDetailClick(service);
           }}
-          className="sm:w-auto cursor-pointer px-0 py-1 text-[11px] font-bold text-[#D38516] transition-all hover:opacity-75 active:scale-95"
+          className="sm:w-auto cursor-pointer px-0 py-1 text-[11px] font-bold text-[#904720] transition-all hover:opacity-75 active:scale-95"
         >
           More details
         </button>

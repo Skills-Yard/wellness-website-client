@@ -34,6 +34,7 @@ export function useCreateAddress() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.addresses() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me() });
     },
   });
 }
@@ -49,6 +50,7 @@ export function useUpdateAddress() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.addresses() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me() });
     },
   });
 }
@@ -64,6 +66,7 @@ export function useRemoveAddress() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.addresses() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me() });
     },
   });
 }

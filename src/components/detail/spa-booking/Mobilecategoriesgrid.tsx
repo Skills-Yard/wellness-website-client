@@ -60,7 +60,7 @@ export default function MobileCategoriesGrid({
                 </div>
                 <span
                   className={`text-xs xs:text-sm font-medium leading-tight text-center wrap-break-word max-w-full transition-colors ${activeTab === cat.id
-                    ? "text-[#D38516] font-bold"
+                    ? "text-[#904720] font-bold"
                     : "text-[#000000]"
                     }`}
                 >

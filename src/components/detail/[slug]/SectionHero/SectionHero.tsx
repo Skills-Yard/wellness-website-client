@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Sparkles, Star } from "lucide-react";
 import { useState } from "react";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 interface SectionHeroProps {
   service: any;
@@ -50,7 +51,7 @@ export default function SectionHero({ service, categoryLabel }: SectionHeroProps
         />
         <div className="bg-[#00000068] absolute inset-0 z-20 w-full h-full" />
         {!imageLoaded && (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 animate-pulse" />
+          <Skeleton className="absolute inset-0 rounded-none bg-slate-200" />
         )}
         {categoryLabel && (
           <span className="absolute left-4 top-4 z-30 inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm shadow-amber-500/30">

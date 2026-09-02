@@ -6,6 +6,11 @@ export type Address = {
   userId?: string;
   label?: string;
   customLabel?: string;
+  /** Contact for this address — used on the Edit form. `customerPhone`
+   *  is write-only server-side (stored encrypted), so it never comes back
+   *  on a GET; only `customerName` / `customerCountryCode` round-trip. */
+  customerName?: string | null;
+  customerCountryCode?: string | null;
   line1?: string;
   line2?: string;
   landmark?: string;
@@ -17,10 +22,18 @@ export type Address = {
   isDefault?: boolean;
 };
 
+/** Body for both POST /users/addresses and PATCH /users/addresses/{id}
+ *  — the create and update endpoints take the exact same shape.
+ *  `userId` is optional in the type (the checkout edit path doesn't send
+ *  it, the backend resolves it from the session there) but the profile
+ *  flow always includes it, matching the documented payload. */
 export type CreateAddressBody = {
-  userId: string;
+  userId?: string;
   label: string;
   customLabel: string;
+  customerName?: string;
+  customerCountryCode?: string;
+  customerPhone?: string;
   line1: string;
   line2: string;
   landmark: string;
@@ -32,7 +45,7 @@ export type CreateAddressBody = {
   isDefault: boolean;
 };
 
-export type UpdateAddressBody = Omit<CreateAddressBody, "userId">;
+export type UpdateAddressBody = CreateAddressBody;
 
 export type AddressesResponse = ApiSuccess<
   Address[] | { addresses?: Address[]; items?: Address[] }

@@ -66,7 +66,7 @@ export default function MobileStickyNavbar({
                 <button
                   key={cat.id}
                   onClick={() => onCategoryClick(cat.id)}
-                  className="whitespace-nowrap text-xs xs:text-sm font-bold text-[#D38516] transition-colors"
+                  className="whitespace-nowrap text-xs xs:text-sm font-bold text-[#904720] transition-colors"
                 >
                   {cat.name}
                 </button>

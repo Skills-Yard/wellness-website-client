@@ -29,6 +29,7 @@ import {
 import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
 import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -43,9 +44,23 @@ const bookingLocality = (booking: Booking) =>
     .filter(Boolean)
     .join(", ");
 
+function BookingCardSkeleton() {
+  return (
+    <div className="flex gap-3 rounded-lg border border-black/8 bg-white p-3">
+      <Skeleton className="h-20 w-24 shrink-0 rounded-lg" />
+      <div className="flex-1 space-y-2 py-1">
+        <Skeleton className="h-4 w-2/3 rounded" />
+        <Skeleton className="h-3 w-1/2 rounded" />
+        <Skeleton className="h-3 w-1/3 rounded" />
+        <Skeleton className="mt-3 h-6 w-20 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
 function SectionLabel({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center gap-1.5 text-[#D38516]">
+    <div className="mb-3 flex items-center gap-1.5 text-[#904720]">
       <Icon className="h-3.5 w-3.5" />
       <span className="text-sm font-medium">{children}</span>
     </div>
@@ -103,18 +118,18 @@ function ActiveBookingCard({
           <p className="line-clamp-2 text-base font-medium text-slate-900">{title}</p>
 
           <div className="flex items-center gap-1.5 text-xs text-[#25180F]">
-            <Calendar className="h-3.5 w-3.5 shrink-0 text-[#D38516]" />
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-[#904720]" />
             <span className="truncate">{formatBookingDateLong(booking.scheduledDate)}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-[#25180F]">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-[#D38516]" />
+            <Clock className="h-3.5 w-3.5 shrink-0 text-[#904720]" />
             <span className="truncate">
               {formatBookingTime(booking.scheduledTime)} -{" "}
               {formatBookingTime(booking.estimatedEndTime)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-[#25180F]">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#D38516]" />
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#904720]" />
             <span className="truncate">{bookingLocality(booking)}</span>
           </div>
 
@@ -151,7 +166,7 @@ function ActiveBookingCard({
 function NoActiveBooking({ onBook }: { onBook: () => void }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-black/8 bg-white px-4 py-6 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F9EEE3] text-[#D38516]">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F9EEE3] text-[#904720]">
         <CalendarOff className="h-7 w-7" strokeWidth={1.5} />
       </div>
       <p className="text-[15px] font-medium text-slate-900">No Active Bookings</p>
@@ -281,7 +296,7 @@ export default function BookingsListPage() {
           <SectionLabel icon={Calendar}>Active Booking</SectionLabel>
 
           {upcoming.isLoading ? (
-            <p className="py-6 text-center text-sm text-slate-400">Loading…</p>
+            <BookingCardSkeleton />
           ) : activeBooking ? (
             <ActiveBookingCard
               booking={activeBooking}
@@ -317,7 +332,10 @@ export default function BookingsListPage() {
           <SectionLabel icon={History}>Booking History</SectionLabel>
 
           {past.isLoading ? (
-            <p className="py-6 text-center text-sm text-slate-400">Loading…</p>
+            <div className="space-y-4">
+              <BookingCardSkeleton />
+              <BookingCardSkeleton />
+            </div>
           ) : past.items.length === 0 ? (
             <div className="rounded-lg border border-black/8 bg-white px-4 py-10 text-center text-sm text-slate-500">
               No past bookings yet.

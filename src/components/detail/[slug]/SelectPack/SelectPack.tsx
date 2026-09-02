@@ -250,7 +250,7 @@ export default function RequirementSelector({
                             onClick={() => setSelectedDurationId(duration.id)}
                             className={`flex shrink-0 flex-col h-16 sm:h-20 md:h-20 w-[86px] sm:w-28 md:w-32 rounded-lg items-start border p-3 text-left transition-colors ${
                               isSelected
-                                ? "border-[#D38516] bg-[#FDFBF8]"
+                                ? "border-[#FFC558] bg-[#FDFBF8]"
                                 : "border-black/25 bg-transparent hover:border-slate-400"
                             }`}
                           >
@@ -266,7 +266,7 @@ export default function RequirementSelector({
                               )}
                               <span
                                 className={`text-sm md:text-base font-semibold leading-tight ${
-                                  isSelected ? "text-[#D38516]" : "text-[#666666]"
+                                  isSelected ? "text-[#904720]" : "text-[#666666]"
                                 }`}
                               >
                                 ₹{Math.round(pricing.displayPrice).toLocaleString("en-IN")}
@@ -567,7 +567,7 @@ export default function RequirementSelector({
                     </h2>
 
                     <div className="relative w-full rounded-xl sm:rounded-2xl px-4 sm:px-5 py-5 sm:py-6 bg-gradient-to-r from-[#FFF0E6] to-[#FADBD8] mb-6 sm:mb-8 overflow-hidden">
-                      <div className="inline-block bg-white text-[#8A4A24] text-xs font-bold tracking-wide px-3 py-1.5 rounded-md mb-3 sm:mb-4 shadow-sm">
+                      <div className="inline-block bg-white text-[#904720] text-xs font-bold tracking-wide px-3 py-1.5 rounded-md mb-3 sm:mb-4 shadow-sm">
                         EEZIT EXPERTS
                       </div>
 
@@ -575,10 +575,10 @@ export default function RequirementSelector({
                         {skilledPros.map((text, i) => (
                           <li
                             key={i}
-                            className="flex items-start gap-2 text-xs sm:text-sm font-medium text-[#8A4A24] leading-relaxed"
+                            className="flex items-start gap-2 text-xs sm:text-sm font-medium text-[#904720] leading-relaxed"
                           >
                             <svg
-                              className="w-4 h-4 shrink-0 mt-1 text-[#8A4A24]"
+                              className="w-4 h-4 shrink-0 mt-1 text-[#904720]"
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"

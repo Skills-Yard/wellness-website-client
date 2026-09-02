@@ -57,16 +57,16 @@ export default function MobileHeader({
     return (
         <div
             className={cn(
-                "fixed top-0 left-0 right-0 z-30 transition-all duration-300 px-4",
+                "fixed top-0 left-0 right-0 z-30 transition-all duration-300 px-4 font-sans",
                 headerScrolled
                     ? "bg-white border-b border-stone-150 shadow-xs pt-2.5 pb-2.5 text-stone-900"
-                    : "bg-gradient-to-b from-black/80 via-black/35 to-transparent pt-5 pb-4 text-white"
+                    : "bg-transparent pt-5 pb-4 text-white"
             )}
         >
             {/* Top Row: Location & Cart */}
             <div
                 className={cn(
-                    "flex items-center justify-between transition-all duration-300 ease-in-out",
+                    "flex items-center justify-between gap-3 transition-all duration-300 ease-in-out",
                     headerScrolled
                         ? "max-h-0 opacity-0 mb-0 pointer-events-none"
                         : "max-h-16 opacity-100 mb-4"
@@ -74,14 +74,20 @@ export default function MobileHeader({
             >
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <div className="flex flex-col cursor-pointer max-w-[80%]">
-                            <span className="text-[20px] font-semibold leading-5 text-white">
+                        <div className="flex min-w-0 flex-1 flex-col cursor-pointer">
+                            <span className="truncate text-xl font-semibold leading-5 text-white">
                                 In 15 Minutes
                             </span>
-                            <span className="text-[14px] font-medium text-white flex items-center gap-1.5 truncate mt-1.5">
-                                <MapPin className="w-5 h-5 text-white shrink-0" fill="currentColor" />
-                                <span className="truncate">{isMounted ? displayLocation : LOCATIONS[0]}</span>
-                                <ChevronDown className="w-3 h-3 text-white shrink-0" />
+                            <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-sm font-medium text-white">
+                                <svg
+                                    viewBox="0 0 384 512"
+                                    aria-hidden="true"
+                                    className="h-4 w-4 shrink-0 fill-current"
+                                >
+                                    <path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z" />
+                                </svg>
+                                <span className="min-w-0 truncate">{isMounted ? displayLocation : LOCATIONS[0]}</span>
+                                <ChevronDown className="h-3 w-3 shrink-0" />
                             </span>
                         </div>
                     </DropdownMenuTrigger>
@@ -150,35 +156,28 @@ export default function MobileHeader({
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Grouped in their own flex container with a tight gap —
-                    the parent row is justify-between, which would otherwise
-                    space these two as far apart as the location content on
-                    the left leaves room for, instead of keeping them
-                    together as one pair pushed to the edge. */}
+                {/* Profile + notifications — cart lives in BottomNav. Both
+                    tiles share the same 33px / rounded-[5px] / #EDEDED
+                    style. */}
                 <div className="flex shrink-0 items-center gap-2">
-                    {/* Profile — cart moved to BottomNav (Home/Bookings/
-                        Cart), but notifications stay here alongside it,
-                        same as before. NotificationBell tracks its own
-                        unread count/login-gating internally, so no extra
-                        badge wiring here. */}
                     <Link
                         href="/profile"
                         className="flex h-8.25 w-8.25 shrink-0 items-center justify-center rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50"
                         aria-label="Profile"
                     >
-                        <User className="h-4.5 w-4.5" strokeWidth={1.5} />
+                        <User className="h-4 w-4" strokeWidth={1.5} />
                     </Link>
 
                     {isMounted && (
-                        <NotificationBell className="rounded-full bg-white shadow-sm border-none" />
+                        <NotificationBell className="h-8.25 w-8.25 rounded-[5px] border border-[#EDEDED] bg-white text-black hover:bg-stone-50" />
                     )}
                 </div>
             </div>
 
             {/* Search Row */}
             <div className="relative">
-                <div className="flex h-10.75 items-center px-3.5 gap-2 rounded-lg bg-white border border-stone-250/30 shadow-sm focus-within:ring-2 focus-within:ring-amber-500/20">
-                    <Search className="w-5 h-5 text-stone-400 shrink-0" />
+                <div className="flex h-10.75 items-center gap-1.5 rounded-lg bg-white px-3 shadow-sm focus-within:ring-2 focus-within:ring-amber-500/20">
+                    <Search className="h-5 w-5 shrink-0 text-stone-400" />
                     <Input
                         placeholder="Search for Services (e.g., Spa for Women)"
                         value={searchQuery}
@@ -187,7 +186,7 @@ export default function MobileHeader({
                             onSearchFocus();
                         }}
                         onFocus={onSearchFocus}
-                        className="flex-1 bg-transparent text-sm text-stone-900 placeholder:text-black/36 placeholder:font-medium outline-none border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 min-w-0"
+                        className="h-auto min-w-0 flex-1 border-none bg-transparent p-0 text-sm font-medium text-stone-900 shadow-none outline-none placeholder:font-medium placeholder:text-black/36 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     {searchQuery && (
                         <button type="button" onClick={() => setSearchQuery("")} className="cursor-pointer">

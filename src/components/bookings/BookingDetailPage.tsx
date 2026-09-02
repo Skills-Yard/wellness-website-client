@@ -316,7 +316,7 @@ export default function BookingDetailPage() {
                   return (
                     <div className="flex items-center gap-3 rounded-lg border-2 border-[#F7ECD8] bg-[#FBF7ED] p-4.5">
                       <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white">
-                        <Icon className="h-7 w-7 text-[#D38516]" />
+                        <Icon className="h-7 w-7 text-[#904720]" />
                       </span>
                       <div>
                         <p className="text-lg font-medium text-black">{current.title}</p>
@@ -335,11 +335,11 @@ export default function BookingDetailPage() {
                   {MOBILE_STEP_LABELS.map((label, index) => (
                     <div key={label} className="relative z-10 flex flex-col items-center gap-1.5">
                       {index < stepIndex ? (
-                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#D38516]">
+                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#FFC558]">
                           <Check className="h-2 w-2 text-white" strokeWidth={4} />
                         </span>
                       ) : index === stepIndex ? (
-                        <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#D38516] ring-4 ring-[#D38516]/20" />
+                        <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#FFC558] ring-4 ring-[#FFC558]/20" />
                       ) : (
                         <span className="h-3.5 w-3.5 rounded-full bg-[#EDEAE4]" />
                       )}
@@ -473,10 +473,10 @@ export default function BookingDetailPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <span className="flex h-11.5 w-11.5 items-center justify-center rounded-full border border-black/8 text-[#D38516]">
+                  <span className="flex h-11.5 w-11.5 items-center justify-center rounded-full border border-black/8 text-[#904720]">
                     <Phone className="h-4.5 w-4.5" />
                   </span>
-                  <span className="flex h-11.5 w-11.5 items-center justify-center rounded-full border border-black/8 text-[#D38516]">
+                  <span className="flex h-11.5 w-11.5 items-center justify-center rounded-full border border-black/8 text-[#904720]">
                     <MessageCircle className="h-4.5 w-4.5" />
                   </span>
                 </div>

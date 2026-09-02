@@ -30,11 +30,12 @@ export default function DetailSkeleton() {
 
   return (
     <div
-      className="relative w-full animate-pulse bg-white pb-20"
+      className="relative w-full overflow-hidden bg-white pb-20"
       aria-busy="true"
       aria-live="polite"
     >
       <span className="sr-only">Loading services…</span>
+      <span className="pointer-events-none absolute inset-0 z-10 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent motion-reduce:hidden" />
 
       {/* ───────── MOBILE ───────── */}
       <div className="lg:hidden">

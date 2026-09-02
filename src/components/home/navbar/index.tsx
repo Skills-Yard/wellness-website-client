@@ -81,7 +81,14 @@ export default function Navbar() {
   const addresses = addressesData ?? [];
   const selectedSavedAddress = addresses.find((address) => address.id === addressId) ?? null;
 
-  const [active, setActive] = useState<NavLinkType>("Massage");
+  // null = no category section is the current one (e.g. scrolled to the
+  // very top, above the first section). A click sets it explicitly; the
+  // scroll-spy effect below keeps it in sync with manual scrolling.
+  const [active, setActive] = useState<NavLinkType | null>(null);
+  // While a click-triggered smooth scroll is animating, ignore scroll-spy
+  // updates so the highlight doesn't flicker through the sections it
+  // passes on the way. Holds the "unlock" timer id while locked.
+  const spyLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -125,6 +132,79 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Scroll-spy: keep the active nav link in sync with which category
+  // section is actually on screen as the user scrolls by hand (not just
+  // on click). Above the first section — e.g. at the very top — nothing
+  // is active. Only runs on the home page, where these sections exist.
+  useEffect(() => {
+    if (pathname !== "/") return;
+
+    const entries = NAV_LINKS.map((link) => ({
+      link,
+      id: NAV_LINK_SECTION_IDS[link],
+    }));
+    // Bottom of the sticky navbar — content above this line is "behind"
+    // it and doesn't count toward a section being on screen.
+    const LINE = 96;
+
+    let raf = 0;
+    const recompute = () => {
+      raf = 0;
+      if (spyLockTimer.current !== null) return;
+
+      const vh = window.innerHeight;
+
+      // The active section is simply whichever one takes up the most of
+      // the visible area below the navbar right now. This is robust to
+      // the last section being too short to ever scroll its top up to the
+      // navbar line (which made "the last section whose top crossed the
+      // line" pick the *previous* section — e.g. Spa while viewing
+      // Physio).
+      let current: NavLinkType | null = null;
+      let bestVisible = 0;
+      let firstTop = Infinity;
+
+      for (const { link, id } of entries) {
+        const el = getVisibleElementById(id);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        firstTop = Math.min(firstTop, r.top);
+        const visible = Math.min(r.bottom, vh) - Math.max(r.top, LINE);
+        if (visible > bestVisible) {
+          bestVisible = visible;
+          current = link;
+        }
+      }
+
+      // Above the first section (still scrolled up near the hero/top) —
+      // nothing is active.
+      if (firstTop > LINE + 8) current = null;
+
+      setActive((prev) => (prev === current ? prev : current));
+    };
+
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(recompute);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    // Initial sync — deferred a frame so it doesn't setState in the
+    // effect body. The extra kicks re-check after the catalog (and thus
+    // the section elements) has had time to mount, so a refresh landing
+    // mid-page still lights the right link without waiting for a scroll.
+    raf = requestAnimationFrame(recompute);
+    const kicks = [250, 900, 2000].map((ms) => setTimeout(onScroll, ms));
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+      kicks.forEach(clearTimeout);
+      if (spyLockTimer.current) clearTimeout(spyLockTimer.current);
+    };
+  }, [pathname]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!searchRef.current?.contains(e.target as Node)) setSearchOpen(false);
@@ -155,6 +235,11 @@ export default function Navbar() {
     setSearchOpen(false);
     const id = NAV_LINK_SECTION_IDS[link];
     if (pathname === "/") {
+      // Hold the spy off until the smooth scroll settles.
+      if (spyLockTimer.current) clearTimeout(spyLockTimer.current);
+      spyLockTimer.current = setTimeout(() => {
+        spyLockTimer.current = null;
+      }, 900);
       scrollToSection(id);
     } else {
       router.push(`/?tab=${id}`);
@@ -413,7 +498,7 @@ export default function Navbar() {
                 ))}
                 {query && !isSearchIndexLoading && searchResults.length === 0 && (
                   <p className="text-sm text-gray-400 px-3 py-3 text-center">
-                    No results for "{query}"
+                    No results for &quot;{query}&quot;
                   </p>
                 )}
               </div>

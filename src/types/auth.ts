@@ -59,7 +59,53 @@ export type CreateUserResponse = ApiSuccess<{
   };
 }>;
 
-/** GET /users/me — the logged-in client's own profile. */
+/** An address as it comes back nested inside GET /users/me. Superset of
+ *  the standalone `Address` (services/addressApi) — customer contact
+ *  fields here are read-only (phone is stored encrypted, so only its
+ *  presence, never the value, comes back). */
+export type MeAddress = {
+  id: string;
+  userId: string;
+  label?: string | null;
+  customLabel?: string | null;
+  customerName?: string | null;
+  customerCountryCode?: string | null;
+  line1?: string | null;
+  line2?: string | null;
+  landmark?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  zoneId?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+/** A registered device/session nested inside GET /users/me. */
+export type MeDevice = {
+  id: string;
+  deviceType: "WEB" | "ANDROID" | "IOS" | null;
+  deviceName: string | null;
+  deviceModel: string | null;
+  isActive: boolean;
+  lastUsedAt: string | null;
+  createdAt: string;
+};
+
+export type MePreferences = {
+  whatsappOptIn: boolean;
+  emailOptIn: boolean;
+  pushOptIn: boolean;
+  promotionalOptIn: boolean;
+};
+
+/** GET /users/me — the logged-in client's own profile, with everything
+ *  the profile dashboard needs in one call (addresses, devices,
+ *  preferences + account metadata). */
 export type UserProfile = {
   id: string;
   countryCode: string;
@@ -72,8 +118,17 @@ export type UserProfile = {
   dateOfBirth?: string | null;
   gender?: "MALE" | "FEMALE" | "OTHER" | null;
   referralCode?: string;
+  referredBy?: string | null;
   isPhoneVerified: boolean;
   isProfileComplete: boolean;
+  isActive?: boolean;
+  userRole?: string;
+  lastLoginAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  addresses?: MeAddress[];
+  devices?: MeDevice[];
+  preferences?: MePreferences | null;
 };
 
 export type GetMeResponse = ApiSuccess<UserProfile>;

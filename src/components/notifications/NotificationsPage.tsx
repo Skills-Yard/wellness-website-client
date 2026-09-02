@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, BellOff } from "lucide-react";
 import { useNotifications, useMarkAllNotificationsRead } from "@/src/hooks/queries/useNotifications";
 import BottomNav from "@/src/components/home/mobile/Bottomnav";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import NotificationRow from "./NotificationRow";
 import { useRequireAuth } from "@/src/hooks/useRequireAuth";
 import LazyAuthModal from "@/src/components/auth/LazyAuthModal";
@@ -75,7 +76,17 @@ export default function NotificationsPage() {
 
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {isLoading && notifications.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-slate-400">Loading…</p>
+            <div className="divide-y divide-slate-100">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex gap-3 px-4 py-4">
+                  <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2 py-0.5">
+                    <Skeleton className="h-3.5 w-3/4 rounded" />
+                    <Skeleton className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center px-4 py-14 text-center">
               <Bell className="mb-3 h-8 w-8 text-slate-300" strokeWidth={1.5} />

@@ -59,17 +59,17 @@ export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
 
     if (orderedCampaigns.length === 0) {
         return (
-            <div className="flex h-60 items-end bg-neutral-950 px-5 pb-5 text-white">
+            <div className="flex h-70 items-end bg-neutral-950 px-4 pb-4 font-sans text-white">
                 <div>
-                    <h2 className="text-xl font-extrabold text-[#FFC558]">Wellness at your doorstep</h2>
-                    <p className="mt-1 text-[11px] font-semibold text-white/80">New campaigns will appear here shortly.</p>
+                    <h2 className="text-lg font-semibold leading-[1.125] text-[#FFC558]">Wellness at your doorstep</h2>
+                    <p className="mt-1 text-sm font-semibold text-white">New campaigns will appear here shortly.</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="relative w-full h-60 bg-neutral-950 overflow-hidden">
+        <div className="relative w-full h-70 bg-neutral-950 overflow-hidden font-sans">
             {orderedCampaigns.map((campaign, index) => {
                 const href = campaignHref(campaign, categories);
 
@@ -96,37 +96,39 @@ export default function HeroSlider({ campaigns, categories }: HeroSliderProps) {
                         />
                     ) : null}
 
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/30" />
+                    {/* Brown gradient — dark at the top (under the header
+                        controls) and bottom (under the campaign text),
+                        clear through the middle. Matches the Figma spec
+                        (rgba(107,75,34,…)). */}
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(107,75,34,0.62)_0%,rgba(107,75,34,0.42)_30%,rgba(107,75,34,0)_50%,rgba(107,75,34,0)_68%,rgba(107,75,34,0.42)_85%,rgba(107,75,34,0.62)_100%)]" />
 
-                    {/* Slide Text */}
-                    <div className="absolute bottom-4 left-5 right-5 text-white space-y-1 z-20">
-                        <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight drop-shadow-md text-[#FFC558]">
+                    {/* Campaign title + subtitle — tap to open the campaign.
+                        Sits above the slide dashes (which are pinned lower
+                        right), so it can use the full width and truncate. */}
+                    <Link
+                        href={href}
+                        className="absolute bottom-6 left-4 right-4 z-20 block text-white"
+                    >
+                        <h2 className="truncate text-lg font-semibold leading-[1.125] tracking-tight text-[#FFC558] drop-shadow-md">
                             {campaign.title}
                         </h2>
-                        <p className="text-white/80 text-[11px] sm:text-xs font-semibold drop-shadow-sm max-w-[85%]">
+                        <p className="mt-1 truncate text-sm font-semibold text-white drop-shadow-sm">
                             {campaign.subtitle}
                         </p>
-                        <Link
-                            href={href}
-                            className="mt-3 inline-flex max-w-full truncate rounded-lg bg-white px-3 py-1.5 text-[11px] font-bold text-stone-900 shadow-sm"
-                        >
-                            {campaign.ctaText ?? "Explore Plans"}
-                        </Link>
-                    </div>
+                    </Link>
                 </div>
                 );
             })}
 
-            {/* Dot Navigation */}
-            <div className="absolute bottom-4 right-2 z-20 flex gap-1.5 bg-black/30 backdrop-blur-md px-2 py-1 rounded-full border border-white/5">
+            {/* Slide indicators — dashes, active one amber and wider. */}
+            <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1.5">
                 {orderedCampaigns.map((campaign, index) => (
                     <button
                         key={campaign.id}
                         onClick={() => setCurrentSlide(index)}
                         className={cn(
-                            "w-1.5 h-1.5 rounded-full transition-all duration-300 cursor-pointer",
-                            index === currentSlide ? "bg-amber-400 w-3.5" : "bg-white/40"
+                            "h-1 rounded-full transition-all duration-300 cursor-pointer",
+                            index === currentSlide ? "w-5 bg-[#FFC558]" : "w-2.5 bg-[#ABABAB]"
                         )}
                         aria-label={`Go to slide ${index + 1}`}
                     />

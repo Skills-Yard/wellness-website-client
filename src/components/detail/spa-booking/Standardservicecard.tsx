@@ -99,7 +99,7 @@ export default function StandardServiceCard({
               e.stopPropagation();
               onDetailClick(service);
             }}
-            className="absolute -bottom-4 left-1/2 flex w-10/12 -translate-x-1/2 items-center justify-center rounded-xl border border-[#E8CCBE] bg-white py-2 text-xs font-bold text-[#D38516] shadow-md transition-all hover:bg-[#FEF6F3] cursor-pointer active:scale-95"
+            className="absolute -bottom-4 left-1/2 flex w-10/12 -translate-x-1/2 items-center justify-center rounded-xl border border-[#E8CCBE] bg-white py-2 text-xs font-bold text-[#904720] shadow-md transition-all hover:bg-[#FEF6F3] cursor-pointer active:scale-95"
           >
             ADD
           </button>
@@ -110,7 +110,7 @@ export default function StandardServiceCard({
               {service.tag}
             </span>
           )}
-          <h3 className="text-[15px] font-bold text-[#000000] group-hover/item:text-[#D38516] transition-colors">
+          <h3 className="text-[15px] font-bold text-[#000000] group-hover/item:text-[#904720] transition-colors">
             {service.title}
           </h3>
           <p className="mt-0 text-[11px] text-[#666666] flex items-center gap-1.5">
@@ -122,7 +122,7 @@ export default function StandardServiceCard({
             • <span>{service.totalBookingsCount ?? 0} bookings</span>
           </p>
           <p className="mt-0 text-[13px] text-[#000000] font-medium">
-            <span className="font-extrabold text-[#D38516] text-[13px]">
+            <span className="font-extrabold text-[#904720] text-[13px]">
               {service.price}
             </span>
             {hasDiscount && (
@@ -144,7 +144,7 @@ export default function StandardServiceCard({
                 e.stopPropagation();
                 onDetailClick(service);
               }}
-              className="sm:w-auto cursor-pointer px-0 py-1 text-[11px] font-bold text-[#D38516] transition-all hover:opacity-75 active:scale-95"
+              className="sm:w-auto cursor-pointer px-0 py-1 text-[11px] font-bold text-[#904720] transition-all hover:opacity-75 active:scale-95"
             >
               More details
             </button>

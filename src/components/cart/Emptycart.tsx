@@ -24,12 +24,12 @@ export default function EmptyCart() {
 
         {/* Floating sparkle dots */}
         <span className="absolute top-2 left-[28%] w-2 h-2 rounded-full bg-amber-300 opacity-60 animate-bounce" style={{ animationDuration: "2.1s" }} />
-        <span className="absolute top-6 right-[24%] w-1.5 h-1.5 rounded-full bg-[#D38516] opacity-50 animate-bounce" style={{ animationDuration: "1.7s", animationDelay: "0.3s" }} />
+        <span className="absolute top-6 right-[24%] w-1.5 h-1.5 rounded-full bg-[#FFC558] opacity-50 animate-bounce" style={{ animationDuration: "1.7s", animationDelay: "0.3s" }} />
         <span className="absolute bottom-3 left-[22%] w-1.5 h-1.5 rounded-full bg-amber-400 opacity-40 animate-bounce" style={{ animationDuration: "2.4s", animationDelay: "0.6s" }} />
         <span className="absolute bottom-2 right-[26%] w-2 h-2 rounded-full bg-amber-200 opacity-70 animate-bounce" style={{ animationDuration: "1.9s", animationDelay: "0.9s" }} />
 
         {/* Icon container */}
-        <div className="relative z-10 w-24 h-24 rounded-[28px] bg-gradient-to-br from-amber-400 to-[#D38516] flex items-center justify-center shadow-[0_8px_32px_rgba(211,133,22,0.35)] rotate-3">
+        <div className="relative z-10 w-24 h-24 rounded-[28px] bg-gradient-to-br from-amber-400 to-[#FFC558] flex items-center justify-center shadow-[0_8px_32px_rgba(255, 197, 88,0.35)] rotate-3">
           <ShoppingCart className="w-11 h-11 text-white" strokeWidth={1.8} />
           {/* Sparkle badge */}
           <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center">

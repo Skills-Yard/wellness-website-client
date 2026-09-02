@@ -1,6 +1,10 @@
 import { NavLinkType } from "@/src/utils/types";
 
-export const NAV_LINKS: NavLinkType[] = ["Massage", "Wellness", "Physiotherapy"];
+// Navbar display order: Spa (key "Wellness"), then Massage, then
+// Physiotherapy. This only drives the order of the quick-jump buttons;
+// it's independent of the order the category sections render in on the
+// home page (that comes from the backend catalog).
+export const NAV_LINKS: NavLinkType[] = ["Wellness", "Massage", "Physiotherapy"];
 
 // Display label shown in the navbar, kept separate from the link's own
 // value so renaming what's shown doesn't touch anything that value is used

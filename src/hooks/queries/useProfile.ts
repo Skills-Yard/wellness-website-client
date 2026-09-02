@@ -79,6 +79,8 @@ export function useUpdateNotificationPreference() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationPreference() });
+      // The profile dashboard reads preferences off /users/me too.
+      queryClient.invalidateQueries({ queryKey: queryKeys.me() });
     },
   });
 }

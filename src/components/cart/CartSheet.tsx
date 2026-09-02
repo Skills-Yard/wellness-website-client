@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { useCart } from "@/src/context/CartContext";
 import { addressApi, type Address, type CreateAddressBody } from "@/src/services/addressApi";
 import { useAddresses } from "@/src/hooks/queries/useAddresses";
@@ -151,9 +151,24 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
 // real items land.
 function CartLoading() {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
-      <Loader2 className="h-6 w-6 animate-spin" />
-      <p className="text-sm font-medium">Loading your cart…</p>
+    <div className="flex h-full flex-col">
+      <Skeleton className="mb-4 h-6 w-28 rounded" />
+      <div className="flex-1 space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-lg border border-black/5 p-3">
+            <div className="flex gap-3">
+              <Skeleton className="h-21.5 w-29.75 shrink-0 rounded-lg" />
+              <div className="flex-1 space-y-2 py-1">
+                <Skeleton className="h-4 w-3/4 rounded" />
+                <Skeleton className="h-3 w-1/2 rounded" />
+                <Skeleton className="mt-4 h-7 w-24 rounded-md" />
+              </div>
+            </div>
+            <Skeleton className="mt-3 h-8 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-12 w-full rounded-lg" />
     </div>
   );
 }

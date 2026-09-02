@@ -43,39 +43,24 @@ export default function ServiceFaq({ categoryFaqs, limit, initialCategoryId }: S
         setOpenId((prev) => (prev === id ? null : id));
     };
 
-    // Keyed by the category's real `slug` (see CategoryServices' `id={category.slug}`
-    // and utils/data/navbar.ts's NAV_LINK_SECTION_IDS, the same source of truth) —
-    // not by array position, so each category always gets its own color no matter
-    // what order the backend returns categories in.
+    // Every category uses the same on-brand styling (Frame 158 theme —
+    // amber #FFC558 active fill, brown #904720 icon, espresso CTA); only
+    // the per-category icon differs. Keyed by the category's real `slug`
+    // (see CategoryServices' `id={category.slug}` / NAV_LINK_SECTION_IDS).
+    const THEME_TAB = {
+        color: "text-[#904720] bg-amber-50 border-amber-100",
+        activeClass: "bg-amber-400 text-[#25180F] shadow-sm",
+        buttonGradient: "from-[#25180F] to-[#3a2518] shadow-[#25180F]/25",
+    };
     const tabConfig: Record<
         string,
         { icon: typeof Sparkles; color: string; activeClass: string; buttonGradient: string }
     > = {
-        spa: {
-            icon: Sparkles,
-            color: "text-orange-600 bg-orange-50 border-orange-100",
-            activeClass: "bg-orange-500 text-white shadow-md shadow-orange-500/20",
-            buttonGradient: "from-orange-500 to-amber-400 shadow-orange-500/30",
-        },
-        massage: {
-            icon: ShieldCheck,
-            color: "text-emerald-600 bg-emerald-50 border-emerald-100",
-            activeClass: "bg-emerald-600 text-white shadow-md shadow-emerald-600/20",
-            buttonGradient: "from-emerald-500 to-emerald-400 shadow-emerald-500/30",
-        },
-        physio: {
-            icon: Activity,
-            color: "text-blue-600 bg-blue-50 border-blue-100",
-            activeClass: "bg-blue-600 text-white shadow-md shadow-blue-600/20",
-            buttonGradient: "from-blue-500 to-blue-400 shadow-blue-500/30",
-        },
+        spa: { icon: Sparkles, ...THEME_TAB },
+        massage: { icon: ShieldCheck, ...THEME_TAB },
+        physio: { icon: Activity, ...THEME_TAB },
     };
-    const DEFAULT_TAB_CONFIG = {
-        icon: HelpCircle,
-        color: "text-gray-500 bg-gray-50 border-gray-100",
-        activeClass: "bg-gray-800 text-white shadow-md shadow-gray-800/20",
-        buttonGradient: "from-gray-700 to-gray-600 shadow-gray-700/30",
-    };
+    const DEFAULT_TAB_CONFIG = { icon: HelpCircle, ...THEME_TAB };
     const configFor = (category: HomeCategory) => tabConfig[category.slug] ?? DEFAULT_TAB_CONFIG;
 
     if (!activeGroup) return null;

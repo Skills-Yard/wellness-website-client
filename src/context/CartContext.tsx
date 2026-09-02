@@ -664,8 +664,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     id: string,
     slotDate: string,
     slotStartTime: string,
-  ) => {
-    if (isCartSyncing) return;
+  ): Promise<void> => {
+    if (isCartSyncing) return Promise.resolve();
     // Computed explicitly, not read back from the cartItems state
     // variable — this function calls syncCart (via the cart-wide
     // schedule sync below) in the same tick as the setCartItems call
@@ -707,7 +707,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       !item.packageId ||
       !accessToken
     )
-      return;
+      return Promise.resolve();
     if (isPendingSync(item)) {
       // The "Select time slot" button in CartView is always clickable
       // (no isPendingSync gate there anymore) — this check is what
@@ -720,16 +720,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         "Skipped slot update — item hasn't synced with the server yet",
         id,
       );
-      return;
+      return Promise.resolve();
     }
 
     // Marks this cart row as "saving" so CartView can show a loading
     // state on its slot button until the request below settles —
-    // cleared in .finally() regardless of outcome.
+    // cleared in .finally() regardless of outcome. The returned promise
+    // lets the slot-picker modal stay open with its own "Updating…"
+    // state and close only once this settles.
     setUpdatingSlotItemIds((prev) => new Set(prev).add(id));
     beginSync();
 
-    cartApi
+    return cartApi
       .updateItem(
         // {itemId} in PATCH /cart/items/{itemId} is the service's
         // own id (serviceItemId) — the id of the service this cart
