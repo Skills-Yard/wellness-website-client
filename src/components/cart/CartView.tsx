@@ -64,9 +64,13 @@ const addMinutes = (hhmm: string, mins: number) => {
 const slotTimeRange = (start: string, duration: string) =>
   `${to12h(start)} - ${to12h(addMinutes(start, durationMinutes(duration)))}`;
 
-const slotDateLabel = (iso: string) => {
+const slotDateLabel = (value: string) => {
+  // `value` is usually a bare "YYYY-MM-DD" but, once the cart has
+  // re-synced with the server, arrives as a full ISO timestamp — take
+  // just the date part either way before parsing as local midnight.
+  const iso = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? value;
   const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
+  if (Number.isNaN(d.getTime())) return value;
   const date = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   return `${date}, ${d.toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase()}`;
 };

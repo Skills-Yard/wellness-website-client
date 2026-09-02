@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Calendar, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, Calendar, Headset, ShieldCheck, X } from "lucide-react";
 import { Dialog, DialogContent } from "@/src/components/ui/dialog";
 import { bookingApi, type AvailableSlot } from "@/src/services/bookingApi";
 import { formatBookingTime } from "@/src/components/bookings/bookingStatus";
@@ -22,6 +22,19 @@ const isoOf = (d: Date) =>
 
 const todayIso = () => isoOf(new Date());
 
+// A cart slot date reaches us in one of two shapes: the bare
+// "YYYY-MM-DD" this modal writes, or — once the cart has re-synced with
+// the server — a full ISO timestamp like "2026-09-02T00:00:00.000Z".
+// Everything below works off the bare calendar date, so collapse both
+// forms to that here (an unparseable value falls back to today).
+const toCalendarIso = (value?: string | null): string => {
+  if (!value) return todayIso();
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? todayIso() : isoOf(parsed);
+};
+
 const dayChip = (d: Date): DayChip => ({
   iso: isoOf(d),
   weekday: d.toLocaleDateString("en-IN", { weekday: "short" }),
@@ -38,9 +51,54 @@ const nextDays = (count: number) => {
   });
 };
 
+const addDays = (base: Date, n: number) => {
+  const d = new Date(base);
+  d.setDate(base.getDate() + n);
+  return d;
+};
+
 // Slot times come back as bare "HH:mm" — but pass any already-12h string
 // straight through so it isn't mangled by formatBookingTime.
 const to12h = (t: string) => (/[ap]m/i.test(t) ? t : formatBookingTime(t));
+
+// Resolve a slot's start ("HH:mm", or an already-12h "h:mm am/pm") to an
+// absolute Date on the given day so it can be compared against "now".
+const slotDateTime = (dateIso: string, time: string): Date | null => {
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})\s*([ap]m)?$/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const meridiem = match[3]?.toLowerCase();
+  if (meridiem === "pm" && hours < 12) hours += 12;
+  if (meridiem === "am" && hours === 12) hours = 0;
+  const d = new Date(`${dateIso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+};
+
+// A slot stops being bookable once its start is less than an hour away.
+const BOOKING_LEAD_MS = 60 * 60 * 1000;
+
+// Static reassurance list shown in the leftover space under the date
+// chips (desktop only — mobile has no such gap).
+const ASSURANCES = [
+  {
+    Icon: Award,
+    title: "Professional & verified expert",
+    desc: "Trained and experienced professionals.",
+  },
+  {
+    Icon: ShieldCheck,
+    title: "Hygiene & safety assured",
+    desc: "Clean tools, sanitized kits, safe service.",
+  },
+  {
+    Icon: Headset,
+    title: "At your convenience",
+    desc: "Service at your location, on your time.",
+  },
+];
 
 export default function SlotPickerModal({
   item,
@@ -48,13 +106,20 @@ export default function SlotPickerModal({
   onClose,
   onConfirm,
 }: SlotPickerModalProps) {
-  const [selectedDate, setSelectedDate] = useState(item.slotDate || todayIso());
+  const [selectedDate, setSelectedDate] = useState(() => toCalendarIso(item.slotDate));
   const [selectedStartTime, setSelectedStartTime] = useState<string | null>(
-    item.slotDate === selectedDate ? (item.slotStartTime ?? null) : null,
+    item.slotStartTime ?? null,
   );
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  // Keep the "has this slot expired?" checks live while the modal is open.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const canFetch = Boolean(item.serviceItemId && item.durationId && zoneId);
 
@@ -118,22 +183,42 @@ export default function SlotPickerModal({
 
   const handleConfirm = () => {
     if (!selectedStartTime) return;
+    const picked = slots.find((s) => s.startTime === selectedStartTime);
+    if (picked && isSlotExpired(picked)) return;
     onConfirm(selectedDate, selectedStartTime);
     onClose();
   };
 
-  // Only the next 4 days get their own chip — anything further out is a
-  // calendar pick away (the "More Dates" tile / the "Can't find a
-  // suitable date?" hint), rather than scrolling through a longer row.
-  const days = nextDays(4);
-  const dayList = days.some((d) => d.iso === selectedDate)
-    ? days
-    : [dayChip(new Date(`${selectedDate}T00:00:00`)), ...days];
+  // Only the next 4 days get their own chip. Anything further out is a
+  // calendar pick — and when the user picks one it is NOT appended as a
+  // new chip: the "More Dates" tile itself takes on that date (styled
+  // differently so it still reads as the calendar control). The calendar
+  // is capped to min today+4 … max today+7, so it can only reach the
+  // 3 days beyond the visible chips and never a date that's already one.
+  const dayList = nextDays(4);
+  const customDate = dayList.some((d) => d.iso === selectedDate)
+    ? null
+    : dayChip(new Date(`${selectedDate}T00:00:00`));
+  const calendarMin = isoOf(addDays(new Date(), 4));
+  const calendarMax = isoOf(addDays(new Date(), 7));
+
+  const isSelectedDateToday = selectedDate === todayIso();
+  const bookingCutoff = now.getTime() + BOOKING_LEAD_MS;
+  const isSlotExpired = (slot: AvailableSlot) => {
+    if (!isSelectedDateToday) return false;
+    const start = slotDateTime(selectedDate, slot.startTime);
+    return start != null && start.getTime() <= bookingCutoff;
+  };
+
+  // Expired slots (start already within the next hour) are dropped from
+  // the list entirely rather than shown disabled.
+  const visibleSlots = slots.filter((slot) => !isSlotExpired(slot));
 
   const activeSlot = slots.find((s) => s.startTime === selectedStartTime);
+  const activeSlotExpired = activeSlot ? isSlotExpired(activeSlot) : false;
   const rangeLabel = activeSlot
     ? `${to12h(activeSlot.startTime)} - ${to12h(activeSlot.endTime)}`
-    : item.slotStartTime && item.slotDate === selectedDate
+    : item.slotStartTime && toCalendarIso(item.slotDate) === selectedDate
       ? to12h(item.slotStartTime)
       : "Choose a time";
   const longDate = (() => {
@@ -224,11 +309,11 @@ export default function SlotPickerModal({
             popup width. Select Time has no such fixed requirement (its
             rows are just full-width buttons), so minmax(0,1fr) lets it
             take whatever's left and still shrink safely instead of
-            overflowing. items-stretch (not items-start) so the Select
-            Time column actually gets a real height to scroll within,
-            matching this row's own height instead of shrinking to its
-            (short) sibling's content height. */}
-        <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[400px_minmax(0,1fr)] md:items-stretch md:gap-6">
+            overflowing. items-start (not items-stretch) so the popup
+            only grows as tall as its content — the Select Time list
+            carries its own md:max-h + scroll instead of being sized by
+            the row. */}
+        <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[400px_minmax(0,1fr)] md:items-start md:gap-6">
           <div className="shrink-0">
             <h2 className="mt-6 mb-3 text-base font-medium text-black">Select Date</h2>
             <div className="flex gap-3 overflow-x-auto pb-1">
@@ -252,17 +337,43 @@ export default function SlotPickerModal({
                 );
               })}
 
-              <label className="relative flex h-25.75 w-16 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-black/5 bg-[#FBF7ED] text-center text-xs font-medium text-[#25180F] transition-colors duration-150 hover:border-[#D38516]/40 hover:bg-[#F7EBD3] active:scale-95">
-                <Calendar className="h-8 w-8 text-[#D38516]" />
-                More Dates
+              {/* "More Dates" calendar tile. Once a calendar date is picked
+                  (customDate set) this same tile shows that date instead —
+                  with a dashed amber ring + "More" caption so it's clearly
+                  still the calendar control, just holding a non-chip pick. */}
+              <label
+                className={`relative flex h-25.75 w-16 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg text-center text-xs font-medium transition-colors duration-150 active:scale-95 ${
+                  customDate
+                    ? "border-2 border-dashed border-[#D38516] bg-[#25180F] text-white"
+                    : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
+                }`}
+              >
+                {customDate ? (
+                  <>
+                    <span>{customDate.weekday}</span>
+                    <span className="text-xl font-semibold">{customDate.day}</span>
+                    <span>{customDate.month}</span>
+                    <span className="mt-0.5 flex items-center gap-0.5 text-[10px] text-[#F0B860]">
+                      <Calendar className="h-3 w-3" />
+                      More
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="h-8 w-8 text-[#D38516]" />
+                    More Dates
+                  </>
+                )}
                 {/* A plain click on a date input doesn't reliably pop the
                     native calendar open in every browser — showPicker()
                     forces it open on the same click instead of depending
-                    on that default behavior. */}
+                    on that default behavior. min/max cap the picker to the
+                    3 days past the visible chips (today+4 … today+7). */}
                 <input
                   type="date"
-                  min={todayIso()}
-                  value={selectedDate}
+                  min={calendarMin}
+                  max={calendarMax}
+                  value={customDate ? selectedDate : ""}
                   onClick={(event) => event.currentTarget.showPicker?.()}
                   onChange={(event) => event.target.value && pickDate(event.target.value)}
                   className="absolute inset-0 cursor-pointer opacity-0"
@@ -270,42 +381,36 @@ export default function SlotPickerModal({
               </label>
             </div>
 
-            {/* Desktop-only hint, matching the reference design — the
-                "More Dates" tile above already covers this on mobile, so
-                it isn't duplicated there. */}
-            <label className="relative mt-6 hidden cursor-pointer items-center gap-3 rounded-xl bg-[#FBF1E0] px-4 py-3.5 transition-colors hover:bg-[#F7E8CE] md:flex">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#D38516]">
-                <Calendar className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-black">
-                  Can&apos;t find a suitable date?
-                </span>
-                <span className="block text-xs text-[#666]">
-                  Check availability for more dates that suit you.
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-[#D38516]" />
-              {/* Same overlay + showPicker() as the "More Dates" input above. */}
-              <input
-                type="date"
-                min={todayIso()}
-                value={selectedDate}
-                onClick={(event) => event.currentTarget.showPicker?.()}
-                onChange={(event) => event.target.value && pickDate(event.target.value)}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
-            </label>
+            {/* Fills the space under the chips on desktop; mobile has no
+                gap here so it stays hidden there. */}
+            <div className="mt-6 hidden rounded-xl bg-[#FBF7ED] px-4 md:block">
+              {ASSURANCES.map(({ Icon, title, desc }, i) => (
+                <div
+                  key={title}
+                  className={`flex items-center gap-3 py-4 ${
+                    i > 0 ? "border-t border-black/5" : ""
+                  }`}
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#D38516]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-black">{title}</span>
+                    <span className="block text-xs text-[#666]">{desc}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Select Time — heading stays fixed (shrink-0), only the
-              status/slots content below it scrolls, within whatever
-              height md:items-stretch (desktop) or the flex-1 chain
-              (mobile) actually gives this column. */}
-          <div className="flex min-h-0 flex-1 flex-col md:h-full">
-            <h2 className="mt-6 mb-3 shrink-0 text-base font-medium text-black">Select Time</h2>
+              status/slots content below it scrolls. On desktop the list
+              is capped (md:max-h) so the popup stays compact; on mobile
+              the flex-1 chain fills the full-screen sheet instead. */}
+          <div className="mt-6 flex min-h-0 flex-1 flex-col md:mt-0">
+            <h2 className="mb-3 shrink-0 text-base font-medium text-black md:mt-6">Select Time</h2>
 
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto md:max-h-105">
               {!canFetch ? (
                 <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
                   {zoneId
@@ -316,13 +421,15 @@ export default function SlotPickerModal({
                 <p className="py-6 text-center text-xs text-gray-400">Loading available slots…</p>
               ) : error ? (
                 <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
-              ) : slots.length === 0 ? (
+              ) : visibleSlots.length === 0 ? (
                 <p className="py-6 text-center text-xs text-gray-400">
-                  No slots available on this date — try another day.
+                  {slots.length === 0
+                    ? "No slots available on this date — try another day."
+                    : "No more slots available today — try another day."}
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {slots.map((slot) => {
+                  {visibleSlots.map((slot) => {
                     const isAvailable = slot.netAvailable > 0;
                     const isSelected = selectedStartTime === slot.startTime;
                     return (
@@ -374,7 +481,7 @@ export default function SlotPickerModal({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={!selectedStartTime}
+          disabled={!selectedStartTime || activeSlotExpired}
           className="relative w-full cursor-pointer rounded-lg bg-[#25180F] py-3.5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#3a2518] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:opacity-100 disabled:active:scale-100 md:text-base"
         >
           Confirm Time Slot
