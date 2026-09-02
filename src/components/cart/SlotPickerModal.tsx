@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Award, Calendar, Headset, ShieldCheck, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Award,
+  Calendar,
+  ChevronDown,
+  Headset,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { Dialog, DialogContent } from "@/src/components/ui/dialog";
 import { bookingApi, type AvailableSlot } from "@/src/services/bookingApi";
 import { formatBookingTime } from "@/src/components/bookings/bookingStatus";
@@ -80,6 +89,10 @@ const slotDateTime = (dateIso: string, time: string): Date | null => {
 // A slot stops being bookable once its start is less than an hour away.
 const BOOKING_LEAD_MS = 60 * 60 * 1000;
 
+// How far out dates can be picked. The first chipCount days are chips;
+// the rest live in the "More dates" dropdown.
+const BOOKING_WINDOW_DAYS = 7;
+
 // Static reassurance list shown in the leftover space under the date
 // chips (desktop only — mobile has no such gap).
 const ASSURANCES = [
@@ -114,12 +127,37 @@ export default function SlotPickerModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [dateMenuOpen, setDateMenuOpen] = useState(false);
+  // Mobile shows 3 date chips (+ next 4 in the More-dates dropdown); md:
+  // up shows 4 (+ next 3). This modal is client-only (ssr:false in
+  // CartView) so the initializer can safely read matchMedia — no
+  // hydration flash.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window === "undefined" || window.matchMedia("(min-width: 768px)").matches,
+  );
 
   // Keep the "has this slot expired?" checks live while the modal is open.
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setIsDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!dateMenuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDateMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [dateMenuOpen]);
 
   const canFetch = Boolean(item.serviceItemId && item.durationId && zoneId);
 
@@ -189,18 +227,19 @@ export default function SlotPickerModal({
     onClose();
   };
 
-  // Only the next 4 days get their own chip. Anything further out is a
-  // calendar pick — and when the user picks one it is NOT appended as a
-  // new chip: the "More Dates" tile itself takes on that date (styled
-  // differently so it still reads as the calendar control). The calendar
-  // is capped to min today+4 … max today+7, so it can only reach the
-  // 3 days beyond the visible chips and never a date that's already one.
-  const dayList = nextDays(4);
+  // Only the first few days get their own chip (4 on desktop, 3 on
+  // mobile). The rest of the 7-day booking window lives in the "More
+  // dates" dropdown on the last tile — 3 entries on desktop, 4 on
+  // mobile. Picking one doesn't append a chip: the More tile itself
+  // shows that date (styled as the dropdown control).
+  const chipCount = isDesktop ? 4 : 3;
+  const dayList = nextDays(chipCount);
+  const moreDates = Array.from({ length: BOOKING_WINDOW_DAYS - chipCount }, (_, i) =>
+    dayChip(addDays(new Date(), chipCount + i)),
+  );
   const customDate = dayList.some((d) => d.iso === selectedDate)
     ? null
     : dayChip(new Date(`${selectedDate}T00:00:00`));
-  const calendarMin = isoOf(addDays(new Date(), 4));
-  const calendarMax = isoOf(addDays(new Date(), 7));
 
   const isSelectedDateToday = selectedDate === todayIso();
   const bookingCutoff = now.getTime() + BOOKING_LEAD_MS;
@@ -242,20 +281,20 @@ export default function SlotPickerModal({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="top-0 left-0 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-white p-0 ring-0 sm:max-w-none md:top-1/2 md:left-1/2 md:h-auto md:max-h-[85vh] md:w-full md:max-w-4xl md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border md:border-slate-100 md:shadow-2xl"
+        className="top-0 left-0 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-white p-0 ring-0 sm:max-w-none md:top-1/2 md:left-1/2 md:h-[85vh] md:max-h-184 md:w-full md:max-w-4xl md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border md:border-slate-100 md:shadow-2xl"
       >
-      <div className="flex items-center justify-between gap-3 px-4 pt-5 pb-3 md:px-8 md:pt-6">
+      <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 md:px-8 md:pt-6 md:pb-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
             aria-label="Back"
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[#EDEDED] text-black transition-colors hover:bg-stone-50 active:scale-95"
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[#EDEDED] text-black transition-colors hover:bg-stone-50 active:scale-95 md:h-8 md:w-8"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </button>
           <div>
-            <h1 className="text-xl font-semibold text-black">Select Date &amp; Time</h1>
+            <h1 className="text-base font-semibold text-black md:text-xl">Select Date &amp; Time</h1>
             {/* Desktop-only subtitle — mobile keeps the original single-line header. */}
             <p className="mt-1 hidden text-sm text-gray-500 md:block">
               Choose your preferred slot to continue
@@ -283,18 +322,18 @@ export default function SlotPickerModal({
           again). The service card and Select Date section are shrink-0:
           fixed at their natural size, never scrolling. */}
       <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 md:px-8 md:pb-6">
-        <div className="flex shrink-0 gap-3 rounded-lg border border-black/5 p-3 shadow-[3px_2px_16px_rgba(0,0,0,0.04)]">
-          <div className="relative h-21.5 w-29.75 shrink-0 overflow-hidden rounded-lg bg-stone-100">
+        <div className="flex shrink-0 gap-2.5 rounded-lg border border-black/5 p-2.5 shadow-[3px_2px_16px_rgba(0,0,0,0.04)] md:gap-3 md:p-3">
+          <div className="relative h-16 w-22 shrink-0 overflow-hidden rounded-lg bg-stone-100 md:h-21.5 md:w-29.75">
             <Image src={item.image} alt={item.title} fill className="object-cover" />
           </div>
-          <div className="min-w-0 flex-1 pt-1">
-            <p className="truncate text-sm font-medium text-black">{item.title}</p>
-            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-[#25180F]">
+          <div className="min-w-0 flex-1 pt-0.5 md:pt-1">
+            <p className="truncate text-xs font-medium text-black md:text-sm">{item.title}</p>
+            <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#25180F] md:mt-1.5 md:text-xs">
               {rangeLabel}
               <span className="h-1 w-1 rounded-full bg-[#666]" />
               <span className="text-[#666]">At home</span>
             </p>
-            <p className="mt-1.5 text-sm font-medium text-[#D38516]">{longDate}</p>
+            <p className="mt-1 text-xs font-medium text-[#D38516] md:mt-1.5 md:text-sm">{longDate}</p>
           </div>
         </div>
 
@@ -302,97 +341,152 @@ export default function SlotPickerModal({
             image); below md: this is a flex-col instead (Select Date
             fixed on top, Select Time — heading fixed, only its list
             scrolls — filling the rest of the popup's height beneath it).
-            The date column is a fixed 400px, not an even 1fr/1fr split —
-            it needs a hard minimum (5 chips × 64px + 4 × 12px gaps =
-            368px) to show all 4 dates + "More Dates" without clipping/
-            scrolling, which a 50/50 split couldn't guarantee at every
-            popup width. Select Time has no such fixed requirement (its
-            rows are just full-width buttons), so minmax(0,1fr) lets it
-            take whatever's left and still shrink safely instead of
-            overflowing. items-start (not items-stretch) so the popup
-            only grows as tall as its content — the Select Time list
-            carries its own md:max-h + scroll instead of being sized by
-            the row. */}
-        <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[400px_minmax(0,1fr)] md:items-start md:gap-6">
+            The date column needs a hard minimum (5 tiles × 64px + 4 ×
+            12px gaps = 368px) to show all 4 dates + "More Dates" without
+            clipping — 400px on lg:, a tighter 340px on md: (tablet) where
+            the row will scroll horizontally if it must. Select Time takes
+            whatever's left via minmax(0,1fr).
+            grid-template-rows:minmax(0,1fr) + items-stretch pins the row
+            to the popup's fixed inner height, so the Select Time list
+            scrolls within it and the popup height never grows with the
+            slot count. The Select Date column itself never scrolls — the
+            reassurance block below the chips only renders when the
+            viewport is tall enough to show all of it (see its variant),
+            so the column always fits as-is. */}
+        <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[340px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:items-stretch md:gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
           <div className="shrink-0">
-            <h2 className="mt-6 mb-3 text-base font-medium text-black">Select Date</h2>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {dayList.map((d) => {
-                const selected = d.iso === selectedDate;
-                return (
-                  <button
-                    key={d.iso}
-                    type="button"
-                    onClick={() => pickDate(d.iso)}
-                    className={`flex h-25.75 w-16 shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-lg text-sm font-medium transition-all duration-150 active:scale-95 ${
-                      selected
-                        ? "bg-[#25180F] text-white hover:bg-[#3a2518]"
-                        : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
-                    }`}
-                  >
-                    <span>{d.weekday}</span>
-                    <span className="text-xl">{d.day}</span>
-                    <span>{d.month}</span>
-                  </button>
-                );
-              })}
+            <h2 className="mt-4 mb-2 text-sm font-medium text-black md:mt-6 md:mb-3 md:text-base">Select Date</h2>
+            {/* relative wrapper: the dropdown is a sibling of the chip
+                row (not inside it), so md:overflow-x-auto on the row
+                can't clip it. Mobile: 3 chips + the More tile share the
+                row full-width (flex-1, no scroll) so they fit any phone;
+                md: up they revert to a fixed 64px width and scroll if the
+                column can't hold all 5. */}
+            <div className="relative">
+              <div className="flex gap-2 pb-1 md:gap-3 md:overflow-x-auto">
+                {dayList.map((d) => {
+                  const selected = d.iso === selectedDate;
+                  return (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      onClick={() => pickDate(d.iso)}
+                      className={`flex h-22 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg text-xs font-medium transition-all duration-150 active:scale-95 md:h-25.75 md:w-16 md:flex-none md:gap-2.5 md:text-sm ${
+                        selected
+                          ? "bg-[#25180F] text-white hover:bg-[#3a2518]"
+                          : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
+                      }`}
+                    >
+                      <span>{d.weekday}</span>
+                      <span className="text-lg md:text-xl">{d.day}</span>
+                      <span>{d.month}</span>
+                    </button>
+                  );
+                })}
 
-              {/* "More Dates" calendar tile. Once a calendar date is picked
-                  (customDate set) this same tile shows that date instead —
-                  with a dashed amber ring + "More" caption so it's clearly
-                  still the calendar control, just holding a non-chip pick. */}
-              <label
-                className={`relative flex h-25.75 w-16 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg text-center text-xs font-medium transition-colors duration-150 active:scale-95 ${
-                  customDate
-                    ? "border-2 border-dashed border-[#D38516] bg-[#25180F] text-white"
-                    : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
-                }`}
-              >
-                {customDate ? (
-                  <>
-                    <span>{customDate.weekday}</span>
-                    <span className="text-xl font-semibold">{customDate.day}</span>
-                    <span>{customDate.month}</span>
-                    <span className="mt-0.5 flex items-center gap-0.5 text-[10px] text-[#F0B860]">
-                      <Calendar className="h-3 w-3" />
-                      More
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Calendar className="h-8 w-8 text-[#D38516]" />
-                    More Dates
-                  </>
-                )}
-                {/* A plain click on a date input doesn't reliably pop the
-                    native calendar open in every browser — showPicker()
-                    forces it open on the same click instead of depending
-                    on that default behavior. min/max cap the picker to the
-                    3 days past the visible chips (today+4 … today+7). */}
-                <input
-                  type="date"
-                  min={calendarMin}
-                  max={calendarMax}
-                  value={customDate ? selectedDate : ""}
-                  onClick={(event) => event.currentTarget.showPicker?.()}
-                  onChange={(event) => event.target.value && pickDate(event.target.value)}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
-              </label>
+                {/* "More dates" tile — toggles a dropdown of just the
+                    remaining bookable dates (no full native calendar with
+                    everything-else disabled). Once one is picked
+                    (customDate set) this tile shows that date, dashed
+                    amber, with a "More" caption so it still reads as the
+                    dropdown control. */}
+                <button
+                  type="button"
+                  onClick={() => setDateMenuOpen((open) => !open)}
+                  aria-haspopup="listbox"
+                  aria-expanded={dateMenuOpen}
+                  className={`relative flex h-22 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg text-center text-[11px] font-medium transition-colors duration-150 active:scale-95 md:h-25.75 md:w-16 md:flex-none md:text-xs ${
+                    customDate
+                      ? "border-2 border-dashed border-[#D38516] bg-[#25180F] text-white"
+                      : "border border-black/5 bg-[#FBF7ED] text-[#25180F] hover:border-[#D38516]/40 hover:bg-[#F7EBD3]"
+                  } ${dateMenuOpen ? "ring-2 ring-[#D38516]/40" : ""}`}
+                >
+                  {customDate ? (
+                    <>
+                      <span>{customDate.weekday}</span>
+                      <span className="text-lg font-semibold md:text-xl">{customDate.day}</span>
+                      <span>{customDate.month}</span>
+                      <span className="-mt-1 flex items-center gap-0.5 text-[10px] text-[#F0B860]">
+                        <ChevronDown className="h-3 w-3" />
+                        More
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="h-6 w-6 text-[#D38516] md:h-8 md:w-8" />
+                      More Dates
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {dateMenuOpen && (
+                <>
+                  {/* click-anywhere-else backdrop (no portal / listeners) */}
+                  <button
+                    type="button"
+                    aria-label="Close date list"
+                    onClick={() => setDateMenuOpen(false)}
+                    className="fixed inset-0 z-20 cursor-default"
+                  />
+                  <div
+                    role="listbox"
+                    aria-label="More dates"
+                    className="absolute top-full right-0 z-30 mt-2 w-60 overflow-hidden rounded-xl border border-black/10 bg-white p-1 shadow-xl"
+                  >
+                    <p className="px-3 py-2 text-[11px] font-medium tracking-wide text-[#999] uppercase">
+                      More dates
+                    </p>
+                    {moreDates.map((md) => {
+                      const active = md.iso === selectedDate;
+                      const full = new Date(`${md.iso}T00:00:00`).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      });
+                      return (
+                        <button
+                          key={md.iso}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => {
+                            pickDate(md.iso);
+                            setDateMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                            active
+                              ? "bg-[#FBF1E0] text-[#25180F]"
+                              : "text-[#25180F] hover:bg-[#F7EBD3]"
+                          }`}
+                        >
+                          <span className="flex flex-col">
+                            <span className="text-[11px] text-[#888]">{md.weekday}</span>
+                            <span className="text-sm font-medium">{full}</span>
+                          </span>
+                          {active && <span className="h-2 w-2 shrink-0 rounded-full bg-[#D38516]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* Fills the space under the chips on desktop; mobile has no
-                gap here so it stays hidden there. */}
-            <div className="mt-6 hidden rounded-xl bg-[#FBF7ED] px-4 md:block">
+            {/* Fills the space under the chips — but only on a wide (md:)
+                AND tall (>=850px) viewport, so it's shown in full or not
+                at all and the Select Date column never needs to scroll.
+                Below that height it's dropped entirely. */}
+            <div className="mt-5 hidden rounded-xl bg-[#FBF7ED] px-4 [@media(min-width:768px)_and_(min-height:850px)]:block">
               {ASSURANCES.map(({ Icon, title, desc }, i) => (
                 <div
                   key={title}
-                  className={`flex items-center gap-3 py-4 ${
+                  className={`flex items-center gap-3 py-3.5 ${
                     i > 0 ? "border-t border-black/5" : ""
                   }`}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#D38516]">
-                    <Icon className="h-5 w-5" />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#D38516]">
+                    <Icon className="h-4.5 w-4.5" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-black">{title}</span>
@@ -404,13 +498,13 @@ export default function SlotPickerModal({
           </div>
 
           {/* Select Time — heading stays fixed (shrink-0), only the
-              status/slots content below it scrolls. On desktop the list
-              is capped (md:max-h) so the popup stays compact; on mobile
-              the flex-1 chain fills the full-screen sheet instead. */}
-          <div className="mt-6 flex min-h-0 flex-1 flex-col md:mt-0">
-            <h2 className="mb-3 shrink-0 text-base font-medium text-black md:mt-6">Select Time</h2>
+              status/slots list below it scrolls. The column is pinned to
+              the popup's inner height by the grid row, so the list
+              scrolls within it and never stretches the popup. */}
+          <div className="mt-3 flex min-h-0 flex-1 flex-col md:mt-0 md:h-full">
+            <h2 className="mb-2 shrink-0 text-sm font-medium text-black md:mt-6 md:mb-3 md:text-base">Select Time</h2>
 
-            <div className="min-h-0 flex-1 overflow-y-auto md:max-h-105">
+            <div className="min-h-0 flex-1 overflow-y-auto">
               {!canFetch ? (
                 <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
                   {zoneId
@@ -418,17 +512,17 @@ export default function SlotPickerModal({
                     : "Your service zone is unavailable — refresh your location and try again."}
                 </p>
               ) : isLoading ? (
-                <p className="py-6 text-center text-xs text-gray-400">Loading available slots…</p>
+                <p className="py-4 text-center text-xs text-gray-400 md:py-6">Loading available slots…</p>
               ) : error ? (
                 <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
               ) : visibleSlots.length === 0 ? (
-                <p className="py-6 text-center text-xs text-gray-400">
+                <p className="py-4 text-center text-xs text-gray-400 md:py-6">
                   {slots.length === 0
                     ? "No slots available on this date — try another day."
                     : "No more slots available today — try another day."}
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {visibleSlots.map((slot) => {
                     const isAvailable = slot.netAvailable > 0;
                     const isSelected = selectedStartTime === slot.startTime;
@@ -438,7 +532,7 @@ export default function SlotPickerModal({
                         type="button"
                         disabled={!isAvailable}
                         onClick={() => setSelectedStartTime(slot.startTime)}
-                        className={`flex w-full items-center justify-between rounded-lg border px-3.5 py-4 text-left transition-all duration-150 ${
+                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left transition-all duration-150 md:px-3.5 md:py-4 ${
                           isSelected
                             ? "border-[#D38516]/40 bg-[radial-gradient(120%_120%_at_60%_0%,#FDE8CF_0%,rgba(255,226,173,0)_60%,#FDE8CF_100%)]"
                             : "border-black/8 bg-white"
@@ -448,20 +542,20 @@ export default function SlotPickerModal({
                             : "cursor-not-allowed opacity-50"
                         }`}
                       >
-                        <span className="flex items-center gap-3">
+                        <span className="flex items-center gap-2.5 md:gap-3">
                           <span
-                            className={`flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full border-2 ${
+                            className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 md:h-5.5 md:w-5.5 ${
                               isSelected ? "border-[#D38516]" : "border-black/30"
                             }`}
                           >
-                            {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-[#D38516]" />}
+                            {isSelected && <span className="h-2 w-2 rounded-full bg-[#D38516] md:h-2.5 md:w-2.5" />}
                           </span>
-                          <span className="text-sm font-medium text-black">
+                          <span className="text-xs font-medium text-black md:text-sm">
                             {to12h(slot.startTime)} - {to12h(slot.endTime)}
                           </span>
                         </span>
                         <span
-                          className={`text-xs font-medium ${
+                          className={`text-[11px] font-medium md:text-xs ${
                             isAvailable ? "text-[#208900]" : "text-gray-400"
                           }`}
                         >
@@ -477,12 +571,12 @@ export default function SlotPickerModal({
         </div>
       </div>
 
-      <div className="border-t border-black/6 p-4 md:px-8 md:py-5">
+      <div className="border-t border-black/6 p-3 md:px-8 md:py-5">
         <button
           type="button"
           onClick={handleConfirm}
           disabled={!selectedStartTime || activeSlotExpired}
-          className="relative w-full cursor-pointer rounded-lg bg-[#25180F] py-3.5 text-sm font-medium text-white transition-all duration-150 hover:bg-[#3a2518] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:opacity-100 disabled:active:scale-100 md:text-base"
+          className="relative w-full cursor-pointer rounded-lg bg-[#25180F] py-3 text-[13px] font-medium text-white transition-all duration-150 hover:bg-[#3a2518] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:opacity-100 disabled:active:scale-100 md:py-3.5 md:text-base"
         >
           Confirm Time Slot
           {/* Desktop-only trailing arrow, matching the reference design. */}
