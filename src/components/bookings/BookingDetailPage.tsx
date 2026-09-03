@@ -21,7 +21,7 @@ import {
   Star,
   User,
 } from "lucide-react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import {
   useBooking,
   useCancelBooking,
@@ -247,7 +247,6 @@ export default function BookingDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-10">
-      <ToastContainer position="top-center" />
       <div className="mx-auto max-w-2xl bg-white px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-3">
           <button

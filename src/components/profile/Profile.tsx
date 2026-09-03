@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import {
   ArrowLeft,
   Bell,
@@ -12,7 +12,9 @@ import {
   Camera,
   CircleDashed,
   Clock,
+  Gift,
   Headset,
+  Info,
   Loader2,
   LogOut,
   Mail,
@@ -25,6 +27,7 @@ import {
   RefreshCw,
   Settings,
   ShieldCheck,
+  Tag,
   Ticket,
   User as UserIcon,
   UserCircle2,
@@ -58,6 +61,15 @@ import AddressBook from "./AddressBook";
 import DevicesTable from "./DevicesTable";
 import ImageCropModal from "./ImageCropModal";
 import type { AddressFormValues } from "./EditAddressModal";
+import MobileHub from "./mobile/MobileHub";
+import MobilePersonalInfo from "./mobile/MobilePersonalInfo";
+import MobileAddresses from "./mobile/MobileAddresses";
+import MobilePaymentMethods from "./mobile/MobilePaymentMethods";
+import MobileReviews from "./mobile/MobileReviews";
+import MobileHelp from "./mobile/MobileHelp";
+import MobileSettings from "./mobile/MobileSettings";
+import { MobileComingSoon } from "./mobile/shared";
+import type { MobilePage } from "./mobile/types";
 
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -353,6 +365,10 @@ export default function ProfilePage() {
       Notification.permission === "granted",
   );
   const [isTogglingPush, setIsTogglingPush] = useState(false);
+  // Phone-only (<md) screen state — independent of `section`, which still
+  // drives the tablet/desktop sidebar experience unchanged.
+  const [mobilePage, setMobilePage] = useState<MobilePage>("hub");
+  const [settingsComingSoon, setSettingsComingSoon] = useState<string | null>(null);
 
   const { data: profile, isLoading } = useMe();
   const updateProfile = useUpdateProfile();
@@ -399,6 +415,7 @@ export default function ProfilePage() {
       onSuccess: () => {
         toast.success("Profile updated.");
         setProfileModalOpen(false);
+        setMobilePage("hub");
       },
       onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't update your profile."),
     });
@@ -595,7 +612,6 @@ export default function ProfilePage() {
   if (!isLogin) {
     return (
       <div className="min-h-screen bg-[#FAF8F4]">
-        <ToastContainer position="top-center" />
         <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#FBF7ED] text-amber-600">
             <UserCircle2 className="h-12 w-12" strokeWidth={1.5} />
@@ -624,8 +640,100 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] pb-24 lg:h-screen lg:overflow-hidden lg:pb-0">
-      <ToastContainer position="top-center" />
+      {/* Phone-only (<md) — a menu hub plus its own drill-in screens,
+          entirely separate from the tablet/desktop tree below. */}
+      <div className="md:hidden">
+        {/* pb-20 (80px) is just enough to clear the fixed BottomNav (~72px
+            incl. its own bottom-4 offset) so the last row of a long screen
+            never sits half-hidden behind it, without padding out short
+            screens (like the hub) into an unnecessary extra scroll. */}
+        <div className="mx-auto max-w-md px-4 pt-4 pb-20">
+          {isLoading || !profile ? (
+            <div className="space-y-3">
+              <Skeleton className="h-31 w-full rounded-lg" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {mobilePage === "hub" && (
+                <MobileHub
+                  profile={profile}
+                  photoUrl={photoUrl}
+                  initials={initials(profile.name)}
+                  isUploadingPhoto={isUploadingPhoto}
+                  onChangePhoto={() => fileInputRef.current?.click()}
+                  onNavigate={setMobilePage}
+                  onLogout={handleLogout}
+                  isLoggingOut={isLoggingOut}
+                  onBack={() => router.push("/")}
+                />
+              )}
+              {mobilePage === "personal" && (
+                <MobilePersonalInfo
+                  profile={profile}
+                  isSaving={updateProfile.isPending}
+                  onBack={() => setMobilePage("hub")}
+                  onSave={handleSaveProfile}
+                />
+              )}
+              {mobilePage === "addresses" && (
+                <MobileAddresses
+                  addresses={addresses}
+                  isSaving={isAddressSaving}
+                  onBack={() => setMobilePage("hub")}
+                  onCreate={handleCreateAddress}
+                  onUpdate={handleUpdateAddress}
+                  onSetDefault={handleSetDefault}
+                />
+              )}
+              {mobilePage === "payments" && (
+                <MobilePaymentMethods onBack={() => setMobilePage("hub")} />
+              )}
+              {mobilePage === "reviews" && <MobileReviews onBack={() => setMobilePage("hub")} />}
+              {mobilePage === "offers" && (
+                <MobileComingSoon
+                  title="Offers & Coupons"
+                  icon={Tag}
+                  onBack={() => setMobilePage("hub")}
+                />
+              )}
+              {mobilePage === "refer" && (
+                <MobileComingSoon
+                  title="Refer & Earn"
+                  icon={Gift}
+                  onBack={() => setMobilePage("hub")}
+                />
+              )}
+              {mobilePage === "help" && <MobileHelp onBack={() => setMobilePage("hub")} />}
+              {mobilePage === "settings" &&
+                (settingsComingSoon ? (
+                  <MobileComingSoon
+                    title={settingsComingSoon}
+                    icon={Info}
+                    onBack={() => setSettingsComingSoon(null)}
+                  />
+                ) : (
+                  <MobileSettings
+                    preferences={preferences}
+                    isSavingPreferences={updatePreference.isPending}
+                    onTogglePreference={handleTogglePref}
+                    pushEnabled={pushEnabled}
+                    isTogglingPush={isTogglingPush}
+                    onTogglePush={(c) => void handleTogglePush(c)}
+                    onOpenComingSoon={setSettingsComingSoon}
+                    onBack={() => setMobilePage("hub")}
+                  />
+                ))}
+            </>
+          )}
+        </div>
+        <BottomNav onHomeClick={() => router.push("/")} />
+      </div>
 
+      {/* Tablet/desktop (≥md) — unchanged multi-section dashboard. */}
+      <div className="hidden md:block lg:h-full">
       <div className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:px-8 lg:py-6">
         {/* Page header */}
         <div className="mb-4 flex shrink-0 items-center gap-3">
@@ -947,6 +1055,7 @@ export default function ProfilePage() {
 
       <div className="block lg:hidden">
         <BottomNav onHomeClick={() => router.push("/")} />
+      </div>
       </div>
 
       {profileModalOpen && profile && (

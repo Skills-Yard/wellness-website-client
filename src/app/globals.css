@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "react-toastify/dist/ReactToastify.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -175,6 +176,67 @@ body {
   .field {
     @apply mt-1 w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3 py-2 text-xs text-stone-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500;
   }
+}
+
+/* ── Toast notifications — styled like a native/FCM push banner ────────
+   Desktop: a compact card pinned to the top-right, sliding in from the
+   right, cards stack downward like OS notification centers.
+   Mobile: full-width, pinned to the top, sliding down like a heads-up
+   notification. See AppToastContainer for the position/transition logic
+   that picks between the two. */
+.Toastify__toast-container {
+  padding: 0;
+  width: auto;
+  max-width: min(380px, calc(100vw - 1.5rem));
+}
+.Toastify__toast-container--top-right {
+  top: 1rem;
+  right: 1rem;
+}
+.Toastify__toast-container--top-center {
+  top: 0.75rem;
+  width: calc(100vw - 1.5rem);
+}
+.Toastify__toast {
+  min-height: unset;
+  align-items: flex-start;
+  padding: 0.75rem 0.75rem;
+  margin-bottom: 0.625rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+  box-shadow:
+    0 12px 28px rgba(37, 24, 15, 0.14),
+    0 2px 6px rgba(37, 24, 15, 0.06);
+  font-family: inherit;
+}
+.Toastify__toast-body {
+  padding: 0;
+  margin: 0;
+  gap: 0.625rem;
+  align-items: flex-start;
+  color: #25180f;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.Toastify__toast-icon {
+  width: 1.25rem;
+  margin-top: 0.0625rem;
+  margin-inline-end: 0;
+}
+.Toastify__close-button {
+  align-self: flex-start;
+  color: #25180f;
+  opacity: 0.35;
+}
+.Toastify__close-button:hover {
+  opacity: 0.75;
+}
+.Toastify__progress-bar {
+  height: 2px;
+  background: currentColor;
+  opacity: 0.5;
 }
 
 
