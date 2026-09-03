@@ -148,18 +148,6 @@ function Field({
   );
 }
 
-function OptBadge({ opted }: { opted: boolean }) {
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        opted ? "bg-[#E7F4E4] text-[#208900]" : "bg-red-50 text-red-500"
-      }`}
-    >
-      {opted ? "Opted In" : "Opted Out"}
-    </span>
-  );
-}
-
 const editBtnCls =
   "inline-flex items-center gap-1.5 rounded-lg border border-amber-600/40 px-3 py-1.5 text-xs font-semibold text-amber-600 transition-colors hover:bg-[#FBF1E0]";
 
@@ -279,7 +267,8 @@ function EditProfileModal({
   );
 }
 
-// ── Edit Preferences modal ───────────────────────────────────────────
+// ── Preferences panel (used in Overview + its own section) ────────────
+// Toggles apply immediately — there's no separate "Edit Preferences" step.
 const PREF_ROWS: { key: keyof MePreferences; label: string; hint: string; icon: typeof Bell }[] = [
   { key: "whatsappOptIn", label: "WhatsApp Notifications", hint: "Booking updates over WhatsApp", icon: MessageCircle },
   { key: "emailOptIn", label: "Email Notifications", hint: "Receipts and confirmations by email", icon: Mail },
@@ -287,104 +276,36 @@ const PREF_ROWS: { key: keyof MePreferences; label: string; hint: string; icon: 
   { key: "promotionalOptIn", label: "Promotional Updates", hint: "Occasional offers and deals", icon: Megaphone },
 ];
 
-function EditPreferencesModal({
+function PreferencesPanel({
   preferences,
   isSaving,
-  onClose,
-  onSave,
+  onToggle,
 }: {
   preferences: MePreferences;
   isSaving: boolean;
-  onClose: () => void;
-  onSave: (v: MePreferences) => void;
-}) {
-  const [draft, setDraft] = useState<MePreferences>(preferences);
-  return (
-    <Dialog open onOpenChange={(open) => !open && !isSaving && onClose()}>
-      <DialogContent
-        showCloseButton={false}
-        className="top-0 left-0 flex h-full max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-white p-0 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-black/10 sm:shadow-2xl"
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-black/5 px-5 py-4">
-          <h2 className="text-base font-semibold text-espresso">Edit Preferences</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            aria-label="Close"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[#666] hover:bg-stone-100 disabled:opacity-40"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="divide-y divide-black/5 px-5">
-          {PREF_ROWS.map(({ key, label, hint, icon: Icon }) => (
-            <div key={key} className="flex items-center justify-between gap-3 py-4">
-              <div className="flex min-w-0 items-start gap-2.5">
-                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brown" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-espresso">{label}</p>
-                  <p className="text-xs text-[#999]">{hint}</p>
-                </div>
-              </div>
-              <Switch
-                checked={draft[key]}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
-              />
-            </div>
-          ))}
-        </div>
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-black/5 px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            className="rounded-lg border border-black/10 px-5 py-2.5 text-sm font-medium text-[#666] hover:bg-stone-50 disabled:opacity-40"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => !isSaving && onSave(draft)}
-            disabled={isSaving}
-            className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
-          >
-            {isSaving ? "Saving…" : "Save Preferences"}
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── Preferences panel (used in Overview + its own section) ────────────
-function PreferencesPanel({
-  preferences,
-  onEdit,
-}: {
-  preferences: MePreferences;
-  onEdit: () => void;
+  onToggle: (key: keyof MePreferences, value: boolean) => void;
 }) {
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Bell className="h-4.5 w-4.5 text-brown" />
-          <h2 className="text-base font-semibold text-espresso">Preferences</h2>
-        </div>
-        <button type="button" onClick={onEdit} className={editBtnCls}>
-          <Pencil className="h-3.5 w-3.5" />
-          Edit Preferences
-        </button>
+      <div className="mb-4 flex items-center gap-2">
+        <Bell className="h-4.5 w-4.5 text-brown" />
+        <h2 className="text-base font-semibold text-espresso">Preferences</h2>
       </div>
       <div className="divide-y divide-black/5">
-        {PREF_ROWS.map(({ key, label, icon: Icon }) => (
+        {PREF_ROWS.map(({ key, label, hint, icon: Icon }) => (
           <div key={key} className="flex items-center justify-between gap-3 py-3.5">
-            <span className="flex items-center gap-2.5 text-sm text-espresso">
-              <Icon className="h-4 w-4 text-brown" />
-              {label}
-            </span>
-            <OptBadge opted={preferences[key]} />
+            <div className="flex min-w-0 items-start gap-2.5">
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brown" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-espresso">{label}</p>
+                <p className="text-xs text-[#999]">{hint}</p>
+              </div>
+            </div>
+            <Switch
+              checked={preferences[key]}
+              disabled={isSaving}
+              onCheckedChange={(v) => onToggle(key, v)}
+            />
           </div>
         ))}
       </div>
@@ -421,7 +342,6 @@ export default function ProfilePage() {
     return (raw && map[raw]) || "overview";
   });
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [prefsModalOpen, setPrefsModalOpen] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -536,14 +456,31 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSavePrefs = (v: MePreferences) => {
-    updatePreference.mutate(v, {
-      onSuccess: () => {
-        toast.success("Preferences updated.");
-        setPrefsModalOpen(false);
+  const handleTogglePref = (key: keyof MePreferences, value: boolean) => {
+    // The switch itself flips instantly (useUpdateNotificationPreference
+    // patches the cache optimistically) — this toast just lets the user
+    // know the change is still being saved in the background, and confirms
+    // or reverts once the request settles.
+    const toastId = toast.loading("Saving changes…");
+    updatePreference.mutate(
+      { ...preferences, [key]: value },
+      {
+        onSuccess: () =>
+          toast.update(toastId, {
+            render: "Preferences updated.",
+            type: "success",
+            isLoading: false,
+            autoClose: 2000,
+          }),
+        onError: (e) =>
+          toast.update(toastId, {
+            render: e instanceof Error ? e.message : "Couldn't update preferences.",
+            type: "error",
+            isLoading: false,
+            autoClose: 3000,
+          }),
       },
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't update preferences."),
-    });
+    );
   };
 
   const toNum = (s: string) => {
@@ -686,12 +623,12 @@ export default function ProfilePage() {
   const meta = SECTION_META[section];
 
   return (
-    <div className="min-h-screen bg-[#FAF8F4] pb-24 lg:pb-10">
+    <div className="min-h-screen bg-[#FAF8F4] pb-24 lg:h-screen lg:overflow-hidden lg:pb-0">
       <ToastContainer position="top-center" />
 
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+      <div className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:px-8 lg:py-6">
         {/* Page header */}
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-4 flex shrink-0 items-center gap-3">
           <button
             type="button"
             onClick={() => router.push("/")}
@@ -705,9 +642,9 @@ export default function ProfilePage() {
           </h1>
         </div>
 
-        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-6">
-          {/* Sidebar */}
-          <aside className="lg:sticky lg:top-4 lg:self-start">
+        <div className="lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-6">
+          {/* Sidebar — stays put; only the content pane scrolls */}
+          <aside className="lg:h-full lg:overflow-hidden">
             <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0">
               {NAV.map(({ id, label, icon: Icon }) => {
                 const active = section === id;
@@ -756,8 +693,8 @@ export default function ProfilePage() {
             </button>
           </aside>
 
-          {/* Content */}
-          <div className="mt-4 space-y-5 lg:mt-0">
+          {/* Content — the only scrollable pane on desktop */}
+          <div className="mt-4 space-y-5 lg:mt-0 lg:h-full lg:overflow-y-auto lg:pr-1 lg:pb-6">
             {isLoading || !profile ? (
               <Card>
                 <div className="flex flex-col gap-5 sm:flex-row">
@@ -906,7 +843,8 @@ export default function ProfilePage() {
                     <Card>
                       <PreferencesPanel
                         preferences={preferences}
-                        onEdit={() => setPrefsModalOpen(true)}
+                        isSaving={updatePreference.isPending}
+                        onToggle={handleTogglePref}
                       />
                     </Card>
                   </div>
@@ -941,7 +879,8 @@ export default function ProfilePage() {
                   <Card>
                     <PreferencesPanel
                       preferences={preferences}
-                      onEdit={() => setPrefsModalOpen(true)}
+                      isSaving={updatePreference.isPending}
+                      onToggle={handleTogglePref}
                     />
                   </Card>
                 )}
@@ -1016,14 +955,6 @@ export default function ProfilePage() {
           isSaving={updateProfile.isPending}
           onClose={() => setProfileModalOpen(false)}
           onSave={handleSaveProfile}
-        />
-      )}
-      {prefsModalOpen && (
-        <EditPreferencesModal
-          preferences={preferences}
-          isSaving={updatePreference.isPending}
-          onClose={() => setPrefsModalOpen(false)}
-          onSave={handleSavePrefs}
         />
       )}
       {cropFile && (

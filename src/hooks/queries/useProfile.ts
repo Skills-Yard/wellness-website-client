@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userApi } from "@/src/services/userApi";
-import type { UpdateProfileBody } from "@/src/types/auth";
+import type { UpdateProfileBody, UserProfile } from "@/src/types/auth";
 import type { NotificationPreference } from "@/src/types/notification";
 import { queryKeys } from "./queryKeys";
 
@@ -59,22 +59,41 @@ export function useUpdateNotificationPreference() {
       return userApi.updateNotificationPreference(body, accessToken);
     },
     // Optimistic: the toggle should feel instant, not wait on a round trip.
+    // The profile dashboard's switches read preferences off /users/me, not
+    // the standalone notification-preference query, so both caches need the
+    // same optimistic patch (and the same rollback if the request fails).
     onMutate: async (body) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.notificationPreference() });
-      const previous = queryClient.getQueryData<NotificationPreference>(
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: queryKeys.notificationPreference() }),
+        queryClient.cancelQueries({ queryKey: queryKeys.me() }),
+      ]);
+
+      const previousPreference = queryClient.getQueryData<NotificationPreference>(
         queryKeys.notificationPreference(),
       );
-      if (previous) {
+      if (previousPreference) {
         queryClient.setQueryData(queryKeys.notificationPreference(), {
-          ...previous,
+          ...previousPreference,
           ...body,
         });
       }
-      return { previous };
+
+      const previousMe = queryClient.getQueryData<UserProfile>(queryKeys.me());
+      if (previousMe?.preferences) {
+        queryClient.setQueryData(queryKeys.me(), {
+          ...previousMe,
+          preferences: { ...previousMe.preferences, ...body },
+        });
+      }
+
+      return { previousPreference, previousMe };
     },
     onError: (_err, _body, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(queryKeys.notificationPreference(), context.previous);
+      if (context?.previousPreference) {
+        queryClient.setQueryData(queryKeys.notificationPreference(), context.previousPreference);
+      }
+      if (context?.previousMe) {
+        queryClient.setQueryData(queryKeys.me(), context.previousMe);
       }
     },
     onSettled: () => {
