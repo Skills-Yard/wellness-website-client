@@ -30,6 +30,21 @@ export const NAV_LINK_SECTION_IDS: Record<NavLinkType, string> = {
     Physiotherapy: "physio",
 };
 
+// Desktop marketing nav — anchors to sections on the rebuilt desktop
+// landing page (components/home/landing/*). Deliberately separate from
+// NAV_LINKS above (the category quick-jumps, still used by the mobile tree
+// via useMobileHome): different targets, different lifecycle. Each
+// `sectionId` must match a landing <section id="…">.
+export type DesktopNavLink = { label: string; sectionId: string };
+
+export const DESKTOP_NAV_LINKS: DesktopNavLink[] = [
+    { label: "Why Us", sectionId: "why-choose-us" },
+    { label: "About Us", sectionId: "expert-care" },
+    { label: "Our Services", sectionId: "our-services" },
+    { label: "How It Works", sectionId: "how-it-works" },
+    { label: "Reviews", sectionId: "reviews" },
+];
+
 export const LOCATIONS = [
     "H37, Block H- Saket, Delhi",
     "Connaught Place, New Delhi",

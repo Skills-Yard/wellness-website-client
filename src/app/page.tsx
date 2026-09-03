@@ -1,17 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/src/context/CartContext";
 
-import ServiceFaq, { CategoryFaqGroup } from "@/src/components/home/faq-accordion";
-import Header from "@/src/components/home/header";
-import Inspotlight from "@/src/components/home/in-spotlight";
-import WallPanel from "@/src/components/home/wall-panel";
-import CategoryServices from "@/src/components/home/category-services";
-import MobileHome from "@/src/components/home/mobile";
 import HomeSkeleton from "@/src/components/home/home-skeleton";
+import DesktopLanding from "@/src/components/home/landing";
+import MobileHome from "@/src/components/home/mobile";
 import { getVisibleElementById } from "@/src/utils/scroll";
 
 // Only ever rendered when the resolved zone isn't servable — never needed
@@ -22,7 +18,6 @@ const LocationUnavailableModal = dynamic(
 );
 
 import { useHomeDetails } from "@/src/hooks/queries/useHomeDetails";
-import { useServicesByCategory } from "@/src/hooks/useServicesByCategory";
 
 export default function Home() {
   const router = useRouter();
@@ -35,12 +30,7 @@ export default function Home() {
     refetch: refetchHomeDetails,
   } = useHomeDetails(zoneId, { enabled: !!zoneId });
 
-  // Every category row's services come from the single call above, grouped
-  // by categoryId — no per-category fetching anymore.
-  const servicesForCategory = useServicesByCategory(homeDetails);
-
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [categoryFaqs, setCategoryFaqs] = useState<CategoryFaqGroup[]>([]);
 
   // Hides the browser's page scrollbar while on the home route only — added
   // here (not globals.css/layout.tsx) so other routes, like the detail
@@ -63,16 +53,6 @@ export default function Home() {
     setShowLocationModal(!zoneExists);
   }, [isZoneLoading, zoneExists]);
 
-  const handleFaqsChange = useCallback(
-    (category: CategoryFaqGroup["category"], faqs: CategoryFaqGroup["faqs"]) => {
-      setCategoryFaqs((current) => {
-        const withoutCategory = current.filter((group) => group.category.id !== category.id);
-        return faqs.length > 0 ? [...withoutCategory, { category, faqs }] : withoutCategory;
-      });
-    },
-    [],
-  );
-
   /*
    * Loading state — covers both resolving the zone and, once that succeeds,
    * fetching home details for it. Kept as one combined check so there's no
@@ -84,13 +64,12 @@ export default function Home() {
     (zoneExists && (isHomeLoading || (!homeError && !homeDetails)));
 
   // Cross-page nav-link deep link (see Navbar's handleNavChange): clicking
-  // Massage/Spa/Physiotherapy from any other page lands here with
-  // `?tab=<id>` once the catalog (and therefore the section it points to)
-  // is actually on the page. MobileHome's own useMobileHome hook already
-  // handles this for the mobile tree; this mirrors it for the desktop one.
-  // Reads window.location.search directly rather than useSearchParams so
-  // this stays a plain client-only effect with no Suspense-boundary
-  // requirement.
+  // a nav link from any other page lands here with `?tab=<sectionId>` once
+  // the landing page (and therefore the section it points to) is actually
+  // on the page. MobileHome's own useMobileHome hook already handles this
+  // for the mobile tree; this mirrors it for the desktop one. Reads
+  // window.location.search directly rather than useSearchParams so this
+  // stays a plain client-only effect with no Suspense-boundary requirement.
   useEffect(() => {
     if (isLoadingCatalog) return;
     const tab = new URLSearchParams(window.location.search).get("tab");
@@ -173,38 +152,7 @@ export default function Home() {
         {/* ───────── DESKTOP ───────── */}
 
         <div className="hidden md:block">
-          <Header homeDetails={homeDetails} zoneId={zoneId} />
-
-          <Inspotlight
-            campaigns={homeDetails.promotionalCampaigns}
-            categories={homeDetails.categories}
-          />
-
-          {homeDetails.categories.map((category, index) => {
-            const highlightBanner = homeDetails.promotionalCampaigns
-              .filter(
-                (campaign) =>
-                  (campaign.type === "HIGHLIGHT_BANNER" || campaign.type === "HIGHLIGHT_VIDEO") &&
-                  campaign.categoryId === category.id &&
-                  campaign.isActive !== false,
-              )
-              .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
-
-            return (
-            <div key={category.id}>
-              {highlightBanner && (
-                <WallPanel campaign={highlightBanner} category={category} priority={index === 0} />
-              )}
-              <CategoryServices
-                category={category}
-                services={servicesForCategory(category.id)}
-                onFaqsChange={handleFaqsChange}
-              />
-            </div>
-            );
-          })}
-
-          <ServiceFaq categoryFaqs={categoryFaqs} limit={5} />
+          <DesktopLanding homeDetails={homeDetails} />
         </div>
 
         {/* ───────── MOBILE ───────── */}

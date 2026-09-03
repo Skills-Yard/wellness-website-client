@@ -1,26 +1,29 @@
+// "How it works" steps — Figma "Frame 396". Consumed only by
+// components/home/landing/how-it-works.
+// TODO(figma-asset): replace image paths with the real circular step art.
 export const stepsData = [
   {
     id: "step-1",
-    title: "Book your session",
-    description: "Choose your preferred treatment, date, and time through our easy-to-use online booking system.",
-    image: "/images/detail/section4.png", // Replace with your actual image paths
+    title: "Choose a Service",
+    description: "Pick the service you need",
+    image: "/images/wellness_facial.png",
   },
   {
     id: "step-2",
-    title: "We arrive & set up",
-    description: "Our professional therapists arrive 15 minutes early with a premium massage bed, fresh linens, and oils to transform your space.",
-    image: "/images/detail/section4.png",
+    title: "Select Date & Time",
+    description: "Choose a slot that suits you",
+    image: "/images/slider_spa_room.png",
   },
   {
     id: "step-3",
-    title: "Enjoy your spa experience",
-    description: "Disconnect and relax. We tailor the pressure, focus areas, and ambiance to your exact preferences.",
-    image: "/images/detail/section4.png",
+    title: "We Arrive",
+    description: "Our experts reach your doorstep",
+    image: "/images/massage_swedish.png",
   },
   {
     id: "step-4",
-    title: "Seamless pack up",
-    description: "We quietly clean up and pack our equipment, leaving your home exactly as we found it so you can continue relaxing.",
-    image: "/images/detail/section4.png",
+    title: "Relax & Rejuvenate",
+    description: "Enjoy professional care at home",
+    image: "/images/slider_facial_glow.png",
   },
 ];

@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import "swiper/css";
 import { HomeCategory, HomeServiceItem } from "@/src/types/serviceTypes";
 import { HomeFaq, ServiceItem } from "@/src/types/serviceItemTypes";
-import { DynamicService } from "@/src/utils/types/spabooking";
+import ServiceCard from "@/src/components/home/service-card";
+import { toDynamicService } from "@/src/utils/service/card";
 import SubDetailPopUp from "@/src/components/detail/[slug]/LazySubDetailPopUp";
 
 type CategoryServicesProps = {
@@ -22,70 +22,6 @@ type CategoryServicesProps = {
     faqs: HomeFaq[],
   ) => void;
 };
-
-const formatPrice = (price: ServiceItem["price"] | null) => {
-  if (typeof price === "number") return `₹${price.toLocaleString("en-IN")}`;
-  return price ?? "₹0";
-};
-
-const formatRating = (rating: ServiceItem["averageRating"] | ServiceItem["rating"]) => {
-  if (typeof rating === "number") return rating.toFixed(1);
-  return rating ?? "0";
-};
-
-// Real bookings count (distinct from totalReviews, the rating count) —
-// always shown, defaulting to 0 whether it's genuinely 0 or just missing.
-// Compact past 1000 ("12k+ bookings") to match the card's reference design;
-// below that the raw count reads fine on its own ("5 bookings").
-const formatBookingsLabel = (bookings: ServiceItem["totalBookingsCount"]) => {
-  const count = bookings ?? 0;
-  return count >= 1000
-    ? `${Math.floor(count / 1000)}k+ bookings`
-    : `${count} bookings`;
-};
-
-const getLowestDurationPrice = (service: ServiceItem) => {
-  const prices = (service.durations ?? [])
-    .map((duration) => duration.price)
-    .filter((price): price is string | number => price !== null && price !== undefined && price !== "")
-    .map(Number)
-    .filter((price) => Number.isFinite(price));
-
-  return prices.length > 0 ? Math.min(...prices) : service.price;
-};
-
-// The catalog API already embeds each service item's own durations/packages/
-// addOns (see getServiceItems) — no extra fetch needed to open the detail
-// popup right here, just reshape the one ServiceItem SubDetailPopUp expects.
-const toDynamicService = (service: ServiceItem, categoryName: string): DynamicService => ({
-  id: service.id,
-  title: service.cardTitle ?? service.title ?? service.name ?? "Wellness service",
-  price: formatPrice(getLowestDurationPrice(service)),
-  originalPrice:
-    service.originalPrice === null || service.originalPrice === undefined
-      ? null
-      : formatPrice(service.originalPrice),
-  duration: service.duration ?? "",
-  media: service.media ?? service.thumbnailKey ?? "/images/hero-fallback.jpg",
-  rating: service.averageRating ?? service.rating ?? "—",
-  reviews: service.totalReviews ?? service.reviews ?? 0,
-  totalBookingsCount: service.totalBookingsCount ?? 0,
-  category: categoryName,
-  subCategoryId: service.subCategoryId,
-  tag: service.tag,
-  isSpotlight: service.isSpotlight,
-  features: service.features ?? [],
-  overview: service.overview,
-  procedureSteps: service.procedureSteps,
-  itemsUsed: service.itemsUsed,
-  skilledPros: service.skilledPros,
-  prePostCare: service.prePostCare,
-  disclaimer: service.disclaimer,
-  whatsIncluded: service.whatsIncluded,
-  faqs: service.faqs,
-  trustedLoved: service.trustedLoved,
-  customReviews: service.customReviews,
-});
 
 export default function CategoryServices({
   category,
@@ -182,70 +118,18 @@ export default function CategoryServices({
           onResize={syncEdges}
           className="w-full"
         >
-          {services.map((service) => {
-            const image = service.media ?? service.thumbnailKey;
-            const lowestDurationPrice = getLowestDurationPrice(service);
-
-            return (
-              <SwiperSlide key={service.id} className="h-auto">
-                {/* Opens the detail popup in place — same as the category
-                    page's own service cards (see Serviceslist.tsx) — rather
-                    than navigating there, so no href/Link here. */}
-                <div
-                  onClick={() => setSelectedService(service)}
-                  className="group block h-full cursor-pointer"
-                >
-                  <div className="relative mb-[7px] aspect-[168/97] w-full overflow-hidden rounded-[7px] bg-stone-100">
-                    {image ? (
-                      <Image
-                        src={image}
-                        alt={service.cardTitle ?? service.title ?? service.name ?? category.name}
-                        fill
-                        sizes="(max-width: 639px) 45vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 23vw, 19vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <span className="flex h-full items-center justify-center text-2xl font-bold text-amber-500">
-                        {(service.cardTitle ?? service.title ?? service.name ?? category.name).charAt(0)}
-                      </span>
-                    )}
-                  </div>
-                  {/* min-h reserves 2 lines so the rating row below lands
-                      at the same height across every card in the row
-                      regardless of title length — items-end bottom-aligns
-                      the title inside that reserved box so a one-line
-                      title sits right against the rating row instead of
-                      leaving a gap under it (the empty half-line goes
-                      above the title, against the image, instead). */}
-                  <div className="flex min-h-[32px] items-end">
-                    <h3 className="line-clamp-2 text-[14px] font-medium leading-[116%] text-black transition-colors group-hover:text-amber-600">
-                      {service.cardTitle ?? service.title ?? service.name ?? "Wellness service"}
-                    </h3>
-                  </div>
-                  {/* One row — star, rating, then bookings in parens — not
-                      two stacked lines. totalBookingsCount is the real
-                      bookings field, same one SectionHero.tsx reads once
-                      this service's popup is open (distinct from
-                      totalReviews, the rating count). Always rendered, no
-                      >0 gate — 0 shows as "(0 bookings)" rather than the
-                      line disappearing. */}
-                  <div className="mt-[6px] flex items-center gap-1 text-[12px] leading-[116%] text-[#666]">
-                    <Star className="h-3.5 w-3.5 shrink-0 fill-[#ffb318] text-[#ff9d00]" />
-                    <span className="font-medium text-black">
-                      {formatRating(service.averageRating ?? service.rating)}
-                    </span>
-                    <span>({formatBookingsLabel(service.totalBookingsCount)})</span>
-                  </div>
-                  <div className="mt-[6px] flex items-center gap-1 text-[14px] font-medium leading-[116%] text-black">
-                    <span>Starts at {formatPrice(lowestDurationPrice)}</span>
-                    <span className="text-[12px] text-[#666] line-through">
-                      {formatPrice(service.originalPrice)}
-                    </span>
-                  </div>
-                </div>
-              </SwiperSlide>
-            );
-          })}
+          {services.map((service) => (
+            <SwiperSlide key={service.id} className="h-auto">
+              {/* Opens the detail popup in place — same as the category
+                  page's own service cards (see Serviceslist.tsx) — rather
+                  than navigating there. */}
+              <ServiceCard
+                service={service}
+                categoryName={category.name}
+                onSelect={setSelectedService}
+              />
+            </SwiperSlide>
+          ))}
         </Swiper>
 
         {/* Desktop-only — hidden on touch breakpoints (md and below), where
