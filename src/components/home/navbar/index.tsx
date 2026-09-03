@@ -242,10 +242,10 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Service search — centered in the gap between logo and links. */}
-        <div className="flex flex-1">
+        {/* Service search — sits after the logo, with a gap. */}
+        <div className="ml-6 shrink-0 lg:ml-10">
           <div
-            className="relative mx-auto hidden w-full max-w-[220px] md:block"
+            className="relative hidden w-[190px] md:block lg:w-[220px]"
             ref={searchRef}
           >
             <div
@@ -319,31 +319,30 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Marketing links — centered in the bar (Figma "Frame 52"). */}
-        <div className="hidden shrink-0 items-center lg:flex">
-          {DESKTOP_NAV_LINKS.map((link) => (
-            <button
-              key={link.sectionId}
-              type="button"
-              onClick={() => handleNavChange(link.sectionId)}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-2.5 text-[12px] font-medium transition-colors focus-visible:outline-none cursor-pointer",
-                activeSectionId === link.sectionId
-                  ? "bg-brand/10 text-brand-strong"
-                  : "text-[#25180F] hover:bg-black/[0.04]",
-              )}
-            >
-              {link.label}
-              {link.sectionId === "our-services" && (
-                <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />
-              )}
-            </button>
-          ))}
+        {/* Marketing links — centered in the space between the search and
+            the right group (not the whole bar). */}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="hidden items-center lg:flex">
+            {DESKTOP_NAV_LINKS.map((link) => (
+              <button
+                key={link.sectionId}
+                type="button"
+                onClick={() => handleNavChange(link.sectionId)}
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-3 py-2.5 text-[12px] font-medium transition-colors focus-visible:outline-none cursor-pointer",
+                  activeSectionId === link.sectionId
+                    ? "bg-brand/10 text-brand-strong"
+                    : "text-[#25180F] hover:bg-black/[0.04]",
+                )}
+              >
+                {link.label}
+                {link.sectionId === "our-services" && (
+                  <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* Spacer that balances the search's flex-1 so the links sit
-            centered in the bar. */}
-        <div className="hidden flex-1 lg:block" />
 
         {/* Right group (Figma "Frame 442"). */}
         <div className="flex shrink-0 items-center gap-3">
