@@ -5,128 +5,202 @@ import { HomeCampaign, HomeCategory } from "@/src/types/serviceTypes";
 import CampaignVideo from "@/src/components/media/CampaignVideo";
 
 type WallPanelProps = {
-    campaign: HomeCampaign;
-    category: HomeCategory;
-    /** Only the first category's banner is actually above-the-fold — every
-     *  later one should lazy-load like any other below-fold image instead
-     *  of forcing eager load for all of them. Defaults to false so any
-     *  other caller doesn't silently regress to eager-loading. */
-    priority?: boolean;
+  campaign: HomeCampaign;
+  category: HomeCategory;
+  /** Only the first category's banner is actually above-the-fold — every
+   *  later one should lazy-load like any other below-fold image instead
+   *  of forcing eager load for all of them. Defaults to false so any
+   *  other caller doesn't silently regress to eager-loading. */
+  priority?: boolean;
 };
 
-export default function WallPanel({ campaign, category, priority = false }: WallPanelProps) {
-    const image = campaign.cdnUrl ?? campaign.s3Key;
-    const isVideo = campaign.mediaType === "VIDEO";
-    const categoryName = `${category.name} ${category.slug}`.toLowerCase();
-    const isPhysio = categoryName.includes("physio");
-    const isSpa = !isPhysio && (categoryName.includes("spa") || categoryName.includes("wellness") || categoryName.includes("beauty"));
+export default function WallPanel({
+  campaign,
+  category,
+  priority = false,
+}: WallPanelProps) {
+  const image = campaign.cdnUrl ?? campaign.s3Key;
+  const isVideo = campaign.mediaType === "VIDEO";
+  const categoryName = `${category.name} ${category.slug}`.toLowerCase();
+  const isPhysio = categoryName.includes("physio");
+  const isSpa =
+    !isPhysio &&
+    (categoryName.includes("spa") ||
+      categoryName.includes("wellness") ||
+      categoryName.includes("beauty"));
 
-    // Styling only (position/color/font) — text content itself now comes from the
-    // campaign's own fields below, with these as fallbacks for older/incomplete
-    // campaigns rather than per-category copy.
-    const mobileTheme = isPhysio
-        ? {
-            eyebrowFallback: "Relief that helps you move",
-            titleFallback: "Move better. Feel stronger.",
-            accent: "#204390",
-            badgeClass: "left-6 top-[33px] bg-white text-black",
-            copyClass: "left-6 top-[64px] text-black/75",
-            titleClass: "left-6 top-[82px] max-w-[145px] leading-5",
-            buttonClass: "left-6 top-[134px]",
+  // Per-category copy fallbacks + mobile-banner colors. The background wash is
+  // chosen separately in `bannerBackground` below and is intentionally shared.
+  const variant = isPhysio
+    ? {
+        eyebrowFallback: "Relief that helps you move",
+        titleFallback: "Move better. Feel stronger.",
+        accent: "#204390",
+        badgeBg: "#FFFFFF",
+        badgeColor: "#000000",
+        eyebrowColor: "rgba(0, 0, 0, 0.74)",
+        // Mobile-banner offsets (see Figma frame per category)
+        badgeTop: "top-[33px]",
+        eyebrowTop: "top-[64px]",
+        titleTop: "top-[82px]",
+        ctaPos: "bottom-[18%]",
+        titleClass: "leading-[19px] line-clamp-2",
+      }
+    : isSpa
+      ? {
+          eyebrowFallback: "Taking care of your",
+          titleFallback: "Wellbeing.",
+          accent: "#904720",
+          badgeBg: "#EBDAC4",
+          badgeColor: "#904720",
+          eyebrowColor: "#000000",
+          badgeTop: "top-[39px]",
+          eyebrowTop: "top-[75px]",
+          titleTop: "top-[92px]",
+          ctaPos: "bottom-[10%]",
+          titleClass: "leading-[19px] line-clamp-2",
         }
-        : isSpa
-            ? {
-                eyebrowFallback: "Taking care of your",
-                titleFallback: "Wellbeing.",
-                accent: "#904720",
-                badgeClass: "left-6 top-[39px] bg-[#EBDAC4] text-[#904720]",
-                copyClass: "left-6 top-[75px] text-black",
-                titleClass: "left-6 top-[92px] max-w-[145px] leading-[22px]",
-                buttonClass: "left-6 top-[127px]",
-            }
-            : {
-                eyebrowFallback: "Release tension",
-                titleFallback: "Restore your balance",
-                accent: "#904720",
-                badgeClass: "left-6 top-[39px] bg-[#EBDAC4] text-[#904720]",
-                copyClass: "left-6 top-[75px] text-black",
-                titleClass: "left-6 top-[92px] max-w-[140px] leading-[22px]",
-                buttonClass: "left-6 bottom-[16px]",
-            };
+      : {
+          eyebrowFallback: "Release tension",
+          titleFallback: "Restore balance.",
+          accent: "#904720",
+          badgeBg: "#EBDAC4",
+          badgeColor: "#904720",
+          eyebrowColor: "#000000",
+          badgeTop: "top-[39px]",
+          eyebrowTop: "top-[75px]",
+          titleTop: "top-[92px]",
+          ctaPos: "bottom-[10%]",
+          titleClass: "leading-[19px] line-clamp-2",
+        };
 
-    if (!image) return null;
+  // Each category gets its own wash: physio cool grey-blue, spa warm/pink,
+  // massage the neutral cream default.
+  const bannerBackground = isPhysio
+    ? "radial-gradient(88.83% 430.76% at 11.17% 78.28%, #FFFFFF 0%, rgba(120, 148, 170, 0.7) 40.99%, #E5E8E9 100%)"
+    : isSpa
+      ? "radial-gradient(86.87% 419.05% at 13.13% 69.33%, #FFF5EB 0%, rgba(255, 217, 197, 0.76) 40.99%, rgba(255, 219, 219, 0.98) 100%)"
+      : "radial-gradient(86.87% 419.05% at 13.13% 69.33%, #FEFEFE 0%, #F5DABA 40.99%, #FDE8CF 100%)";
 
-    const badgeText = `Featured ${category.name}`.toUpperCase();
-    const eyebrowText = campaign.subtitle ?? mobileTheme.eyebrowFallback;
-    const titleText = campaign.title ?? mobileTheme.titleFallback;
-    const ctaText = campaign.ctaText ?? "Explore Plans";
-    const href = campaign.ctaDeeplink?.startsWith("/")
-        ? campaign.ctaDeeplink
-        : `/detail/${category.slug}?categoryId=${encodeURIComponent(category.id)}`;
+  if (!image) return null;
 
-    return (
-        <section className="w-full py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
-            <div className="relative h-[198px] overflow-hidden rounded-[8px] md:hidden">
-                {isVideo ? (
-                    <CampaignVideo src={image} className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                    <Image
-                        src={image}
-                        alt={campaign.title ?? titleText}
-                        fill
-                        sizes="100vw"
-                        className="absolute inset-0 object-cover"
-                        priority={priority}
-                    />
-                )}
-                <span className={`absolute z-10 flex h-5 max-w-[calc(100%-48px)] items-center truncate rounded-[4px] border border-black/[0.09] px-2 text-[10px] font-semibold leading-3 ${mobileTheme.badgeClass}`}>
-                    {badgeText}
-                </span>
-                <p className={`absolute z-10 max-w-[calc(100%-48px)] truncate text-xs font-medium leading-[15px] ${mobileTheme.copyClass}`}>
-                    {eyebrowText}
-                </p>
-                <h2 className={`absolute z-10 truncate font-serif text-xl font-normal ${mobileTheme.titleClass}`} style={{ color: mobileTheme.accent }}>
-                    {titleText}
-                </h2>
-                <Link
-                    href={href}
-                    className={`absolute z-10 flex h-[31px] w-[108px] items-center justify-center gap-1 rounded-[8px] bg-[#25180F] px-2 text-xs font-medium text-white ${mobileTheme.buttonClass}`}
-                >
-                    <span className="truncate">{ctaText}</span>
-                    <span className="shrink-0 text-base leading-none">›</span>
-                </Link>
-            </div>
+  const eyebrowText = campaign.subtitle ?? variant.eyebrowFallback;
+  const titleText = campaign.title ?? variant.titleFallback;
+  // Mobile banner: keep two words on the first line, everything else wraps below.
+  const titleWords = titleText.trim().split(/\s+/);
+  const mobileTitleLines =
+    titleWords.length > 2
+      ? [titleWords.slice(0, 2).join(" "), titleWords.slice(2).join(" ")]
+      : [titleText];
+  const badgeText = `Featured ${category.name}`.toUpperCase();
+  const ctaText = campaign.ctaText ?? "Explore Plans";
+  const href = campaign.ctaDeeplink?.startsWith("/")
+    ? campaign.ctaDeeplink
+    : `/detail/${category.slug}?categoryId=${encodeURIComponent(category.id)}`;
 
-            <div className="relative hidden min-h-[350px] overflow-hidden rounded-tr-xl rounded-bl-xl md:flex md:flex-row items-center p-4 sm:p-8 md:p-10">
-                {isVideo ? (
-                    <CampaignVideo src={image} className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                    <Image
-                        src={image}
-                        alt={campaign.title ?? titleText}
-                        fill
-                        sizes="100vw"
-                        className="absolute inset-0 object-cover"
-                        priority={priority}
-                    />
-                )}
+  return (
+    <section className="w-full py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+      {/* Mobile banner — badge, serif accent title & CTA on the left, media boxed on the right */}
+      <div
+        className="relative h-[198px] overflow-hidden rounded-[8px] md:hidden"
+        style={{ background: bannerBackground }}
+      >
+        <div className="absolute right-2 top-1/2 h-[118px] w-[176px] max-w-[48%] -translate-y-1/2">
+          {isVideo ? (
+            <CampaignVideo
+              src={image}
+              className="h-full w-full object-contain object-right"
+            />
+          ) : (
+            <Image
+              src={image}
+              alt={campaign.title ?? titleText}
+              fill
+              sizes="48vw"
+              className="object-contain object-right"
+              priority={priority}
+            />
+          )}
+        </div>
 
-                {/* Text content */}
-                <div className="relative z-10 flex-1 flex flex-col items-start justify-center space-y-5 max-sm:space-y-4 py-4 md:py-6 pl-2 sm:pl-4 max-w-full">
-                    <h2 className="w-full truncate text-xl sm:text-4xl lg:text-[40px] font-extrabold text-neutral-900 leading-tight tracking-tight max-w-lg">
-                        {titleText}
-                    </h2>
+        <span
+          className={`absolute left-6 ${variant.badgeTop} z-10 flex h-5 max-w-[calc(100%-48px)] items-center truncate rounded-[4px] border border-black/[0.09] px-2 text-[10px] font-semibold leading-3`}
+          style={{
+            backgroundColor: variant.badgeBg,
+            color: variant.badgeColor,
+          }}
+        >
+          {badgeText}
+        </span>
 
-                    <p className="w-full truncate text-base sm:text-lg text-neutral-800 font-medium tracking-wide max-w-lg">
-                        {eyebrowText}
-                    </p>
-                    <Link href={href} className="max-w-full">
-                        <Button className="max-w-full bg-[#111111] text-white hover:bg-black font-bold text-sm h-12 px-8 rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
-                            <span className="truncate">{ctaText}</span>
-                        </Button>
-                    </Link>
-                </div>
-            </div>
-        </section>
-    );
+        <p
+          className={`absolute left-6 ${variant.eyebrowTop} z-10 max-w-[52%] truncate text-[11px] font-medium leading-[14px]`}
+          style={{ color: variant.eyebrowColor }}
+        >
+          {eyebrowText}
+        </p>
+
+        <h2
+          className={`absolute left-6 ${variant.titleTop} z-10 max-w-[52%] font-serif text-lg font-normal ${variant.titleClass}`}
+          style={{ color: variant.accent }}
+        >
+          {mobileTitleLines.map((line, i) => (
+            <span key={i} className="block">
+              {line}
+            </span>
+          ))}
+        </h2>
+
+        <Link
+          href={href}
+          className={`absolute left-6 ${variant.ctaPos} z-10 flex h-[31px] w-[108px] items-center justify-center gap-1 rounded-[8px] bg-[#25180F] px-2 text-xs font-medium text-white`}
+        >
+          <span className="truncate">{ctaText}</span>
+          <span className="shrink-0 text-base leading-none">›</span>
+        </Link>
+      </div>
+
+      {/* Desktop banner — text left, media box right */}
+      <div
+        className="relative hidden md:flex flex-row items-center gap-4 sm:gap-6 overflow-hidden rounded-[8px] p-6 sm:p-8 md:p-10 min-h-[350px]"
+        style={{ background: bannerBackground }}
+      >
+        {/* Text content — left */}
+        <div className="relative z-10 flex-1 flex flex-col items-start justify-center space-y-4 sm:space-y-6 py-2 md:py-6 max-w-full">
+          <h2 className="w-full truncate text-3xl sm:text-[44px] lg:text-5xl font-extrabold text-neutral-900 leading-tight tracking-tight max-w-xl">
+            {titleText}
+          </h2>
+
+          <p className="w-full truncate text-lg sm:text-xl lg:text-2xl text-neutral-800 font-medium tracking-wide max-w-xl">
+            {eyebrowText}
+          </p>
+
+          <Link href={href} className="max-w-full">
+            <Button className="max-w-full bg-[#111111] text-white hover:bg-black font-bold text-sm sm:text-base h-11 sm:h-13 px-6 sm:px-9 rounded-lg sm:rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
+              <span className="truncate">{ctaText}</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* Media — right center, sized like a box */}
+        <div className="relative z-10 flex w-1/2 max-w-[560px] h-[280px] shrink-0 items-center justify-center">
+          {isVideo ? (
+            <CampaignVideo
+              src={image}
+              className="h-full w-full object-contain object-right"
+            />
+          ) : (
+            <Image
+              src={image}
+              alt={campaign.title ?? titleText}
+              fill
+              sizes="50vw"
+              className="object-contain object-right"
+              priority={priority}
+            />
+          )}
+        </div>
+      </div>
+    </section>
+  );
 }
