@@ -105,23 +105,21 @@ export default function WallPanel({
         className="relative h-[198px] overflow-hidden rounded-[8px] md:hidden"
         style={{ background: bannerBackground }}
       >
-        <div className="absolute right-2 top-1/2 h-[118px] w-[176px] max-w-[48%] -translate-y-1/2">
-          {isVideo ? (
-            <CampaignVideo
-              src={image}
-              className="h-full w-full object-contain object-right"
-            />
-          ) : (
-            <Image
-              src={image}
-              alt={campaign.title ?? titleText}
-              fill
-              sizes="48vw"
-              className="object-contain object-right"
-              priority={priority}
-            />
-          )}
-        </div>
+        {isVideo ? (
+          <CampaignVideo
+            src={image}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <Image
+            src={image}
+            alt={campaign.title ?? titleText}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority={priority}
+          />
+        )}
 
         <span
           className={`absolute left-6 ${variant.badgeTop} z-10 flex h-5 max-w-[calc(100%-48px)] items-center truncate rounded-[4px] border border-black/[0.09] px-2 text-[10px] font-semibold leading-3`}
@@ -160,45 +158,58 @@ export default function WallPanel({
         </Link>
       </div>
 
-      {/* Desktop banner — text left, media box right */}
+      {/* Desktop banner — full-bleed photo with badge, eyebrow, title & CTA overlaid on the left */}
       <div
         className="relative hidden md:flex flex-row items-center gap-4 sm:gap-6 overflow-hidden rounded-[8px] p-6 sm:p-8 md:p-10 min-h-[350px]"
         style={{ background: bannerBackground }}
       >
+        {isVideo ? (
+          <CampaignVideo
+            src={image}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <Image
+            src={image}
+            alt={campaign.title ?? titleText}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority={priority}
+          />
+        )}
+
         {/* Text content — left */}
         <div className="relative z-10 flex-1 flex flex-col items-start justify-center space-y-4 sm:space-y-6 py-2 md:py-6 max-w-full">
-          <h2 className="w-full truncate text-3xl sm:text-[44px] lg:text-5xl font-extrabold text-neutral-900 leading-tight tracking-tight max-w-xl">
-            {titleText}
-          </h2>
+          <span
+            className="order-1 inline-flex w-fit items-center rounded-[4px] border border-black/[0.09] px-3 py-1.5 text-sm font-semibold leading-4"
+            style={{
+              backgroundColor: variant.badgeBg,
+              color: variant.badgeColor,
+            }}
+          >
+            {badgeText}
+          </span>
 
-          <p className="w-full truncate text-lg sm:text-xl lg:text-2xl text-neutral-800 font-medium tracking-wide max-w-xl">
+          <p
+            className="order-2 w-full truncate text-2xl sm:text-3xl lg:text-4xl font-medium tracking-wide max-w-xl"
+            style={{ color: variant.eyebrowColor }}
+          >
             {eyebrowText}
           </p>
 
-          <Link href={href} className="max-w-full">
+          <h2
+            className="order-3 w-full truncate text-4xl sm:text-5xl lg:text-6xl font-serif font-normal leading-tight tracking-tight max-w-xl"
+            style={{ color: variant.accent }}
+          >
+            {titleText}
+          </h2>
+
+          <Link href={href} className="order-4 max-w-full">
             <Button className="max-w-full bg-[#111111] text-white hover:bg-black font-bold text-sm sm:text-base h-11 sm:h-13 px-6 sm:px-9 rounded-lg sm:rounded-xl cursor-pointer transition-all active:scale-95 border-none shadow-sm">
               <span className="truncate">{ctaText}</span>
             </Button>
           </Link>
-        </div>
-
-        {/* Media — right center, sized like a box */}
-        <div className="relative z-10 flex w-1/2 max-w-[560px] h-[280px] shrink-0 items-center justify-center">
-          {isVideo ? (
-            <CampaignVideo
-              src={image}
-              className="h-full w-full object-contain object-right"
-            />
-          ) : (
-            <Image
-              src={image}
-              alt={campaign.title ?? titleText}
-              fill
-              sizes="50vw"
-              className="object-contain object-right"
-              priority={priority}
-            />
-          )}
         </div>
       </div>
     </section>
