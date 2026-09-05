@@ -7,6 +7,7 @@ import { CategoryProvider } from "@/src/context/CategoryContext";
 import Navbar from "@/src/components/home/navbar";
 import Providers from "./providers";
 import PushNotificationBootstrap from "@/src/components/notifications/PushNotificationBootstrap";
+import ClientRealtimeBootstrap from "@/src/components/notifications/ClientRealtimeBootstrap";
 
 // App typeface — Inter, per the Frame 158 design system. Keeps the
 // existing `--font-geist-sans` CSS variable name so `--font-sans` /
@@ -61,6 +62,7 @@ export default function RootLayout({
           <CartProvider>
             <CategoryProvider>
               <PushNotificationBootstrap />
+              <ClientRealtimeBootstrap />
               <Navbar />
               {children}
               <div className="hidden md:block">

@@ -14,18 +14,6 @@ import { queryKeys } from "./queryKeys";
 const getAccessToken = () =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
-/** Statuses where something is actively moving (partner matching/en route/
- *  mid-service) — polled on a short interval so the list/detail screens
- *  reflect partner-side changes (a new arrival code, PARTNER_ARRIVED, etc.)
- *  without the client having to manually refresh. */
-const LIVE_STATUSES = new Set([
-  "BROADCASTED",
-  "ACCEPTED",
-  "PARTNER_EN_ROUTE",
-  "PARTNER_ARRIVED",
-  "IN_PROGRESS",
-]);
-
 /** All bookings for the logged-in user. Disabled entirely for a logged-out
  *  visitor, matching useAddresses()/useNotifications(). */
 export function useBookings() {
@@ -39,8 +27,11 @@ export function useBookings() {
   });
 }
 
-/** A single booking. Self-refreshes while it's in a live-tracking state so
- *  the OTP reveal / status banner update on their own. */
+/** A single booking. No polling: booking:status-changed (see
+ *  useClientRealtimeConnection) invalidates this query the instant the
+ *  assigned partner accepts/en-routes/arrives/starts/completes it, or the
+ *  dispatch search gives up — every transition that used to justify an 8s
+ *  live-tracking poll here. */
 export function useBooking(id: string | undefined) {
   const accessToken = getAccessToken();
 
@@ -49,10 +40,6 @@ export function useBooking(id: string | undefined) {
     queryFn: () => bookingApi.findOne(id as string, accessToken as string).then((r) => r.data),
     enabled: !!accessToken && !!id,
     staleTime: 15 * 1000,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status && LIVE_STATUSES.has(status) ? 8 * 1000 : false;
-    },
   });
 }
 
