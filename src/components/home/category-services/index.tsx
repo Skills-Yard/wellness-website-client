@@ -28,6 +28,12 @@ const formatPrice = (price: ServiceItem["price"] | null) => {
   return price ?? "₹0";
 };
 
+// A cut/strike-through price only makes sense when it's a genuine positive
+// value — 0, null, undefined, or a non-numeric string all mean "no discount
+// set", not "the discount is free", so the strike-through shouldn't render.
+const hasCutPrice = (originalPrice: ServiceItem["originalPrice"]) =>
+  Number(originalPrice) > 0;
+
 const formatRating = (rating: ServiceItem["averageRating"] | ServiceItem["rating"]) => {
   if (typeof rating === "number") return rating.toFixed(1);
   return rating ?? "0";
@@ -238,9 +244,11 @@ export default function CategoryServices({
                   </div>
                   <div className="mt-[6px] flex items-center gap-1 text-[14px] font-medium leading-[116%] text-black">
                     <span>Starts at {formatPrice(lowestDurationPrice)}</span>
-                    <span className="text-[12px] text-[#666] line-through">
-                      {formatPrice(service.originalPrice)}
-                    </span>
+                    {hasCutPrice(service.originalPrice) && (
+                      <span className="text-[12px] text-[#666] line-through">
+                        {formatPrice(service.originalPrice)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </SwiperSlide>
