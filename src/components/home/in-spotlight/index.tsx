@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
+import { Autoplay, Navigation } from "swiper/modules";
 import { HomeCampaign, HomeCategory } from "@/src/types/serviceTypes";
 import CampaignVideo from "@/src/components/media/CampaignVideo";
 
@@ -94,6 +95,12 @@ export default function Inspotlight({
   // Only matters on mobile/tablet where centeredSlides is on; sm:h-55
   // below resets every slide to a uniform height on larger breakpoints.
   const [activeIndex, setActiveIndex] = useState(0);
+  // Briefly turns off the text/gradient fade transition while we silently
+  // reset position at the loop boundary (landing on a clone slide, then
+  // instantly re-pointing to the equivalent real slide). Without this the
+  // fade-out/fade-in replay for that swap is visible as a one-frame "blink"
+  // even though the content on screen doesn't actually change.
+  const [suppressFade, setSuppressFade] = useState(false);
 
   const spotlightCampaigns = useMemo(
     () =>
@@ -149,11 +156,12 @@ export default function Inspotlight({
       </div>
 
       <Swiper
-        modules={[Navigation]}
+        modules={[Navigation, Autoplay]}
         // Swiper's loop mode clones slide DOM nodes outside React's control,
         // which breaks CampaignVideo's ref-based setup (the clone the user
         // ends up looking at never gets a src/HLS attach — see CampaignVideo).
         loop={false}
+        autoplay={{ delay: 2500, disableOnInteraction: false, pauseOnMouseEnter: true }}
         initialSlide={canLoop ? 1 : 0}
         onSwiper={(swiper) => setActiveIndex(swiper.activeIndex)}
         onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
@@ -163,15 +171,35 @@ export default function Inspotlight({
           // (or want) this jump, so leave them to clamp normally.
           if (!canLoop || !swiper.params.centeredSlides) return;
           const lastIndex = carouselSlides.length - 1;
-          if (swiper.activeIndex === 0) {
-            // Landed on the leading clone (swiped back past the first real
-            // card) — snap to the real last card, same content, no visible jump.
-            swiper.slideTo(lastIndex - 1, 0, false);
-            setActiveIndex(lastIndex - 1);
-          } else if (swiper.activeIndex === lastIndex) {
-            swiper.slideTo(1, 0, false);
-            setActiveIndex(1);
-          }
+          if (swiper.activeIndex !== 0 && swiper.activeIndex !== lastIndex) return;
+          // Landed on a clone (either end) — snap to the equivalent real
+          // slide, same content, meant to be an invisible reset.
+          const target = swiper.activeIndex === 0 ? lastIndex - 1 : 1;
+          // speed must be >0 here: a literal 0ms slideTo never fires a native
+          // "transitionend" event, which is what Swiper's autoplay module
+          // waits on (via the pause it triggers on every slideTo, see
+          // swiper/modules/autoplay.mjs) before resuming itself — without
+          // that event, autoplay silently never resumes past the first loop.
+          // 1ms is still visually instant.
+          swiper.slideTo(target, 1, false);
+          // Swiper just updated its own position/classes synchronously above.
+          // Our isActive styling comes from this separate `activeIndex` React
+          // state, though — a plain setState here can commit a frame *after*
+          // Swiper's own DOM change, so the browser paints one frame where
+          // Swiper has already jumped to the real slide but our opacity
+          // classes still show it as inactive (or vice versa for the outgoing
+          // clone) — that mismatch is the flicker. flushSync forces both to
+          // land in the same commit, before anything gets a chance to paint.
+          flushSync(() => {
+            setSuppressFade(true);
+            setActiveIndex(target);
+          });
+          // Let the browser paint one frame with transitions off before
+          // switching them back on, otherwise the browser can still animate
+          // the very change we just made.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => setSuppressFade(false));
+          });
         }}
         breakpoints={{
           // centeredSlides gives the symmetric left/right peek. The edge
@@ -199,11 +227,18 @@ export default function Inspotlight({
             slidesOffsetAfter: 20,
           },
           // From here up, multiple full cards are visible at once (a grid,
-          // not a featured/peek carousel), so no offset or centering.
-          640: { slidesPerView: 1.5, spaceBetween: 14, centeredSlides: false },
-          768: { slidesPerView: 2, spaceBetween: 16, centeredSlides: false },
-          1024: { slidesPerView: 2.5, spaceBetween: 16, centeredSlides: false },
-          1280: { slidesPerView: 3, spaceBetween: 20, centeredSlides: false },
+          // not a featured/peek carousel), so no offset or centering. rewind
+          // (not loop — that clones DOM nodes and breaks CampaignVideo) makes
+          // autoplay restart forward instead of Swiper's default end-of-track
+          // behavior, which animates backward from the last slide straight to
+          // the first (see swiper/modules/autoplay.mjs's slideTo(0, speed)
+          // fallback) — the mobile/tablet breakpoints above don't need this,
+          // their own clone-padding + onTransitionEnd jump already keeps
+          // autoplay moving forward-only.
+          640: { slidesPerView: 1.5, spaceBetween: 14, centeredSlides: false, rewind: true },
+          768: { slidesPerView: 2, spaceBetween: 16, centeredSlides: false, rewind: true },
+          1024: { slidesPerView: 2.5, spaceBetween: 16, centeredSlides: false, rewind: true },
+          1280: { slidesPerView: 3, spaceBetween: 20, centeredSlides: false, rewind: true },
         }}
         className="w-full"
       >
@@ -233,25 +268,46 @@ export default function Inspotlight({
                     className="object-cover"
                   />
                 ) : null}
-                {/* Gradient tint overlay, matching the Figma variant for this campaign's category */}
+                {/* Gradient tint overlay. Mobile/tablet (peek carousel): only the
+                    front/active card gets it, side cards stay a plain untinted
+                    image. Desktop (grid, sm:+): every visible card shows text,
+                    so every card keeps the tint too. */}
                 <div
-                  className="absolute inset-0"
+                  className={`absolute inset-0 sm:opacity-100 ${
+                    suppressFade ? "transition-none" : "transition-opacity duration-500"
+                  } ${isActive ? "opacity-100" : "opacity-0"}`}
                   style={{
                     background: variant.gradient,
                     transform: variant.mirrored ? "scaleX(-1)" : undefined,
                   }}
                 />
-                <div className="relative z-10 flex h-full w-full flex-col p-6">
+                {/* Mobile/tablet: side (non-front) cards show no text at all, just
+                    the image — text fades/slides in once a card becomes the
+                    front/active one (dragged to center). Desktop (sm:+): the
+                    grid shows multiple cards at once, so text is always shown
+                    there regardless of isActive. Stays mounted (not
+                    conditionally rendered) so the transition actually animates
+                    instead of popping in. mt-auto on the CTA keeps it pinned to
+                    the bottom regardless of how many lines wrap above it. */}
+                <div
+                  className={`relative z-10 flex h-full w-full flex-col p-6 sm:opacity-100 sm:translate-y-0 sm:pointer-events-auto ${
+                    suppressFade ? "transition-none" : "transition-all duration-500 ease-out"
+                  } ${
+                    isActive
+                      ? "opacity-100 translate-y-0"
+                      : "pointer-events-none opacity-0 translate-y-3"
+                  }`}
+                >
                   {campaign.subtitle && (
                     <p
-                      className="truncate text-xs font-medium leading-[15px]"
+                      className="line-clamp-2 max-w-[171px] text-xs font-medium leading-[15px]"
                       style={{ color: variant.eyebrowColor }}
                     >
                       {campaign.subtitle}
                     </p>
                   )}
                   <h3
-                    className="mt-4 truncate font-serif text-xl font-normal leading-[22px]"
+                    className="mt-4 line-clamp-2 max-w-[171px] font-serif text-xl font-normal leading-[22px]"
                     style={{ color: variant.titleColor }}
                   >
                     {campaign.title}
