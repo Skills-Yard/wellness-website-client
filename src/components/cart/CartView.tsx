@@ -37,6 +37,8 @@ type Props = {
   onSelectAddress: (address: Address) => void;
   onCreateAddress: (address: AddressInput) => void;
   onUpdateAddress: (addressId: string, address: AddressInput) => void;
+  onDeleteAddress: (addressId: string) => void;
+  isDeletingAddress: boolean;
   onContinue: () => void;
 };
 
@@ -90,6 +92,8 @@ export default function CartView({
   onSelectAddress,
   onCreateAddress,
   onUpdateAddress,
+  onDeleteAddress,
+  isDeletingAddress,
   onContinue,
 }: Props) {
   const {
@@ -289,6 +293,8 @@ export default function CartView({
                 onSelect={onSelectAddress}
                 onCreate={onCreateAddress}
                 onUpdate={onUpdateAddress}
+                onDelete={onDeleteAddress}
+                isDeleting={isDeletingAddress || isCartSyncing}
               />
             )}
             {addressError && (

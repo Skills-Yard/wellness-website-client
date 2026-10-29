@@ -192,6 +192,7 @@ export default function CartSheet() {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [isDeletingAddress, setIsDeletingAddress] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -342,6 +343,29 @@ export default function CartSheet() {
     } catch (error) {
       setAddressError(error instanceof Error ? error.message : "Unable to update this address.");
     } finally { setIsSavingAddress(false); }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) { setAddressError("Please log in before removing an address."); return; }
+    if (!window.confirm("Remove this address?")) return;
+    try {
+      setIsDeletingAddress(true);
+      setAddressError(null);
+      await addressApi.remove(addressId, token);
+      const remaining = addresses.filter((item) => item.id !== addressId);
+      queryClient.setQueryData<Address[]>(queryKeys.addresses(), remaining);
+      // Removing the address the cart is using — move the cart onto the
+      // default (or first) remaining one so checkout isn't left pointing at
+      // an address that no longer exists.
+      if (selectedAddress?.id === addressId) {
+        const next = remaining.find((item) => item.isDefault) ?? remaining[0] ?? null;
+        setSelectedAddress(next);
+        if (next) updateCartAddress(next.id);
+      }
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : "Unable to remove this address.");
+    } finally { setIsDeletingAddress(false); }
   };
 
   const handleCheckout = async () => {
@@ -550,7 +574,7 @@ export default function CartSheet() {
   };
 
   return <>
-    <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>Your Cart</SheetTitle></SheetHeader>{cartItems.length === 0 ? (isCartHydrating ? <CartLoading /> : <EmptyCart />) : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onContinue={() => void handleCheckout()} />}</SheetContent></Sheet>
+    <Sheet open={isCartOpen} onOpenChange={handleOpenChange} modal={sheetModal}><SheetContent side="right" className="w-full! !h-full !max-w-full overflow-hidden border-l border-gray-100 bg-white p-6 shadow-[0_8px_40px_rgba(0,0,0,0.12)] sm:!h-full sm:!max-w-[420px]"><SheetHeader className="sr-only"><SheetTitle>Your Cart</SheetTitle></SheetHeader>{cartItems.length === 0 ? (isCartHydrating ? <CartLoading /> : <EmptyCart />) : <CartView address={selectedAddress} addresses={addresses} addressError={addressError} isAddressFormOpen={isAddressFormOpen} isSavingAddress={isSavingAddress} isCheckingOut={isCheckingOut} paymentError={paymentError} onToggleAddressForm={() => setIsAddressFormOpen((open) => !open)} onSelectAddress={(address) => { setSelectedAddress(address); updateCartAddress(address.id); setIsAddressFormOpen(false); setAddressError(null); }} onCreateAddress={(address) => void handleCreateAddress(address)} onUpdateAddress={(addressId, address) => void handleUpdateAddress(addressId, address)} onDeleteAddress={(addressId) => void handleDeleteAddress(addressId)} isDeletingAddress={isDeletingAddress} onContinue={() => void handleCheckout()} />}</SheetContent></Sheet>
     {/* Portaled to <body>: CartSheet is mounted inside the desktop navbar,
         which is `display:none` on mobile — rendering these inline would
         make the checkout overlay and the post-payment confirmation

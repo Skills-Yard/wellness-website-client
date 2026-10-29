@@ -10,8 +10,7 @@ export type AddressInput = Omit<CreateAddressBody, "userId">;
  *  CartView.tsx (checkout's address step); extracted here so the profile
  *  page's address management can reuse the exact same, already-working
  *  geolocation-on-create / edit-in-place behavior instead of rebuilding it.
- *  `onDelete` is optional — CartView doesn't pass it (checkout has no
- *  reason to delete an address mid-flow), only the profile page does.
+ *  `onDelete` is optional — omit it to hide the per-address Delete button.
  *  `onSelect` is likewise optional — omit it (as the profile page does) to
  *  render each saved address as plain text instead of a "pick this one"
  *  button, since picking doesn't mean anything outside checkout. */
