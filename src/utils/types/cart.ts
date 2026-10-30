@@ -79,7 +79,9 @@ export interface CartContextType {
   scheduledTime: string;
   isOnDemand: boolean;
   couponCode: string;
-  updateCartSchedule: (details: { scheduledDate?: string; scheduledTime?: string; isOnDemand?: boolean; couponCode?: string }) => void;
+  /** Resolves once the PATCH /cart sync settles — checkout awaits this to
+   *  stamp an on-demand cart with the current date/time before paying. */
+  updateCartSchedule: (details: { scheduledDate?: string; scheduledTime?: string; isOnDemand?: boolean; couponCode?: string }) => Promise<void>;
   /** Resolves once the slot update has settled (server round-trip done,
    *  or immediately for the no-op paths) — the slot-picker modal awaits
    *  this to keep its "Updating…" state up and close itself on success. */

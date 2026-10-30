@@ -110,7 +110,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [addressId, setAddressId] = useState<string | null>(null);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
-  const [isOnDemand, setIsOnDemand] = useState(true);
+  // Matches the backend's own default (a fresh/cleared cart is
+  // isOnDemand: false) — defaulting to true here used to flag every cart
+  // on-demand on its first sync, skipping the per-item slot check at
+  // checkout and then 400ing on the missing scheduledDate instead.
+  const [isOnDemand, setIsOnDemand] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   // Cart row ids whose PATCH /cart/items/{itemId} slot update is currently
   // in flight — lets CartView show a loading state on that item's "Select
@@ -272,7 +276,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCartZoneId(response.data.zoneId ?? null);
         setScheduledDate(response.data.scheduledDate ?? "");
         setScheduledTime(response.data.scheduledTime ?? "");
-        setIsOnDemand(response.data.isOnDemand ?? true);
+        setIsOnDemand(response.data.isOnDemand ?? false);
         setCouponCode(response.data.couponCode ?? "");
       } catch {
         // Retain the locally cached cart if the API is unavailable.
@@ -790,15 +794,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     scheduledTime?: string;
     isOnDemand?: boolean;
     couponCode?: string;
-  }) => {
-    if (isCartSyncing) return;
+  }): Promise<void> => {
+    if (isCartSyncing) return Promise.resolve();
     if (details.scheduledDate !== undefined)
       setScheduledDate(details.scheduledDate);
     if (details.scheduledTime !== undefined)
       setScheduledTime(details.scheduledTime);
     if (details.isOnDemand !== undefined) setIsOnDemand(details.isOnDemand);
     if (details.couponCode !== undefined) setCouponCode(details.couponCode);
-    void syncCart(cartItems, addressId, details);
+    return syncCart(cartItems, addressId, details);
   };
 
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);

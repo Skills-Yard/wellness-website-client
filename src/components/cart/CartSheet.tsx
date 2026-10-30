@@ -183,6 +183,8 @@ export default function CartSheet() {
     updateCartAddress,
     isCartSyncing,
     isCartHydrating,
+    isOnDemand,
+    updateCartSchedule,
   } = useCart();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -434,6 +436,19 @@ export default function CartSheet() {
       // from here through to Razorpay actually needing the screen (see the
       // "opening_payment" -> "idle" flip right before razorpay.open()).
       setCheckoutStage("checking_cart");
+      // On-demand skips the per-item slot check at checkout, but booking
+      // creation still requires cart.scheduledDate/scheduledTime — stamp
+      // them with "now" here rather than when "Now" was tapped, so they
+      // can't have gone stale while the cart sat open.
+      if (isOnDemand) {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        await updateCartSchedule({
+          isOnDemand: true,
+          scheduledDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+          scheduledTime: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+        });
+      }
       // Ask the server what zone the cart is *actually* pinned to right now,
       // instead of trusting CartContext's cached cartZoneId. A just-picked
       // address or slot can still have its PATCH /cart in flight when the

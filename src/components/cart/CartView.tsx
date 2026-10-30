@@ -11,6 +11,7 @@ import {
   Minus,
   Plus,
   X,
+  Zap,
 } from "lucide-react";
 import { useCart } from "@/src/context/CartContext";
 import type { Address, CreateAddressBody } from "@/src/services/addressApi";
@@ -103,6 +104,7 @@ export default function CartView({
     increaseQuantity,
     decreaseQuantity,
     couponCode,
+    isOnDemand,
     updateCartSchedule,
     cartZoneId,
     updateItemSlot,
@@ -134,6 +136,24 @@ export default function CartView({
     window.setTimeout(() => setAddressCardPulsing(false), 1200);
   };
 
+  // "Now" only flips the flag — the actual date/time is stamped at checkout
+  // (see CartSheet's handleCheckout) so it can't go stale while the cart
+  // sits open. Switching back to "Schedule" re-points the cart-wide
+  // schedule at a slot that's already been picked, since booking creation
+  // reads cart.scheduledDate, not the per-item slots.
+  const selectBookingMode = (onDemand: boolean) => {
+    if (onDemand === isOnDemand) return;
+    if (onDemand) {
+      void updateCartSchedule({ isOnDemand: true });
+      return;
+    }
+    const picked = cartItems.find((item) => item.slotDate && item.slotStartTime);
+    void updateCartSchedule({
+      isOnDemand: false,
+      ...(picked ? { scheduledDate: picked.slotDate, scheduledTime: picked.slotStartTime } : {}),
+    });
+  };
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
@@ -151,6 +171,34 @@ export default function CartView({
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto pb-2 pr-0.5">
+        <div role="radiogroup" aria-label="When do you need it?" className={`grid grid-cols-2 gap-1 p-1 ${CARD}`}>
+          {[
+            { onDemand: true, label: "Now", hint: "As soon as possible", Icon: Zap },
+            { onDemand: false, label: "Schedule", hint: "Pick a time slot", Icon: Calendar },
+          ].map(({ onDemand, label, hint, Icon }) => {
+            const selected = isOnDemand === onDemand;
+            return (
+              <button
+                key={label}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => selectBookingMode(onDemand)}
+                disabled={isCartSyncing}
+                className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  selected ? "bg-[#F6F2EC] text-black" : "text-[#666] hover:bg-stone-50"
+                }`}
+              >
+                <Icon className={`h-4 w-4 shrink-0 ${selected ? "text-[#904720]" : "text-stone-400"}`} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium">{label}</span>
+                  <span className="block truncate text-[11px] text-[#666]">{hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {cartItems.map((item) => (
           <div key={item.id} className={CARD}>
             <div className="flex gap-3 p-3">
@@ -207,7 +255,12 @@ export default function CartView({
             </div>
 
             <div className="border-t border-black/5 px-3 py-3">
-              {isUpdatingSlot(item.id) ? (
+              {isOnDemand ? (
+                <span className="flex items-center gap-2 text-xs text-[#666]">
+                  <Zap className="h-4 w-4 shrink-0 text-[#904720]" />
+                  A professional will be assigned right after payment
+                </span>
+              ) : isUpdatingSlot(item.id) ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-40 rounded" />
                   <Skeleton className="h-8 w-full rounded-lg" />
